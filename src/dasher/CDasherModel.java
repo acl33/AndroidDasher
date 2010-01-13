@@ -52,15 +52,11 @@ public class CDasherModel extends CDasherComponent {
 	 */
 	public boolean m_bContextSensitive;
 	// public String m_strContextBuffer;
-	
-	/* Removed, believed redundant. See the comments at the top of
-	 * CDasherInterfaceBase.
-	 */
-	
+		
 	/**
 	 * The Interface to which this Model belongs.
 	 */
-	public CDasherInterfaceBase m_DasherInterface;
+	private final CDasherInterfaceBase m_DasherInterface;
 	
 /////////////////////////////////////////////////////////////////////////////
 	
@@ -276,9 +272,9 @@ public class CDasherModel extends CDasherComponent {
 	 * @param DashIface Interface which we serve
 	 * @param AlphIO AlphIO object from which to retrieve the AlphInfo object describing the user's chosen alphabet
 	 */
-	public CDasherModel(CEventHandler EventHandler, CSettingsStore SettingsStore, CDasherInterfaceBase DashIface, CAlphIO AlphIO) {
-	super(EventHandler, SettingsStore); 
-	m_DasherInterface = DashIface;
+	public CDasherModel(CDasherInterfaceBase iface, CSettingsStore SettingsStore, CAlphIO AlphIO) {
+	super(iface, SettingsStore); 
+	m_DasherInterface = iface;
 	
 	// Set max bitrate in the FrameRate class
 	m_dMaxRate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) / 100.0;

@@ -68,18 +68,17 @@ public class CInputFilter extends CDasherModule {
 	 * on registering this with the Interface as a usable
 	 * module.
 	 * 
-	 * @param EventHandler Event handler with which we should register ourselves
+	 * @param intf Interface with which to register for events
 	 * @param SettingsStore Settings repository to use
-	 * @param Interface Interface which this filter may control
 	 * @param iID Unique identifier for this Module
 	 * @param iType Module type (see DasherModule for a list)
 	 * @param szName Friendly name (ideally unique)
 	 * @see CDasherModule
 	 */
-	public CInputFilter(CEventHandler EventHandler, CSettingsStore SettingsStore, CDasherInterfaceBase Interface, long iID, int iType, String szName)
+	public CInputFilter(CDasherInterfaceBase iface, CSettingsStore SettingsStore, long iID, int iType, String szName)
     { 
-      	super(EventHandler, SettingsStore, iID, iType, szName);
-      	m_Interface = Interface;
+      	super(iface, SettingsStore, iID, iType, szName);
+      	m_Interface = iface;
     }
 	
 	/**

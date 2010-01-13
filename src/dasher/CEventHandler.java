@@ -71,40 +71,21 @@ public class CEventHandler {
 	/**
 	 * List of currently active listeners
 	 */
-	protected ArrayList <CDasherComponent> m_vListeners;
+	protected final ArrayList <CDasherComponent> m_vListeners = new ArrayList<CDasherComponent>();
 	
 	/**
 	 * List of Components waiting to be added as listeners
 	 * when we finish handling events.
 	 */
-	protected ArrayList <CDasherComponent> m_vListenerQueue;
+	protected final ArrayList <CDasherComponent> m_vListenerQueue = new ArrayList<CDasherComponent>();
 
 	/**
 	 * Integer indicating how many times we are 'in' the event
 	 * handler (for example, we might be in twice if a component
 	 * responded to an event by issuing an event of its own). 
 	 */
-	protected int m_iInHandler;
-	
-	/**
-	 * Interface to whom this Handler belongs, and which will
-	 * have its InterfaceEventHandler method called for all events.
-	 */
-	protected CDasherInterfaceBase m_pInterface;
-	
-	/**
-	 * Creates a new EventHandler with no listeners and attached
-	 * to a specified interface.
-	 * 
-	 * @param pInterface Parent interface
-	 */
-	public CEventHandler(CDasherInterfaceBase pInterface){
-	    m_iInHandler = 0;
-	    m_pInterface = pInterface;
-	    m_vListeners = new ArrayList<CDasherComponent>();
-	    m_vListenerQueue = new ArrayList<CDasherComponent>();
-	}
-	
+	private int m_iInHandler;
+		
 	/**
 	 * Informs all registered listeners of a specified Event.
 	 * <p>
@@ -139,11 +120,6 @@ public class CEventHandler {
 		  for(CDasherComponent i : m_vListeners) {
 		    i.HandleEvent(Event);
 		  }
-		  // Call external handler last, to make sure that internal components are fully up to date before external events happen
-
-		  m_pInterface.InterfaceEventHandler(Event);
-
-		  m_pInterface.ExternalEventHandler(Event);
 
 		  --m_iInHandler;
 		  

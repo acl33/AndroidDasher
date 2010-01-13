@@ -68,11 +68,11 @@ public class CDefaultFilter extends CInputFilter {
 	 * @param iID Unique ID for this module
 	 * @param szName Friendly name for this module
 	 */
-	public CDefaultFilter(CEventHandler EventHandler, CSettingsStore SettingsStore, CDasherInterfaceBase Interface, CDasherModel m_DasherModel, long iID, String szName)
+	public CDefaultFilter(CDasherInterfaceBase iface, CSettingsStore SettingsStore, long iID, String szName)
 	{ 
-		super(EventHandler, SettingsStore, Interface, iID, 1, szName);
+		super(iface, SettingsStore, iID, 1, szName);
 		m_StartHandler = null;
-		m_AutoSpeedControl = new CAutoSpeedControl(m_EventHandler, m_SettingsStore, m_DasherModel.Framerate());
+		m_AutoSpeedControl = new CAutoSpeedControl(m_EventHandler, m_SettingsStore, iface.GetCurFPS());
 		
 		CreateStartHandler();
 	}

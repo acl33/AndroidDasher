@@ -58,7 +58,7 @@ import java.io.*;
  * input of some sort, and implement DasherScreen to provide visual 
  * (or other) display.   
  */
-abstract public class CDasherInterfaceBase {
+abstract public class CDasherInterfaceBase extends CEventHandler {
 	
 		
 	public CFileLogger g_Logger; // CSFS: No logging yet.
@@ -113,17 +113,12 @@ abstract public class CDasherInterfaceBase {
 	/**
 	 * Context of recently entered characters
 	 */
-	protected LinkedList<Character> strCurrentContext;
+	protected final LinkedList<Character> strCurrentContext = new LinkedList<Character>();
 		
-	/**
-	 * Our event handler 
-	 */
-	protected CEventHandler m_EventHandler;
-	
 	/**
 	 * Our settings repository
 	 */
-	protected CSettingsStore m_SettingsStore;
+	protected final CSettingsStore m_SettingsStore;
 	
 	/**
 	 * Our logging module
@@ -181,19 +176,17 @@ abstract public class CDasherInterfaceBase {
 	public abstract void SetupPaths();
 	
 	/**
-	 * Should perform any UI building which is required.
+	 * Called at construction time to make the settings store.
+	 * Subclasses should override to return something appropriate
+	 * - i.e. to store persistent settings - or return a CSettingsStore
+	 * as a fallback.
+	 * @param handler EventHandler for the settings store to use (to propagate
+	 * parameter change notifications); actually <code>this</code>, i.e. a
+	 * CDasherInterfaceBase, but of course the CDasherInterfaceBase bits aren't
+	 * initialised yet (whereas the CEventHandler bits are!)
+	 * @return
 	 */
-	public abstract void SetupUI();
-	
-	/**
-	 * Should create a SettingsStore object of some sort and
-	 * store a reference to it in m_SettingsStore.
-	 * <p>
-	 * This is an abstract method because most implementations
-	 * will want to extend the default SettingsStore to provide
-	 * the possibility of persistent settings.
-	 */
-	public abstract void CreateSettingsStore();
+	protected abstract CSettingsStore createSettingsStore(CEventHandler handler);
 	
 	/**
 	 * Should return the size of a given file, or 0 if the
@@ -217,10 +210,7 @@ abstract public class CDasherInterfaceBase {
 	 * the event handler and module manager.
 	 */
 	public CDasherInterfaceBase() {
-		
-		m_EventHandler = new CEventHandler(this);
-		
-		strCurrentContext = new LinkedList<Character>();
+		m_SettingsStore = createSettingsStore(this);
 		strCurrentContext.add('.');
 		strCurrentContext.add(' ');
 		strTrainfileBuffer = new StringBuffer();
@@ -235,8 +225,7 @@ abstract public class CDasherInterfaceBase {
 	 * Realize does the bulk of the work of setting up a working
 	 * Dasher. The sequence of actions is as follows:
 	 * <p>
-	 * <ul><li>Creates a SettingsStore (by calling CreateSettingsStore())
-	 * <li>Creates the user interface (using SetupUI())
+	 * <ul>
 	 * <li>Sets up the system and user locations (by calling SetupPaths())
 	 * <li>Reads in the available alphabets and colour schemes
 	 * using ScanAlphabetFiles and then creating a CAlphIO based upon
@@ -245,21 +234,16 @@ abstract public class CDasherInterfaceBase {
 	 * <li>Calls ChangeColours() and ChangeAlphabet(), which will
 	 * create a number of internal components of their own
 	 * (see these functions' documentation for details)
-	 * <li>Calls CreateFactories() and CreateInputFilter() to complete
+	 * <li>Calls CreateFactories(), CreateInput() and CreateInputFilter() to complete
 	 * the input setup.
 	 * </ul>
 	 * <p>
 	 * When realize terminates, Dasher will be in a broadly usable
-	 * state. It will still lack a co-ordinate input device, which
-	 * should be registered with RegisterFactory, and will need a Screen
-	 * which should be created externally and registered with
-	 * ChangeScreen, but will otherwise be good to go.
+	 * state, tho it will need a screen which should be created
+	 * externally and registered with ChangeScreen().
 	 */
 	public void Realize() {
 		
-		// TODO: What exactly needs to have happened by the time we call Realize()?
-		CreateSettingsStore();
-		SetupUI();
 		SetupPaths();
 		
 		ArrayList<String> vAlphabetFiles = new ArrayList<String>();
@@ -283,9 +267,10 @@ abstract public class CDasherInterfaceBase {
 		
 		int iUserLogLevel = (int)GetLongParameter(Elp_parameters.LP_USER_LOG_LEVEL_MASK);
 		if (iUserLogLevel > 0) 
-			m_UserLog = new CUserLog(m_EventHandler, m_SettingsStore, iUserLogLevel, m_Alphabet);  
+			m_UserLog = new CUserLog(this, m_SettingsStore, iUserLogLevel, m_Alphabet);  
 		
-		CreateFactories();
+		CreateModules();
+		CreateInput();
 		CreateInputFilter();
 		
 		// All the setup is done by now, so let the user log object know
@@ -330,9 +315,6 @@ abstract public class CDasherInterfaceBase {
 		    g_Logger = null;
 		  }
 
-		  // Must delete event handler after all CDasherComponent derived classes
-
-		  m_EventHandler = null;
 	}
 	
 	/**
@@ -374,8 +356,8 @@ abstract public class CDasherInterfaceBase {
 	}
 	
 	/**
-	 * This is called by the EventHandler after all other
-	 * components have received this event.
+	 * Override to process event by ourselves, after (as per superclass)
+	 * dispatching to all registered listeners/components.
 	 * <p>
 	 * The interface responds to the following parameter changes:
 	 * <p>
@@ -420,8 +402,8 @@ abstract public class CDasherInterfaceBase {
 	 * 
 	 * @param Event The event the interface is to process.
 	 */
-	public void InterfaceEventHandler(CEvent Event) {
-		
+	public void InsertEvent(CEvent Event) {
+		super.InsertEvent(Event);
 		/* CSFS: Changed to lots of if statements, since Java won't switch on a non-
 		 * constant such as the ordinal or ordinal of one of these parameters.
 		 */
@@ -605,7 +587,7 @@ abstract public class CDasherInterfaceBase {
 			CLockEvent Event;
 			
 			Event = new CLockEvent("Training Dasher", true, 0);
-			m_EventHandler.InsertEvent(Event);
+			InsertEvent(Event);
 			Event = null;
 			
 			// Delete the old model and create a new one
@@ -615,7 +597,7 @@ abstract public class CDasherInterfaceBase {
 				m_DasherModel.UnregisterComponent();
 			}
 			
-			m_DasherModel = new CDasherModel(m_EventHandler, m_SettingsStore, this, m_AlphIO);
+			m_DasherModel = new CDasherModel(this, m_SettingsStore, m_AlphIO);
 			m_Alphabet = m_DasherModel.GetAlphabetNew();
 			
 			String T = m_Alphabet.GetTrainingFile();
@@ -631,11 +613,11 @@ abstract public class CDasherInterfaceBase {
 			}
 			else {
 				CMessageEvent oEvent = new CMessageEvent("No training text is avilable for the selected alphabet. Dasher will function, but it may be difficult to enter text.\nPlease see http://www.dasher.org.uk/alphabets/ for more information.", 0, 0);
-				m_EventHandler.InsertEvent(oEvent);
+				InsertEvent(oEvent);
 			}
 			
 			Event = new CLockEvent("Training Dasher", false, 0);
-			m_EventHandler.InsertEvent(Event);
+			InsertEvent(Event);
 			Event = null;
 		}
 	}
@@ -674,7 +656,7 @@ abstract public class CDasherInterfaceBase {
 		SetBoolParameter(Ebp_parameters.BP_REDRAW, true);
 		
 		CStopEvent oEvent = new CStopEvent();
-		m_EventHandler.InsertEvent(oEvent);
+		InsertEvent(oEvent);
 		
 		if (m_UserLog != null)
 			m_UserLog.StopWriting((float) GetNats());
@@ -712,7 +694,7 @@ abstract public class CDasherInterfaceBase {
 		}
 				
 		CStartEvent oEvent = new CStartEvent();
-		m_EventHandler.InsertEvent(oEvent);
+		InsertEvent(oEvent);
 		
 		ResetNats();
 		if (m_UserLog != null)
@@ -985,7 +967,7 @@ abstract public class CDasherInterfaceBase {
 		if(m_DasherScreen != null && m_DasherModel != null) 
 		{
 			m_DasherView = null;
-			m_DasherView = new CDasherViewSquare(m_EventHandler, m_SettingsStore, m_DasherScreen);
+			m_DasherView = new CDasherViewSquare(this, m_SettingsStore, m_DasherScreen);
 			
 			
 			if (m_Input != null)
@@ -1224,7 +1206,7 @@ abstract public class CDasherInterfaceBase {
 			
 			CLockEvent Event;
 			Event = new CLockEvent("Training Dasher", true, (int)((100.0 * (iTotalRead + iOffset))/iTotalBytes));
-			m_EventHandler.InsertEvent(Event);
+			InsertEvent(Event);
 			Event = null;
 			
 		} while(NumberRead == BufferSize - 1); // Until we appear to have reached EOF
@@ -1266,14 +1248,11 @@ abstract public class CDasherInterfaceBase {
 	}
 	
 	/**
-	 * Stub. Ought to return the current frames rate, but this
-	 * is not yet implemented.
-	 * 
-	 * @return 0
+	 * ACL TODO - was "not yet implemented", so trying returning the model's
+	 * {@link CDasherModel#Framerate()}.
 	 */
 	public double GetCurFPS() {
-		//
-		return 0;
+		return m_DasherModel.Framerate();
 	}
 	
 	/**
@@ -1332,7 +1311,7 @@ abstract public class CDasherInterfaceBase {
 		 */
 		
 		CEditContextEvent oEvent = new CEditContextEvent(10);
-		m_EventHandler.InsertEvent(oEvent);
+		InsertEvent(oEvent);
 		
 		String strNewContext = oEvent.newContext;
 		
@@ -1595,6 +1574,8 @@ abstract public class CDasherInterfaceBase {
 	 * <p>
 	 * At present this registers only Normal Control and Click Mode,
 	 * but as an when others are implemented will register these also.
+	 * Subclasses can & should override if they want anything different
+	 * or extra.
 	 * <p>
 	 * The same input filter may be registered repeatedly under
 	 * a variety of different names if desired (so long as the
@@ -1604,20 +1585,20 @@ abstract public class CDasherInterfaceBase {
 	 * button modes which use the same filter class.
 	 *
 	 */
-	public void CreateFactories() {
-		RegisterModule(new CDefaultFilter(m_EventHandler, m_SettingsStore, this, m_DasherModel,3, "Normal Control"));
-		//RegisterModule(new COneDimensionalFilter(m_EventHandler, m_SettingsStore, this, m_DasherModel));
-		//RegisterModule(new CEyetrackerFilter(m_EventHandler, m_SettingsStore, this, m_DasherModel));
-		RegisterModule(new CClickFilter(m_EventHandler, m_SettingsStore, this));
-		//RegisterModule(new CDynamicFilter(m_EventHandler, m_SettingsStore, this));
-		//RegisterModule(new CTwoButtonDynamicFilter(m_EventHandler, m_SettingsStore, this));
+	protected void CreateModules() {
+		RegisterModule(new CDefaultFilter(this, m_SettingsStore, 3, "Normal Control"));
+		//RegisterModule(new COneDimensionalFilter(this, m_SettingsStore, this, m_DasherModel));
+		//RegisterModule(new CEyetrackerFilter(this, m_SettingsStore, this, m_DasherModel));
+		RegisterModule(new CClickFilter(this, m_SettingsStore));
+		//RegisterModule(new CDynamicFilter(this, m_SettingsStore, this));
+		//RegisterModule(new CTwoButtonDynamicFilter(this, m_SettingsStore, this));
 		// TODO: specialist factory for button mode
-		//RegisterModule(new CDasherButtons(m_EventHandler, m_SettingsStore, this, 5, 1, true,8, "Menu Mode"));
-		//RegisterModule(new CDasherButtons(m_EventHandler, m_SettingsStore, this, 3, 0, false,10, "Direct Mode"));
-		//  RegisterModule(new CDasherButtons(m_EventHandler, m_SettingsStore, this, 4, 0, false,11, "Buttons 3"));
-		//RegisterModule(new CDasherButtons(m_EventHandler, m_SettingsStore, this, 3, 3, false,12, "Alternating Direct Mode"));
-		//RegisterModule(new CDasherButtons(m_EventHandler, m_SettingsStore, this, 4, 2, false,13, "Compass Mode"));
-		//RegisterModule(new CStylusFilter(m_EventHandler, m_SettingsStore, this, m_DasherModel,15, "Stylus Control")); 
+		//RegisterModule(new CDasherButtons(this, m_SettingsStore, this, 5, 1, true,8, "Menu Mode"));
+		//RegisterModule(new CDasherButtons(this, m_SettingsStore, this, 3, 0, false,10, "Direct Mode"));
+		//  RegisterModule(new CDasherButtons(this, m_SettingsStore, this, 4, 0, false,11, "Buttons 3"));
+		//RegisterModule(new CDasherButtons(this, m_SettingsStore, this, 3, 3, false,12, "Alternating Direct Mode"));
+		//RegisterModule(new CDasherButtons(this, m_SettingsStore, this, 4, 2, false,13, "Compass Mode"));
+		//RegisterModule(new CStylusFilter(this, m_SettingsStore, this, m_DasherModel,15, "Stylus Control")); 
 		
 		/* CSFS: The commented out filters are not yet implemented. */
 		
@@ -1692,34 +1673,6 @@ abstract public class CDasherInterfaceBase {
 			WriteTrainFile(strTrainfileBuffer.toString());
 			strTrainfileBuffer.setLength(0);
 		}
-		
-	}
-	
-	/**
-	 * Retrieves the EventHandler created during this class'
-	 * construction, and which calls this interface to handle
-	 * events.
-	 * 
-	 * @return EventHandler tied to this Interface.
-	 */
-	public CEventHandler GetEventHandler() {
-		return m_EventHandler;
-	}
-	
-	/**
-	 * Called for every dispatched event after all components
-	 * have received it and *after* InterfaceEventHandler.
-	 * <p>
-	 * By default this ignores all events; the intent is for
-	 * implementations to override it if they want to either
-	 * a) Pass events out to UI components which the core doesn't
-	 * know about, or b) Transcribe our internal events into some
-	 * other event-dispatching scheme such as Win32's message
-	 * dispatching scheme.
-	 * 
-	 * @param Event Event being signalled
-	 */
-	public void ExternalEventHandler(CEvent Event) {
 		
 	}
 	

@@ -6,6 +6,7 @@ import java.util.Collection;
 import android.content.SharedPreferences;
 
 import dasher.CDasherInterfaceBase;
+import dasher.CEventHandler;
 import dasher.CSettingsStore;
 
 public class AndroidDasherInterface extends CDasherInterfaceBase {
@@ -18,8 +19,8 @@ public class AndroidDasherInterface extends CDasherInterfaceBase {
 		this.host = host;
 	}
 	@Override
-	public void CreateSettingsStore() {
-		m_SettingsStore = new AndroidSettings(m_EventHandler,host.getSharedPreferences());
+	protected CSettingsStore createSettingsStore(CEventHandler handler) {
+		return new AndroidSettings(handler,host.getSharedPreferences());
 	}
 
 	@Override
@@ -46,12 +47,6 @@ public class AndroidDasherInterface extends CDasherInterfaceBase {
 
 	@Override
 	public void SetupPaths() {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void SetupUI() {
 		// TODO Auto-generated method stub
 
 	}
