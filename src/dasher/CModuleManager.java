@@ -41,7 +41,7 @@ public class CModuleManager {
 	/**
 	 * Map from modules' IDs to the modules themselves
 	 */
-	protected HashMap<Long, CModuleFactory> m_mapModules = new HashMap<Long, CModuleFactory>();
+	protected HashMap<Long, CDasherModule> m_mapModules = new HashMap<Long, CDasherModule>();
 	
 	/**
 	 * Enumerates all modules provided by a given factory and stores
@@ -52,20 +52,11 @@ public class CModuleManager {
 	 * 
 	 * @param Factory Factory to search for new modules
 	 */
-	public void RegisterFactory(CModuleFactory Factory) {
-		Factory.Start();
-		SFactoryInfo info = new SFactoryInfo();
-		while(Factory.IsMore()) {
-		
-			/* CSFS: This wants to update three variables, so I have altered the call
-			 * to return a small struct
-			 */
-			
-			
-			info = Factory.GetNext(info);
-			
-			m_mapModules.put(info.iID, Factory);
-		}
+	public void RegisterModule(CDasherModule mod) {
+		long l = mod.GetID();
+		if (m_mapModules.containsKey(l))
+			throw new IllegalArgumentException("Module "+l+" already exists!");
+		m_mapModules.put(l, mod);
 	}
 	
 	/**
@@ -75,9 +66,8 @@ public class CModuleManager {
 	 * @return Matching Module, or null if none was found.
 	 */
 	public CDasherModule GetModule(long iID) {
-		// TODO: Error checking here
 		
-		return m_mapModules.get(iID).GetModule(iID);
+		return m_mapModules.get(iID);
 	}
 	
 	/**
@@ -89,9 +79,9 @@ public class CModuleManager {
 	 */
 	public CDasherModule GetModuleByName(String strName) {
 		
-		for(Map.Entry<Long, CModuleFactory> s : m_mapModules.entrySet()) {
-			if (s.getValue().GetName(s.getKey()).equals(strName)) {
-				return s.getValue().GetModule(s.getKey());
+		for(Map.Entry<Long, CDasherModule> s : m_mapModules.entrySet()) {
+			if (s.getValue().GetName().equals(strName)) {
+				return s.getValue();
 			}
 		}
 		
@@ -111,13 +101,12 @@ public class CModuleManager {
 	 * @param vList Collection to be filled with the names of available
 	 * modules
 	 */
-	public void ListModules(int iType, Collection<String> vList) {
-		for(Map.Entry<Long, CModuleFactory> s : m_mapModules.entrySet()) {
-			if(s.getValue().GetType(s.getKey()) == iType) {
-				vList.add(s.getValue().GetName(s.getKey()));
+	public void ListModules(int iType, Collection<CDasherModule> vList) {
+		for(Map.Entry<Long, CDasherModule> s : m_mapModules.entrySet()) {
+			if(s.getValue().GetType() == iType) {
+				vList.add(s.getValue());
 			}
 		}
 	}
-	
 
 }

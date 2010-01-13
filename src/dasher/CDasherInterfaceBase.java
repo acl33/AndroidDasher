@@ -1568,8 +1568,8 @@ abstract public class CDasherInterfaceBase {
 	 * 
 	 * @see CModuleManager
 	 */
-	public void RegisterFactory(CModuleFactory Factory) {
-		m_oModuleManager.RegisterFactory(Factory);
+	public void RegisterModule(CDasherModule mod) {
+		m_oModuleManager.RegisterModule(mod);
 	}
 	
 	/**
@@ -1605,19 +1605,19 @@ abstract public class CDasherInterfaceBase {
 	 *
 	 */
 	public void CreateFactories() {
-		RegisterFactory(new CWrapperFactory(m_EventHandler, m_SettingsStore, new CDefaultFilter(m_EventHandler, m_SettingsStore, this, m_DasherModel,3, "Normal Control")));
-		//RegisterFactory(new CWrapperFactory(m_EventHandler, m_SettingsStore, new COneDimensionalFilter(m_EventHandler, m_SettingsStore, this, m_DasherModel)));
-		//RegisterFactory(new CWrapperFactory(m_EventHandler, m_SettingsStore, new CEyetrackerFilter(m_EventHandler, m_SettingsStore, this, m_DasherModel)));
-		RegisterFactory(new CWrapperFactory(m_EventHandler, m_SettingsStore, new CClickFilter(m_EventHandler, m_SettingsStore, this)));
-		//RegisterFactory(new CWrapperFactory(m_EventHandler, m_SettingsStore, new CDynamicFilter(m_EventHandler, m_SettingsStore, this)));
-		//RegisterFactory(new CWrapperFactory(m_EventHandler, m_SettingsStore, new CTwoButtonDynamicFilter(m_EventHandler, m_SettingsStore, this)));
+		RegisterModule(new CDefaultFilter(m_EventHandler, m_SettingsStore, this, m_DasherModel,3, "Normal Control"));
+		//RegisterModule(new COneDimensionalFilter(m_EventHandler, m_SettingsStore, this, m_DasherModel));
+		//RegisterModule(new CEyetrackerFilter(m_EventHandler, m_SettingsStore, this, m_DasherModel));
+		RegisterModule(new CClickFilter(m_EventHandler, m_SettingsStore, this));
+		//RegisterModule(new CDynamicFilter(m_EventHandler, m_SettingsStore, this));
+		//RegisterModule(new CTwoButtonDynamicFilter(m_EventHandler, m_SettingsStore, this));
 		// TODO: specialist factory for button mode
-		//RegisterFactory(new CWrapperFactory(m_EventHandler, m_SettingsStore, new CDasherButtons(m_EventHandler, m_SettingsStore, this, 5, 1, true,8, "Menu Mode")));
-		//RegisterFactory(new CWrapperFactory(m_EventHandler, m_SettingsStore, new CDasherButtons(m_EventHandler, m_SettingsStore, this, 3, 0, false,10, "Direct Mode")));
-		//  RegisterFactory(new CWrapperFactory(m_EventHandler, m_SettingsStore, new CDasherButtons(m_EventHandler, m_SettingsStore, this, 4, 0, false,11, "Buttons 3")));
-		//RegisterFactory(new CWrapperFactory(m_EventHandler, m_SettingsStore, new CDasherButtons(m_EventHandler, m_SettingsStore, this, 3, 3, false,12, "Alternating Direct Mode")));
-		//RegisterFactory(new CWrapperFactory(m_EventHandler, m_SettingsStore, new CDasherButtons(m_EventHandler, m_SettingsStore, this, 4, 2, false,13, "Compass Mode")));
-		//RegisterFactory(new CWrapperFactory(m_EventHandler, m_SettingsStore, new CStylusFilter(m_EventHandler, m_SettingsStore, this, m_DasherModel,15, "Stylus Control"))); 
+		//RegisterModule(new CDasherButtons(m_EventHandler, m_SettingsStore, this, 5, 1, true,8, "Menu Mode"));
+		//RegisterModule(new CDasherButtons(m_EventHandler, m_SettingsStore, this, 3, 0, false,10, "Direct Mode"));
+		//  RegisterModule(new CDasherButtons(m_EventHandler, m_SettingsStore, this, 4, 0, false,11, "Buttons 3"));
+		//RegisterModule(new CDasherButtons(m_EventHandler, m_SettingsStore, this, 3, 3, false,12, "Alternating Direct Mode"));
+		//RegisterModule(new CDasherButtons(m_EventHandler, m_SettingsStore, this, 4, 2, false,13, "Compass Mode"));
+		//RegisterModule(new CStylusFilter(m_EventHandler, m_SettingsStore, this, m_DasherModel,15, "Stylus Control")); 
 		
 		/* CSFS: The commented out filters are not yet implemented. */
 		
