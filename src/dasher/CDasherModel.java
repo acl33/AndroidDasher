@@ -904,7 +904,7 @@ public class CDasherModel extends CDasherComponent {
 	 * @param pAdded Ignored parameter
 	 * @return True if we have updated the model, false otherwise.
 	 */
-	public boolean Tap_on_display(long miMousex,
+	public void oneStepTowards(long miMousex,
 			long miMousey, 
 			long Time, 
 			ArrayList<CSymbolProb> pAdded)	{
@@ -920,36 +920,17 @@ public class CDasherModel extends CDasherComponent {
 //		Clear out parameters that might get passed in to track user activity
 		if (pAdded != null)	pAdded.clear();
 			
-		if(GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) && (m_deGotoQueue.size() == 0))
-			return false;
-		
-		long iNewMin;
-		long iNewMax;
-		
-		if(m_deGotoQueue.size() == 0) {
-//			works out next viewpoint
-			
-			/* CSFS: Modified as detailed above to use the new minature
-			 * return type to get data out of the function.
-			 */
-			
-			GNRCReturn retval = Get_new_root_coords(miMousex, miMousey);
-			iNewMin = retval.iNewMin; iNewMax = retval.iNewMax;
-			
-			if(GetBoolParameter(Ebp_parameters.BP_OLD_STYLE_PUSH))
-				OldPush(miMousex, miMousey);
-		}
-		else {
-			iNewMin = m_deGotoQueue.getFirst().iN1;
-			iNewMax = m_deGotoQueue.getFirst().iN2;
-			m_deGotoQueue.removeFirst();
-		}
-		
-//		Now actually zoom to the new location
-		NewGoTo(iNewMin, iNewMax);
-		
-		total_nats += -1.0 * java.lang.Math.log((iNewMax - iNewMin) / 4096.0);
-		
+		GNRCReturn retval = Get_new_root_coords(miMousex, miMousey);
+		if(GetBoolParameter(Ebp_parameters.BP_OLD_STYLE_PUSH))
+			OldPush(miMousex, miMousey);
+		NewGoTo(retval.iNewMin, retval.iNewMax);
+	}
+	
+	public boolean nextScheduledStep(long time, ArrayList<CSymbolProb> vAdded) {
+		if (vAdded!=null) vAdded.clear();
+		if (m_deGotoQueue.size() == 0) return false;
+		SGotoItem next = m_deGotoQueue.removeFirst();
+		NewGoTo(next.iN1, next.iN2);
 		return true;
 	}
 	
@@ -1220,7 +1201,9 @@ public class CDasherModel extends CDasherComponent {
 		Push_Node(new_under_cross);
 		
 		HandleOutput(new_under_cross, old_under_cross);
-		
+		//ACL TODO: following should(/did) use original newRootmin/max params
+        // not modified versions...
+        total_nats += -1.0 * Math.log((newRootmax - newRootmin) / 4096.0);
 	}
 	
 	/**

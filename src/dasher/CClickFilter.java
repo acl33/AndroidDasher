@@ -86,8 +86,15 @@ public class CClickFilter extends CInputFilter {
 	public boolean Timer(long Time, CDasherView m_DasherView, CDasherModel m_DasherModel) {
 	  // FIXME - REALLY, REALLY horrible - bleh
 	  DasherView = m_DasherView;
-	  boolean retval = m_DasherModel.Tap_on_display(0, 0, Time, null);
-	  if(m_DasherModel.ScheduledSteps() == 0) {
+	  if (m_DasherModel.nextScheduledStep(Time, null)) {
+		  //no steps scheduled. Reached a pause...
+		  assert (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED));
+		  return false;
+	  }
+	  //ok - just executed a scheduled step
+	  assert (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED));
+	  if (m_DasherModel.ScheduledSteps() == 0) {
+		  //that was last scheduled step. Pause...
 		  while(m_DasherModel.CheckForNewRoot(DasherView)) {
 			  // Do nothing. This allows the root to get reparented as many times as
 			  // are necessary before we pause.
@@ -95,7 +102,7 @@ public class CClickFilter extends CInputFilter {
 		  
 		  SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
 	  }
-	  return retval;
+	  return true;
 	}
 
 	/**

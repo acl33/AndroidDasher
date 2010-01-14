@@ -124,21 +124,14 @@ public class CDefaultFilter extends CInputFilter {
 	 * @return True if the model has been changed, false if not.
 	 */
 	public boolean Timer(long Time, CDasherView m_DasherView, CDasherModel m_DasherModel) {
+		boolean bDidSomething = !GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED);
+		if (bDidSomething) {
+			CDasherView.DPoint inputCoords = m_DasherView.getInputDasherCoords();
 		
-		CDasherView.DPoint inputCoords = m_DasherView.getInputDasherCoords();
+			m_DasherModel.oneStepTowards(inputCoords.x,inputCoords.y, Time, null);
 		
-		/* CSFS: Substituted a DPoint class for the returning of Dasher co-ords here */
-		
-		// ApplyAutoCalibration(iDasherX, iDasherY, true);
-		// ApplyTransform(iDasherX, iDasherY);
-		
-		/*  CSFS: These lines didn't appear to do anything */
-		
-		boolean bDidSomething;
-		bDidSomething = m_DasherModel.Tap_on_display(inputCoords.x,inputCoords.y, Time, null);
-		
-		m_AutoSpeedControl.SpeedControl(inputCoords.x, inputCoords.y, m_DasherModel.Framerate(), m_DasherView);
-		
+			m_AutoSpeedControl.SpeedControl(inputCoords.x, inputCoords.y, m_DasherModel.Framerate(), m_DasherView);
+		}
 		if(m_StartHandler != null) {
 			m_StartHandler.Timer(Time, m_DasherView, m_DasherModel);
 		}
