@@ -53,50 +53,58 @@ public abstract class CDasherView extends CDasherComponent {
 	 * Class representing a point on the screen.
 	 */
 	static public class Point {
+		public Point(int x, int y) {this.x=x; this.y=y;}
 		/**
 		 * X co-ord
 		 */
-		public int x;
+		public final int x;
 		/**
 		 * Y co-ord
 		 */
-		public int y;
+		public final int y;
 	}
 
 	/*
 	 * Class representing a point in Dasher space
 	 */
 	static public class DPoint {
+		public DPoint(long x, long y) {this.x=x; this.y=y;}
 		/**
 		 * X co-ord
 		 */
-		public long x;
+		public final long x;
 		/**
 		 * Y co-ord
 		 */
-		public long y;
+		public final long y;
 	}
 
 	/**
 	 * Rectangle in Dasher space
 	 */
 	static public class DRect {
+		public DRect(long minX, long minY, long maxX, long maxY) {
+			this.minX = minX;
+			this.minY = minY;
+			this.maxX = maxX;
+			this.maxY = maxY;
+		}
 		/**
 		 * Larger y co-ord
 		 */
-		public long maxY;
+		public final long maxY;
 		/**
 		 * Smaller y co-ord
 		 */
-		public long minY;
+		public final long minY;
 		/**
 		 * Smaller x co-ord
 		 */
-		public long minX;
+		public final long minX;
 		/**
 		 * Larger x co-ord
 		 */
-		public long maxX;
+		public final long maxX;
 	}
 
 	/**
@@ -386,11 +394,9 @@ public abstract class CDasherView extends CDasherComponent {
 	 */	
 	public void DasherDrawRectangle(long iLeft, long iTop, long iRight, long iBottom, int Color, int iOutlineColour, EColorSchemes ColorScheme, boolean bDrawOutline, boolean bFill, int iThickness) {
 		
-		CDasherView.Point topleft = new CDasherView.Point();
-		CDasherView.Point bottomright = new CDasherView.Point();
 		
-		topleft = Dasher2Screen(iLeft, iTop);
-		bottomright = Dasher2Screen(iRight, iBottom);
+		CDasherView.Point topleft = Dasher2Screen(iLeft, iTop);
+		CDasherView.Point bottomright = Dasher2Screen(iRight, iBottom);
 		
 		Screen().DrawRectangle(topleft.x, topleft.y, bottomright.x, bottomright.y, Color, iOutlineColour, ColorScheme, bDrawOutline, bFill, iThickness);
 	}
@@ -410,9 +416,7 @@ public abstract class CDasherView extends CDasherComponent {
 	 */
 	public void DasherDrawCentredRectangle(long iDasherX, long iDasherY, int iSize, int Color, EColorSchemes ColorScheme, boolean bDrawOutline) {
 		
-		CDasherView.Point centre = new CDasherView.Point();
-		
-		centre = Dasher2Screen(iDasherX, iDasherY);
+		CDasherView.Point centre = Dasher2Screen(iDasherX, iDasherY);
 		
 		Screen().DrawRectangle(centre.x - iSize, centre.y - iSize, centre.x + iSize, centre.y + iSize, Color, -1, ColorScheme, bDrawOutline, true, 1);
 	}
@@ -481,12 +485,10 @@ public abstract class CDasherView extends CDasherComponent {
 		iAnchorY1 = Math.min( VisRegion.maxY, Math.max( VisRegion.minY, iAnchorY1 ) );
 		iAnchorY2 = Math.min( VisRegion.maxY, Math.max( VisRegion.minY, iAnchorY2 ) );
 		
-		CDasherView.Point ScreenAnchor1 = new CDasherView.Point();
-		CDasherView.Point ScreenAnchor2 = new CDasherView.Point();
 		// FIXME - Truncate here before converting - otherwise we risk integer overflow in screen coordinates
 		
-		ScreenAnchor1 = Dasher2Screen(iAnchorX1, iAnchorY1);
-		ScreenAnchor2 = Dasher2Screen(iAnchorX2, iAnchorY2);
+		CDasherView.Point ScreenAnchor1 = Dasher2Screen(iAnchorX1, iAnchorY1);
+		CDasherView.Point ScreenAnchor2 = Dasher2Screen(iAnchorX2, iAnchorY2);
 		
 		// Truncate the ends of the anchor line to be on the screen - this
 		// prevents us from loosing characters off the top and bottom of the

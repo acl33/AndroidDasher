@@ -232,9 +232,6 @@ public class CDasherViewSquare extends CDasherView {
 		
 		super(EventHandler, SettingsStore, DasherScreen);
 		
-		 m_iDasherMin = new CDasherView.DPoint();
-		 m_iDasherMax = new CDasherView.DPoint();
-		
 		m_DelayDraw = new CDelayedDraw();
 		ChangeScreen(DasherScreen);
 		
@@ -700,10 +697,6 @@ public class CDasherViewSquare extends CDasherView {
 		
 		// Things we're likely to need:
 		
-		/* CSFS: Replacement return value since the C++ version uses pass-by-ref */
-		
-		CDasherView.DPoint retval = new CDasherView.DPoint();
-		
 		long iDasherWidth = lpMaxY;
 		long iDasherHeight = lpMaxY;
 		
@@ -711,9 +704,9 @@ public class CDasherViewSquare extends CDasherView {
 		int iScreenHeight = Screen().GetHeight();
 		
 		if( b1D ) { // Special case for 1D mode...
-			retval.x = iInputX * iDasherWidth / iScreenWidth;
-			retval.y = iInputY * iDasherHeight / iScreenHeight;
-			return retval;
+			return new CDasherView.DPoint(
+					iInputX * iDasherWidth / iScreenWidth,
+					iInputY * iDasherHeight / iScreenHeight);
 		}
 		
 		int eOrientation = realOrientation;
@@ -725,33 +718,35 @@ public class CDasherViewSquare extends CDasherView {
 		
 		iScaleFactorX = scale.x;
 		iScaleFactorY = scale.y;
-		
+		long rx,ry;
 		switch(eOrientation) {
 		case Opts.ScreenOrientations.LeftToRight:
-			retval.x = iDasherWidth / 2 - ( iInputX - iScreenWidth / 2 ) * m_iScalingFactor / iScaleFactorX;
-		retval.y = iDasherHeight / 2 + ( iInputY - iScreenHeight / 2 ) * m_iScalingFactor / iScaleFactorY;
+			rx = iDasherWidth / 2 - ( iInputX - iScreenWidth / 2 ) * m_iScalingFactor / iScaleFactorX;
+			ry = iDasherHeight / 2 + ( iInputY - iScreenHeight / 2 ) * m_iScalingFactor / iScaleFactorY;
 		break;
 		case Opts.ScreenOrientations.RightToLeft:
-			retval.x = (iDasherWidth / 2 + ( iInputX - iScreenWidth / 2 ) * m_iScalingFactor/ iScaleFactorX);
-		retval.y = (iDasherHeight / 2 + ( iInputY - iScreenHeight / 2 ) * m_iScalingFactor/ iScaleFactorY);
+			rx = (iDasherWidth / 2 + ( iInputX - iScreenWidth / 2 ) * m_iScalingFactor/ iScaleFactorX);
+			ry = (iDasherHeight / 2 + ( iInputY - iScreenHeight / 2 ) * m_iScalingFactor/ iScaleFactorY);
 		break;
 		case Opts.ScreenOrientations.TopToBottom:
-			retval.x = (iDasherWidth / 2 - ( iInputY - iScreenHeight / 2 ) * m_iScalingFactor/ iScaleFactorY);
-		retval.y = (iDasherHeight / 2 + ( iInputX - iScreenWidth / 2 ) * m_iScalingFactor/ iScaleFactorX);
+			rx = (iDasherWidth / 2 - ( iInputY - iScreenHeight / 2 ) * m_iScalingFactor/ iScaleFactorY);
+			ry = (iDasherHeight / 2 + ( iInputX - iScreenWidth / 2 ) * m_iScalingFactor/ iScaleFactorX);
 		break;
 		case Opts.ScreenOrientations.BottomToTop:
-			retval.x = (iDasherWidth / 2 + ( iInputY - iScreenHeight / 2 ) * m_iScalingFactor/ iScaleFactorY);
-		retval.y = (iDasherHeight / 2 + ( iInputX - iScreenWidth / 2 ) * m_iScalingFactor/ iScaleFactorX);
+			rx = (iDasherWidth / 2 + ( iInputY - iScreenHeight / 2 ) * m_iScalingFactor/ iScaleFactorY);
+			ry = (iDasherHeight / 2 + ( iInputX - iScreenWidth / 2 ) * m_iScalingFactor/ iScaleFactorX);
 		break;
+		default:
+			throw new AssertionError();
 		}
 		
 		// FIXME - disabled to avoid floating point
 		if( bNonlinearity ) {
-			retval.x = (long)(unapplyXMapping(retval.x / (double)lpMaxY) * lpMaxY);
-			retval.y = (long)m_ymap.unmap(retval.y);
+			rx = (long)(unapplyXMapping(rx / (double)lpMaxY) * lpMaxY);
+			ry = (long)m_ymap.unmap(ry);
 		}
 		
-		return retval;
+		return new CDasherView.DPoint(rx, ry);
 	}
 	
 	/**
@@ -805,17 +800,11 @@ public class CDasherViewSquare extends CDasherView {
 	 * factor as its x, and the height factor as its y.
 	 */
 	public CDasherView.DPoint GetScaleFactor(int eOrientation) {
-		CDasherView.DPoint retval = new CDasherView.DPoint();
-		
 		if(( eOrientation == Opts.ScreenOrientations.LeftToRight ) || ( eOrientation == Opts.ScreenOrientations.RightToLeft )) {
-			retval.x = iLRScaleFactorX;
-			retval.y = iLRScaleFactorY;
+			return new CDasherView.DPoint(iLRScaleFactorX, iLRScaleFactorY);
 		} else {
-			retval.x = iTBScaleFactorX;
-			retval.y = iTBScaleFactorY;
+			return new CDasherView.DPoint(iTBScaleFactorX, iTBScaleFactorY);
 		}
-		
-		return retval;
 	}
 	
 	/**
@@ -832,7 +821,6 @@ public class CDasherViewSquare extends CDasherView {
 	 */
 	public CDasherView.Point Dasher2Screen(long iDasherX, long iDasherY) {
 		
-		CDasherView.Point retval = new CDasherView.Point();
 		// Apply the nonlinearities
 		
 		
@@ -855,27 +843,30 @@ public class CDasherViewSquare extends CDasherView {
 		CDasherView.DPoint scale = GetScaleFactor(realOrientation);
 		iScaleFactorX = scale.x;
 		iScaleFactorY = scale.y;
-		
+
+		int rx, ry;
 		switch( realOrientation ) {
 		case Opts.ScreenOrientations.LeftToRight:
-			retval.x = (int)(iScreenWidth / 2 - ( iDasherX - iDasherWidth / 2 ) * iScaleFactorX / m_iScalingFactor);
-			retval.y = (int)(iScreenHeight / 2 + ( iDasherY - iDasherHeight / 2 ) * iScaleFactorY / m_iScalingFactor);
+			rx = (int)(iScreenWidth / 2 - ( iDasherX - iDasherWidth / 2 ) * iScaleFactorX / m_iScalingFactor);
+			ry = (int)(iScreenHeight / 2 + ( iDasherY - iDasherHeight / 2 ) * iScaleFactorY / m_iScalingFactor);
 		break;
 		case Opts.ScreenOrientations.RightToLeft:
-			retval.x = (int)(iScreenWidth / 2 + ( iDasherX - iDasherWidth / 2 ) * iScaleFactorX / m_iScalingFactor);
-			retval.y = (int)(iScreenHeight / 2 + ( iDasherY - iDasherHeight / 2 ) * iScaleFactorY / m_iScalingFactor);
+			rx = (int)(iScreenWidth / 2 + ( iDasherX - iDasherWidth / 2 ) * iScaleFactorX / m_iScalingFactor);
+			ry = (int)(iScreenHeight / 2 + ( iDasherY - iDasherHeight / 2 ) * iScaleFactorY / m_iScalingFactor);
 		break;
 		case Opts.ScreenOrientations.TopToBottom:
-			retval.x = (int)(iScreenWidth / 2 + ( iDasherY - iDasherHeight / 2 ) * iScaleFactorX / m_iScalingFactor);
-			retval.y = (int)(iScreenHeight / 2 - ( iDasherX - iDasherWidth / 2 ) * iScaleFactorY / m_iScalingFactor);
+			rx = (int)(iScreenWidth / 2 + ( iDasherY - iDasherHeight / 2 ) * iScaleFactorX / m_iScalingFactor);
+			ry = (int)(iScreenHeight / 2 - ( iDasherX - iDasherWidth / 2 ) * iScaleFactorY / m_iScalingFactor);
 		break;
 		case Opts.ScreenOrientations.BottomToTop:
-			retval.x = (int)(iScreenWidth / 2 + ( iDasherY - iDasherHeight / 2 ) * iScaleFactorX / m_iScalingFactor);
-			retval.y = (int)(iScreenHeight / 2 + ( iDasherX - iDasherWidth / 2 ) * iScaleFactorY / m_iScalingFactor);
+			rx = (int)(iScreenWidth / 2 + ( iDasherY - iDasherHeight / 2 ) * iScaleFactorX / m_iScalingFactor);
+			ry = (int)(iScreenHeight / 2 + ( iDasherX - iDasherWidth / 2 ) * iScaleFactorY / m_iScalingFactor);
 		break;
+		default:
+			throw new AssertionError();
 		}
 		
-		return retval;
+		return new CDasherView.Point(rx, ry);
 	}
 	
 	/**
@@ -893,8 +884,6 @@ public class CDasherViewSquare extends CDasherView {
 	 */
 	public CDasherView.DRect VisibleRegion() {
 		
-		CDasherView.DRect retval = new CDasherView.DRect();
-				
 		if(!m_bVisibleRegionValid) {
 			
 					
@@ -920,12 +909,8 @@ public class CDasherViewSquare extends CDasherView {
 			m_bVisibleRegionValid = true;
 		}
 		
-		retval.maxX = m_iDasherMax.x;
-		retval.maxY = m_iDasherMax.y;
-		retval.minX = m_iDasherMin.x;
-		retval.minY = m_iDasherMin.y;
-		
-		return retval;
+		return new CDasherView.DRect(m_iDasherMin.x, m_iDasherMin.y,
+				m_iDasherMax.x, m_iDasherMax.y);
 	}
 	
 
@@ -963,7 +948,7 @@ public class CDasherViewSquare extends CDasherView {
 		boolean b1D = GetBoolParameter(Ebp_parameters.BP_NUMBER_DIMENSIONS);
 		// First convert the supplied co-ordinates to 'linear' Dasher co-ordinates
 			
-		CDasherView.DPoint retval = new CDasherView.DPoint();
+		CDasherView.DPoint retval;
 		
 		switch (iType) {
 		case 0:
@@ -973,13 +958,10 @@ public class CDasherViewSquare extends CDasherView {
 			break;
 		case 1:
 			// Raw dasher coordinates
-			
-			retval.x = iInputX;
-			retval.y = iInputY;
+			retval = new CDasherView.DPoint(iInputX, iInputY);
 			break;
 		default:
-			// ERROR
-			break;
+			throw new AssertionError();
 		}
 		
 		// Apply y scaling
@@ -998,7 +980,8 @@ public class CDasherViewSquare extends CDasherView {
 					dYScale = Screen().GetWidth() / (double)(GetLongParameter(Elp_parameters.LP_YSCALE));
 				}
 				
-				retval.y = (long)((retval.y - lpMaxY/2) * dYScale + lpMaxY/2);
+				retval = new CDasherView.DPoint(retval.x,
+						(long)((retval.y - lpMaxY/2) * dYScale + lpMaxY/2));
 			}
 		}
 		
@@ -1017,22 +1000,17 @@ public class CDasherViewSquare extends CDasherView {
 		
 		// I think that this function is now obsolete
 		
-		CDasherView.Point retval = new CDasherView.Point();
-		
-		retval.x = iX;
-		retval.y = iY;
-		
 		if(iX < 0)
-			retval.x = 0;
+			iX = 0;
 		if(iX > Screen().GetWidth())
-			retval.x = Screen().GetWidth();
+			iX = Screen().GetWidth();
 			
-			if(iY < 0)
-				retval.y = 0;
-			if(iY > Screen().GetHeight())
-				retval.y = Screen().GetHeight();
+		if(iY < 0)
+			iY = 0;
+		if(iY > Screen().GetHeight())
+			iY = Screen().GetHeight();
 		
-		return retval;
+		return new CDasherView.Point(iX, iY);
 	}
 	
 	/**
