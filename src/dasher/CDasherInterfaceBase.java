@@ -1256,20 +1256,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	}
 	
 	/**
-	 * Deferred to m_DasherView. If this is
-	 * null, -1 is returned.
-	 * 
-	 * @return -1 if null, or else DasherView's answer.
-	 * @see CDasherView
-	 */
-	public int GetAutoOffset() {
-		if(m_DasherView != null) {
-			return m_DasherView.GetAutoOffset();
-		}
-		return -1;
-	}
-	
-	/**
 	 * Deferred to CDasherModel
 	 * 
 	 * @see CDasherModel

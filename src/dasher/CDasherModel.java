@@ -56,7 +56,7 @@ public class CDasherModel extends CDasherComponent {
 	/**
 	 * The Interface to which this Model belongs.
 	 */
-	private final CDasherInterfaceBase m_DasherInterface;
+	/*package*/final CDasherInterfaceBase m_DasherInterface;
 	
 /////////////////////////////////////////////////////////////////////////////
 	

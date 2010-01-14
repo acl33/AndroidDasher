@@ -152,14 +152,7 @@ public class CDasherViewSquare extends CDasherView {
 	 * Height of our current screen in pixels
 	 */
 	protected int CanvasY;
-	
-	/**
-	 * Nominally an offset which will be auto-calibrated
-	 * and applied to input co-ordinates. At present this is
-	 * always zero.
-	 */	
-	protected int m_yAutoOffset;
-	
+		
 	/**
 	 * Helper for y mapping.
 	 */
@@ -241,11 +234,6 @@ public class CDasherViewSquare extends CDasherView {
 		
 		 m_iDasherMin = new CDasherView.DPoint();
 		 m_iDasherMax = new CDasherView.DPoint();
-		
-		// TODO - AutoOffset should be part of the eyetracker input filter
-		// Make sure that the auto calibration is set to zero berfore we start
-		
-		m_yAutoOffset = 0;
 		
 		m_DelayDraw = new CDelayedDraw();
 		ChangeScreen(DasherScreen);
@@ -949,18 +937,15 @@ public class CDasherViewSquare extends CDasherView {
 	/** 
 	 * Convert abstract 'input coordinates', which may or may not
 	 * correspond to actual screen positions, depending on the settings,
-	 * into dasher co-ordinates. Modes are:
-	 * <p>
-	 * 0 = Direct (ie mouse)<br>
-	 * 1 = 1D<br>
-	 * 2 = Eyetracker
+	 * into dasher co-ordinates.
 	 * <p>
 	 * This should be done once initially, then we work in Dasher
 	 * co-ordinates for everything else. Input co-ordinates will be
 	 * assumed to range over the extent of the screen.
 	 * <p>
-	 * Internally, we essentially
-	 * <ol><li>Apply m_yAutoOffset to the y co-ordinate if this is an Eyetracker
+	 * Internally, we work in three modes: Direct (ie mouse), 1D and Eyetracker.
+	 * Essentially, we
+	 * <ol>
 	 * <li>Feed screen co-ordinates through Screen2Dasher with the
 	 * appropriate flags (1D and Nonlinear as necessary)
 	 * <li>Apply y co-ordinate scaling if this is a 1D device.
@@ -970,13 +955,12 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param iInputY Input y co-ordinate
 	 * @param iType 0 if input co-ordinates are in pixels
 	 * or 1 if in Dasher co-ordinates
-	 * @param iMode See table above
 	 * @return Dasher world point corresponding but not necessarily
 	 * in the same place as this input point.
 	 */
-	public CDasherView.DPoint Input2Dasher(int iInputX, int iInputY, int iType, int iMode) {
-		
+	public CDasherView.DPoint Input2Dasher(int iInputX, int iInputY, int iType) {
 		// FIXME - need to incorporate one-button mode?
+		boolean b1D = GetBoolParameter(Ebp_parameters.BP_NUMBER_DIMENSIONS);
 		// First convert the supplied co-ordinates to 'linear' Dasher co-ordinates
 			
 		CDasherView.DPoint retval = new CDasherView.DPoint();
@@ -985,18 +969,7 @@ public class CDasherViewSquare extends CDasherView {
 		case 0:
 			// Raw secreen coordinates
 			
-			// TODO - autocalibration should be at the level of the eyetracker filter
-			if(iMode == 2) {
-				// First apply the autocalibration offset
-				iInputY += (int) (m_yAutoOffset);   // FIXME - we need more flexible autocalibration to work with orientations other than left-to-right
-			}
-			
-			if( iMode == 0 )
-				retval = Screen2Dasher( iInputX, iInputY, false, true );
-			else if( iMode == 1 )
-				retval = Screen2Dasher( iInputX, iInputY, true, false );
-			else
-				retval = Screen2Dasher( iInputX, iInputY, false, true );
+			retval = Screen2Dasher( iInputX, iInputY, b1D, !b1D);
 			break;
 		case 1:
 			// Raw dasher coordinates
@@ -1013,7 +986,7 @@ public class CDasherViewSquare extends CDasherView {
 		
 		// TODO: Check that this is still doing something vaguely sensible - I think it isn't
 		
-		if(iMode == 1 ) {
+		if(b1D) {
 			if( GetLongParameter(Elp_parameters.LP_YSCALE) > 0 ) {
 				
 				double dYScale;
@@ -1063,13 +1036,6 @@ public class CDasherViewSquare extends CDasherView {
 	}
 	
 	/**
-	 * Calls getInputDasherCoords(mousex, mousey, null)
-	 */
-	public CDasherView.DPoint getInputDasherCoords() {
-		return getInputDasherCoords(null);
-	}
-	
-	/**
 	 * Gets the point in the Dasher world currently pointed
 	 * to by our input device.
 	 * <p>
@@ -1078,12 +1044,7 @@ public class CDasherViewSquare extends CDasherView {
 	 * through Input2Dasher.
 	 * @param Added Ignored, may be null
 	 */
-	public CDasherView.DPoint getInputDasherCoords(ArrayList<CSymbolProb> Added) {
-		
-		/* CSFS: int * parameter "pNumDeleted" removed as according to notes in
-		 * CDasherView.
-		 */ 	
-	
+	public CDasherView.DPoint getInputDasherCoords() {
 		
 		// FIXME - rename this something more appropriate (all this really should do is convert the coordinates)
 		
@@ -1096,15 +1057,13 @@ public class CDasherViewSquare extends CDasherView {
 		
 		// FIXME - optimise this
 		
-		int iCoordinateCount = (GetCoordinateCount());
+		long[] Coordinates = new long[GetCoordinateCount()];
 		
-		long[] Coordinates = new long[iCoordinateCount];
-		
-		int iType = (GetCoordinates(iCoordinateCount, Coordinates));
+		int iType = (GetCoordinates(Coordinates));
 		
 		int mousex, mousey;
 		
-		if(iCoordinateCount == 1) {
+		if(Coordinates.length == 1) {
 			mousex = 0;
 			mousey = (int)Coordinates[0];
 		}
@@ -1113,20 +1072,9 @@ public class CDasherViewSquare extends CDasherView {
 			mousey = (int)Coordinates[1];
 		}
 		
-		// TODO: Mode probably isn't being used any more
-		
 		// Convert the input co-ordinates to dasher co-ordinates
 		
-		int mode;
-		
-		if(GetBoolParameter(Ebp_parameters.BP_NUMBER_DIMENSIONS))
-			mode = 1;
-		else if(GetBoolParameter(Ebp_parameters.BP_EYETRACKER_MODE))
-			mode = 2;
-		else
-			mode = 0;
-		
-		CDasherView.DPoint retval = Input2Dasher(mousex, mousey, iType, mode);
+		CDasherView.DPoint retval = Input2Dasher(mousex, mousey, iType);
 		
 		/* CSFS: As well as extensive replacement of functions which used 
 		 * primitives by reference, I've removed code which saved co-ordinates
@@ -1183,13 +1131,6 @@ public class CDasherViewSquare extends CDasherView {
 	 */
 	
 	/**
-	 * Sets m_yAutoOffset back to zero.
-	 */
-	public void ResetYAutoOffset() {
-		m_yAutoOffset = 0;
-	}
-	
-	/**
 	 * Sets a new screen, invalidates our current visible region,
 	 * and recalls SetScalingFactor, since the relationships between
 	 * Dasher and Screen co-ordinates may well have changed at this
@@ -1211,30 +1152,6 @@ public class CDasherViewSquare extends CDasherView {
 		SetScaleFactor();
 	}
 	
-	/**
-	 * Gets m_yAutoOffset, the y-coordinate screen offset to be applied
-	 * for eyetracker devices.
-	 */
-	public int GetAutoOffset() {
-		return m_yAutoOffset;
-	}
-	
-	/* CSFS: The following method had a large body but returned on its first
-	 * line. Presumably this is dead code; deleted and modified its only
-	 * calling routine so that it doesn't call it anymore.
-	 * 
-	public CDasherScreen.Point AutoCalibrate(int mousex, int mousey) {
-		return;
-	}
-
-	 */
-	
-	
-		
-	/* CSFS: Another method which was apparently dead: DrawGameModePointer. Again
-	 * I've edited out references to it.
-	 */
-
 	/**
 	 * Defers to m_ymap.map
 	 * 

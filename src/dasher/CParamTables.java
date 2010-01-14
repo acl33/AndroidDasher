@@ -63,7 +63,6 @@ public class CParamTables {
 			  new bp_table(Ebp_parameters.BP_OUTLINE_MODE, "OutlineBoxes", PERS, true, "OutlineBoxes"),
 			  new bp_table(Ebp_parameters.BP_PALETTE_CHANGE, "PaletteChange", PERS, true, "PaletteChange"),
 			  new bp_table(Ebp_parameters.BP_NUMBER_DIMENSIONS, "NumberDimensions", PERS, false, "NumberDimensions"),
-			  new bp_table(Ebp_parameters.BP_EYETRACKER_MODE, "EyetrackerMode", PERS, false, "EyetrackerMode"),
 			  new bp_table(Ebp_parameters.BP_AUTOCALIBRATE, "Autocalibrate", PERS, true, "Autocalibrate"),
 			  new bp_table(Ebp_parameters.BP_DASHER_PAUSED, "DasherPaused", !PERS, true, "Dasher Paused"),
 			  new bp_table(Ebp_parameters.BP_GAME_MODE, "GameMode", PERS, false, "Dasher Game Mode"),

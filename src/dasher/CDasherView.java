@@ -245,17 +245,16 @@ public abstract class CDasherView extends CDasherComponent {
 	/**
 	 * Deferred to m_Input
 	 * 
-	 * @param iN Number of co-ordinates
 	 * @param Coordinates Array to fill with co-ordinates
 	 * @return 0 if the returned co-ordinates are screen co-ordinates,
 	 * 1 if Dasher co-ordinates. 0 will also be returned if there
 	 * is currently no input device. 
 	 */
-	public int GetCoordinates(int iN, long[] Coordinates) {
+	public int GetCoordinates(long[] Coordinates) {
 		if(m_Input != null)
-			return m_Input.GetCoordinates(iN, Coordinates);
-			else
-				return 0;
+			return m_Input.GetCoordinates(Coordinates);
+		else
+			return 0;
 	}
 	
 	/**
@@ -298,7 +297,7 @@ public abstract class CDasherView extends CDasherComponent {
 		iMaxCoordinates[0] = lpMaxY;
 		iMaxCoordinates[1] = lpMaxY;
 		
-		m_Input.SetMaxCoordinates(2, iMaxCoordinates);
+		m_Input.SetMaxCoordinates(iMaxCoordinates);
 	}
 	
 	/**
@@ -624,25 +623,6 @@ public abstract class CDasherView extends CDasherComponent {
 	public abstract CDasherView.DPoint getInputDasherCoords();
 	
 	/**
-	 * Converts a pair of input co-ordinates to dasher co-ordinates.
-	 * <p>
-	 * Also takes account of the type of input device we're using,
-	 * so that one-dimensional devices and eyetrackers are corrected
-	 * appropriately.
-	 * <p>
-	 * This last parameter is redundant.
-	 * <p><i>This method has been renamed from TapOnDisplay</i>
-	 * @param Added Redundant
-	 * 
-	 * @return Dasher co-ordinates corresponding to this input point
-	 */
-	public abstract CDasherView.DPoint getInputDasherCoords(ArrayList<CSymbolProb> Added);
-	
-	/* CSFS: this method used to have an extra parameter, pNumDeleted, which defaulted to zero.
-	 * Since no method ever actually passes this parameter, I've deleted it.
-	 */
-	
-	/**
 	 * Should convert a given screen co-ordinate to dasher co-ordinates.
 	 * 
 	 * @param iInputX Screen x co-ordinate  
@@ -671,20 +651,10 @@ public abstract class CDasherView extends CDasherComponent {
 	 * @param iInputX Input x co-ordinate
 	 * @param iInputY Input y co-ordinate
 	 * @param iType Input co-ordinate scheme: 0 for Screen or 1 for Dasher co-ordintes
-	 * @param iMode Input device mode; 0 for normal, 1 for 1D and 2 for eyetracker
 	 * @return Dasher co-ordinates corresponding to given input co-ordinates
 	 */
-	protected abstract CDasherView.DPoint Input2Dasher(int iInputX, int iInputY, int iType, int iMode);
-	
-	/**
-	 * Stub; Returns 0
-	 * 
-	 * @return 0
-	 */
-	public int GetAutoOffset() {
-	    return 0;
-	}
-	
+	protected abstract CDasherView.DPoint Input2Dasher(int iInputX, int iInputY, int iType);
+		
 	/**
 	 * Draws a square aligned to the y axis and between given y co-ordinates
 	 * 

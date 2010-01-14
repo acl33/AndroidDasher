@@ -60,19 +60,17 @@ abstract public class CDasherInput extends CDasherModule {
 	 * return. These are given as Dasher-world co-ordinates and
 	 * should be translated if necessary.
 	 * 
-	 * @param iN Number of co-ordinates specified
-	 * @param iDasherMax Maximum co-ordinates.
+	 * @param iDasherMax Array of desired number of maximum co-ordinates.
 	 */
-	public void SetMaxCoordinates(int iN, long[] iDasherMax) {}
+	public void SetMaxCoordinates(long[] iDasherMax) {}
 	
 	/**
 	 * Called to request that the device report the current co-ordinates.
 	 * 
-	 * @param iN Number of co-ordinates expected.
-	 * @param Coordinates Fill with the current co-ordinates
+	 * @param Coordinates Array of desired number of elements to fill with current co-ordinates
 	 * @return 0 if those reported are screen co-ordinates, or 1 if they are Dasher world co-ordinates.
 	 */
-	public abstract int GetCoordinates(int iN, long[] Coordinates);
+	public abstract int GetCoordinates(long[] Coordinates);
 	
 	/// Get the number of co-ordinates that this device supplies
 	///

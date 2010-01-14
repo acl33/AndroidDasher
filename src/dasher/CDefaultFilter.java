@@ -219,16 +219,14 @@ public class CDefaultFilter extends CInputFilter {
 	 */
 	public void DrawMouse(CDasherView View) {
 		
-		int iCoordinateCount = (View.GetCoordinateCount());
+		long[] Coordinates = (new long[View.GetCoordinateCount()]);
 		
-		long[] Coordinates = (new long[iCoordinateCount]);
-		
-		int iType = (View.GetCoordinates(iCoordinateCount, Coordinates));
+		int iType = View.GetCoordinates(Coordinates);
 		
 		int mousex;
 		int mousey;
 		
-		if(iCoordinateCount == 1) {
+		if(Coordinates.length == 1) {
 			mousex = 0;
 			mousey = (int)Coordinates[0];
 		}
@@ -242,16 +240,7 @@ public class CDefaultFilter extends CInputFilter {
 			 */
 		}
 		
-		int mode;
-		
-		if(GetBoolParameter(Ebp_parameters.BP_NUMBER_DIMENSIONS))
-			mode = 1;
-		else if(GetBoolParameter(Ebp_parameters.BP_EYETRACKER_MODE))
-			mode = 2;
-		else
-			mode = 0;
-		
-		CDasherView.DPoint dashXY = View.Input2Dasher(mousex, mousey, iType, mode);
+		CDasherView.DPoint dashXY = View.Input2Dasher(mousex, mousey, iType);
 		
 		// ApplyAutoCalibration(iDasherX, iDasherY, false);
 		// ApplyTransform(iDasherX, iDasherY);
@@ -275,16 +264,14 @@ public class CDefaultFilter extends CInputFilter {
 	 */
 	public void DrawMouseLine(CDasherView View) {
 		
-		int iCoordinateCount = (View.GetCoordinateCount());
+		long[] Coordinates = new long[View.GetCoordinateCount()];
 		
-		long[] Coordinates = (new long[iCoordinateCount]);
-		
-		int iType = (View.GetCoordinates(iCoordinateCount, Coordinates));
+		int iType = View.GetCoordinates(Coordinates);
 		
 		int mousex;
 		int mousey;
 		
-		if(iCoordinateCount == 1) {
+		if(Coordinates.length == 1) {
 			mousex = 0;
 			mousey = (int)Coordinates[0];
 		}
@@ -305,16 +292,7 @@ public class CDefaultFilter extends CInputFilter {
 		// probably be using a cached value rather than computing this
 		// separately to TapOn
 		
-		int mode;
-		
-		if(GetBoolParameter(Ebp_parameters.BP_NUMBER_DIMENSIONS))
-			mode = 1;
-		else if(GetBoolParameter(Ebp_parameters.BP_EYETRACKER_MODE))
-			mode = 2;
-		else
-			mode = 0;
-		
-		CDasherView.DPoint newXY = View.Input2Dasher(mousex, mousey, iType, mode);
+		CDasherView.DPoint newXY = View.Input2Dasher(mousex, mousey, iType);
 		x[1] = newXY.x;
 		y[1] = newXY.y;
 		
