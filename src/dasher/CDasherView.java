@@ -338,12 +338,7 @@ public abstract class CDasherView extends CDasherComponent {
 		for(int i = (0); i < n; ++i)
 			ScreenPoints[i] = Dasher2Screen(x[i], y[i]);
 		
-		if(iColour != -1) {
-			Screen().Polyline(ScreenPoints, n, iWidth, iColour);
-		}
-		else {
-			Screen().Polyline(ScreenPoints, n, iWidth);
-		}
+		Screen().Polyline(ScreenPoints, iWidth, iColour);
 	}
 	
 //	Draw a filled polygon specified in Dasher co-ordinates
@@ -370,7 +365,7 @@ public abstract class CDasherView extends CDasherComponent {
 		for(int i = (0); i < n; ++i)
 			ScreenPoints[i] = Dasher2Screen(x[i], y[i]);
 		
-		Screen().Polygon(ScreenPoints, n, iColour);
+		Screen().Polygon(ScreenPoints, iColour, -1, 0);
 	}
 	
 
@@ -385,20 +380,18 @@ public abstract class CDasherView extends CDasherComponent {
 	 * @param iTop Top y co-ordinate
 	 * @param iRight Right side x co-ordinate
 	 * @param iBottom Bottom y co-ordinate
-	 * @param Color Fill colour
-	 * @param iOutlineColour Outline colour
+	 * @param Color Fill colour, -1 => don't fill
+	 * @param iOutlineColour Outline colour (-1 => use default)
 	 * @param ColorScheme Colour scheme to use (usually ignored in favour of colour indices now)
-	 * @param bDrawOutline Should we draw an outline?
-	 * @param bFill Filled?
-	 * @param iThickness Outline thickness
+	 * @param iThickness Outline thickness (<1 => don't outline)
 	 */	
-	public void DasherDrawRectangle(long iLeft, long iTop, long iRight, long iBottom, int Color, int iOutlineColour, EColorSchemes ColorScheme, boolean bDrawOutline, boolean bFill, int iThickness) {
+	public void DasherDrawRectangle(long iLeft, long iTop, long iRight, long iBottom, int Color, int iOutlineColour, EColorSchemes ColorScheme, int iThickness) {
 		
 		
 		CDasherView.Point topleft = Dasher2Screen(iLeft, iTop);
 		CDasherView.Point bottomright = Dasher2Screen(iRight, iBottom);
 		
-		Screen().DrawRectangle(topleft.x, topleft.y, bottomright.x, bottomright.y, Color, iOutlineColour, ColorScheme, bDrawOutline, bFill, iThickness);
+		Screen().DrawRectangle(topleft.x, topleft.y, bottomright.x, bottomright.y, Color, iOutlineColour, ColorScheme, iThickness);
 	}
 	
 //	/ Draw a rectangle centred on a given dasher co-ordinate, but with a size specified in screen co-ordinates (used for drawing the mouse blob)
@@ -418,7 +411,7 @@ public abstract class CDasherView extends CDasherComponent {
 		
 		CDasherView.Point centre = Dasher2Screen(iDasherX, iDasherY);
 		
-		Screen().DrawRectangle(centre.x - iSize, centre.y - iSize, centre.x + iSize, centre.y + iSize, Color, -1, ColorScheme, bDrawOutline, true, 1);
+		Screen().DrawRectangle(centre.x - iSize, centre.y - iSize, centre.x + iSize, centre.y + iSize, Color, bDrawOutline ? 3 : -1, ColorScheme, 1);
 	}
 	
 	/**

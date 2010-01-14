@@ -93,13 +93,12 @@ public interface CDasherScreen {
 	* @param y1 top left corner of rectangle (y coordinate)
 	* @param x2 bottom right of rectangle (x coordinate)
 	* @param y2 bottom right of rectangle (y coordinate)
-	* @param Color the colour to be used (numeric)
+	* @param iFillColour fill colour to be used (numeric, -1 => don't fill)
+	* @param iOutlineColour colour to draw outline (numeric, -1 => don't outline)
 	* @param ColorScheme Which colourscheme is to be used
-	* @param bDrawOutline Whether to draw an outline or not
-	* @param bFill Whether to fill or not
-	* @param iThickness Line thickness for outline
+	* @param iThickness Line thickness for outline (<1 => don't outline)
 	*/
-	public abstract void DrawRectangle(int x1, int y1, int x2, int y2, int Color, int iOutlineColour, EColorSchemes ColorScheme, boolean bDrawOutline, boolean bFill, int iThickness);
+	public abstract void DrawRectangle(int x1, int y1, int x2, int y2, int iFillColour, int iOutlineColour, EColorSchemes ColorScheme, int iThickness);
 	
 	/**
 	 * Draw a circle
@@ -113,23 +112,13 @@ public interface CDasherScreen {
 	public abstract void DrawCircle(int iCX, int iCY, int iR, int iColour, boolean bFill);
 	
 	/**
-	 * Draws a sequence of lines in a fixed colour, usually black.
-	 * 
-	 * @param Points Array of Points describing the vertices of the line.
-	 * @param Number Number of points
-	 * @param iWidth Line width
-	 */
-	public abstract void Polyline(CDasherView.Point[] Points, int Number, int iWidth) ;
-	
-	/**
 	 * Draws a sequence of lines.
 	 * 
 	 * @param Points Array of Points describing the vertices of the line.
-	 * @param Number Number of points
 	 * @param iWidth Line width
-	 * @param Colour Colour number
+	 * @param Colour Colour number. Use -1 if you don't want to specify a colour...
 	 */
-	public abstract void Polyline(CDasherView.Point[] Points, int Number, int iWidth, int Colour);
+	public abstract void Polyline(CDasherView.Point[] Points, int iWidth, int Colour);
 	
    /**
 	* Draw a filled polygon - given vertices and color id.
@@ -140,23 +129,11 @@ public interface CDasherScreen {
 	*
 	* @param Points array of points defining the edge of the polygon
 	* @param Number number of points in the array
-	* @param Color colour of the polygon (numeric)
+	* @param fillColour colour of the polygon (numeric)
+	* @param iOutlineColour colour for border (-1 => no border)
+	* @param iWidth line width of border (<1 => no border)
 	*/
-	public abstract void Polygon(CDasherView.Point[] Points, int Number, int Color);
-	
-	/**
-	* Draw a filled polygon - given vertices, width and color id.
-	* This is not (currently) used in standard Dasher. However, it could be very
-	* useful in the future. Please implement unless it will be very difficult,
-	* in which case make this function call Polyline.
-	* Draw a filled polygon
-	*
-	* @param Points array of points defining the edge of the polygon
-	* @param Number number of points in the array
-	* @param Color colour of the polygon (numeric)
-	* @param iWidth Width of the polygon border to draw
-	*/
-	public abstract void Polygon(CDasherView.Point[] Points, int Number, int Color, int iWidth);
+	public abstract void Polygon(CDasherView.Point[] Points, int fillColour, int iOutlineColour, int iWidth);
 	
 	/**
 	 * Signals the beginning of a new frame.

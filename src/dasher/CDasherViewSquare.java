@@ -544,7 +544,7 @@ public class CDasherViewSquare extends CDasherView {
 		// FIXME - get rid of pointless assignment below
 		
 		if(lpTruncation == 0) {        // Regular squares
-			DasherDrawRectangle(Math.min(iDasherSize,visreg.maxX), Math.min(y2,visreg.maxY), 0, Math.max(y1,visreg.minY), Color, -1, ColorScheme, GetBoolParameter(Ebp_parameters.BP_OUTLINE_MODE), true, 1);
+			DasherDrawRectangle(Math.min(iDasherSize,visreg.maxX), Math.min(y2,visreg.maxY), 0, Math.max(y1,visreg.minY), Color, -1, ColorScheme, GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) ? 1 : 0);
 		}
 		else {
 			int iDasherY = (int)lpMaxY;
@@ -1098,7 +1098,7 @@ public class CDasherViewSquare extends CDasherView {
 		p[2] = Dasher2Screen( iHeight, iDasherMax);
 		p[3] = Dasher2Screen( 0, iDasherMax);
 		
-		Screen().Polyline(p, 4, iWidth, iColour);
+		Screen().Polyline(p, iWidth, iColour);
 	}
 	
 //	TODO: Autocalibration should be in the eyetracker filter class

@@ -31,7 +31,7 @@ public class DasherWidget extends GLSurfaceView implements CDasherScreen {
 			public void onDrawFrame(GL10 gl) {
 				assert (DasherWidget.this.gl == gl);
 				DasherWidget.this.intf.NewFrame(System.currentTimeMillis());
-				//TODO, request redraw after an appropriate delay...
+				requestRender();
 			}
 		
 			public void onSurfaceChanged(GL10 gl, int width, int height) {
@@ -42,13 +42,15 @@ public class DasherWidget extends GLSurfaceView implements CDasherScreen {
 			}
 		
 			public void onSurfaceCreated(GL10 gl, EGLConfig config) {
-				// TODO Auto-generated method stub
+				gl.glShadeModel(GL_FLAT);
+				gl.glEnable(GL_BLEND);
+				gl.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 			}
 		});
 		intf.ChangeScreen(this);
 	}
 	public void Blank() {
-		// TODO Auto-generated method stub
 		gl.glDisable(GL_TEXTURE_2D);
 		gl.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 		gl.glClear(GL_COLOR_BUFFER_BIT);
@@ -64,22 +66,22 @@ public class DasherWidget extends GLSurfaceView implements CDasherScreen {
 		
 	}
 
-	public void DrawRectangle(int x1, int y1, int x2, int y2, int Color,
+	public void DrawRectangle(int x1, int y1, int x2, int y2, int iFillColour,
 			int iOutlineColour, EColorSchemes ColorScheme,
-			boolean bDrawOutline, boolean bFill, int iThickness) {
+			int iThickness) {
 		gl.glDisable(GL_TEXTURE_2D);
         gl.glEnableClientState(GL_VERTEX_ARRAY);
         short sx1=(short)x1,sx2=(short)x2,sy1=(short)y1,sy2=(short)y2;
-        if (bFill) {//(aFillColorIndex != -1) {
-                gl.glColor4f(colourScheme.GetRed(Color),
-                		colourScheme.GetGreen(Color),
-                		colourScheme.GetBlue(Color),
+        if (iFillColour != -1) {
+                gl.glColor4f(colourScheme.GetRed(iFillColour),
+                		colourScheme.GetGreen(iFillColour),
+                		colourScheme.GetBlue(iFillColour),
                 		1.0f);
                 Buffer coords = ShortBuffer.wrap(new short[] {sx1,sy1, sx2,sy1, sx1,sy2, sx2,sy2});
                 gl.glVertexPointer(2, GL_SHORT, 0, coords);
                 gl.glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         }
-        if (bDrawOutline) {//(iThickness>0) {
+        if (iThickness>0) {
                 if (iOutlineColour == -1) iOutlineColour = 3;
                 gl.glColor4f(colourScheme.GetRed(iOutlineColour),
                 		colourScheme.GetGreen(iOutlineColour),
@@ -105,22 +107,12 @@ public class DasherWidget extends GLSurfaceView implements CDasherScreen {
 		return width;
 	}
 
-	public void Polygon(Point[] Points, int Number, int Color) {
+	public void Polygon(Point[] Points, int iFillColour, int iOutlineColour, int iWidth) {
 		// TODO Auto-generated method stub
 		
 	}
 
-	public void Polygon(Point[] Points, int Number, int Color, int iWidth) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	public void Polyline(Point[] Points, int Number, int iWidth) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	public void Polyline(Point[] Points, int Number, int iWidth, int Colour) {
+	public void Polyline(Point[] Points, int iWidth, int Colour) {
 		// TODO Auto-generated method stub
 		
 	}
@@ -130,14 +122,14 @@ public class DasherWidget extends GLSurfaceView implements CDasherScreen {
 		
 	}
 
-	public void SetColourScheme(CCustomColours ColourScheme) {
-		// TODO Auto-generated method stub
+	public void SetColourScheme(CCustomColours colourScheme) {
+		this.colourScheme = colourScheme;
 		
 	}
 
 	public Point TextSize(String string, int Size) {
 		// TODO Auto-generated method stub
-		return null;
+		return new Point(0,0);
 	}
 
 }
