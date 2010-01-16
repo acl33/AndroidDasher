@@ -1,6 +1,7 @@
 package dasher.android;
 
 import java.nio.Buffer;
+import java.nio.ByteBuffer;
 import java.nio.ShortBuffer;
 
 import javax.microedition.khronos.egl.EGLConfig;
@@ -25,7 +26,6 @@ public class DasherWidget extends GLSurfaceView implements CDasherScreen {
 	public DasherWidget(Context context, AndroidDasherInterface intf) {
 		super(context);
 		setDebugFlags(DEBUG_CHECK_GL_ERROR | DEBUG_LOG_GL_CALLS);
-		setRenderMode(RENDERMODE_WHEN_DIRTY);
 		this.intf=intf;
 		setRenderer(new Renderer() {
 			public void onDrawFrame(GL10 gl) {
@@ -35,7 +35,11 @@ public class DasherWidget extends GLSurfaceView implements CDasherScreen {
 			}
 		
 			public void onSurfaceChanged(GL10 gl, int width, int height) {
-				DasherWidget.this.width=width;
+				gl.glViewport(0,0, width, height);
+				gl.glMatrixMode(GL_PROJECTION);
+			    gl.glLoadIdentity();
+			    gl.glOrthox(0, width, height, 0, -1, 1);
+			    DasherWidget.this.width=width;
 				DasherWidget.this.height=height;
 				DasherWidget.this.gl=gl;
 				DasherWidget.this.intf.ChangeScreen(DasherWidget.this);
@@ -45,10 +49,12 @@ public class DasherWidget extends GLSurfaceView implements CDasherScreen {
 				gl.glShadeModel(GL_FLAT);
 				gl.glEnable(GL_BLEND);
 				gl.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
+				gl.glMatrixMode(GL_MODELVIEW);
+				gl.glLoadIdentity();
 			}
 		});
-		intf.ChangeScreen(this);
+		setRenderMode(RENDERMODE_WHEN_DIRTY);
+		//intf.ChangeScreen(this);
 	}
 	public void Blank() {
 		gl.glDisable(GL_TEXTURE_2D);
@@ -66,6 +72,7 @@ public class DasherWidget extends GLSurfaceView implements CDasherScreen {
 		
 	}
 
+	private ByteBuffer buf = ByteBuffer.allocate(16);
 	public void DrawRectangle(int x1, int y1, int x2, int y2, int iFillColour,
 			int iOutlineColour, EColorSchemes ColorScheme,
 			int iThickness) {
@@ -77,8 +84,13 @@ public class DasherWidget extends GLSurfaceView implements CDasherScreen {
                 		colourScheme.GetGreen(iFillColour),
                 		colourScheme.GetBlue(iFillColour),
                 		1.0f);
-                Buffer coords = ShortBuffer.wrap(new short[] {sx1,sy1, sx2,sy1, sx1,sy2, sx2,sy2});
-                gl.glVertexPointer(2, GL_SHORT, 0, coords);
+                buf.clear();
+                buf.putShort(sx1); buf.putShort(sy1);
+                buf.putShort(sx2); buf.putShort(sy1);
+                buf.putShort(sx1); buf.putShort(sy2);
+                buf.putShort(sx2); buf.putShort(sy2);
+                buf.flip();
+                gl.glVertexPointer(2, GL_SHORT, 0, buf);
                 gl.glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         }
         if (iThickness>0) {
@@ -92,6 +104,7 @@ public class DasherWidget extends GLSurfaceView implements CDasherScreen {
                 gl.glVertexPointer(2, GL_SHORT, 0, coords);
                 gl.glDrawArrays(GL_LINE_LOOP, 0, 4);
         }
+        gl.glDisableClientState(GL_VERTEX_ARRAY);
 	}
 
 	public void DrawString(String string, int x1, int y1, long Size) {

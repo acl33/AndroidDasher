@@ -9,28 +9,10 @@ import dasher.CDasherInterfaceBase;
 import dasher.CEventHandler;
 import dasher.CSettingsStore;
 
-public class AndroidDasherInterface extends CDasherInterfaceBase {
-	public interface Host {
-		public void Redraw(boolean bChanged);
-		public SharedPreferences getSharedPreferences();
-	}
-	private final Host host;
-	AndroidDasherInterface(Host host) {
-		this.host = host;
-	}
-	@Override
-	protected CSettingsStore createSettingsStore(CEventHandler handler) {
-		return new AndroidSettings(handler,host.getSharedPreferences());
-	}
-
+public abstract class AndroidDasherInterface extends CDasherInterfaceBase {
 	@Override
 	public int GetFileSize(String strFileName) {
 		return (int)new File(strFileName).length();
-	}
-
-	@Override
-	public void Redraw(boolean bChanged) {
-		host.Redraw(bChanged);
 	}
 
 	@Override
