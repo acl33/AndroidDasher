@@ -73,20 +73,6 @@ public interface CDasherScreen {
 	 */
 	public abstract void DrawString(String string, int x1, int y1, long Size);
 	
-
-	/**
-	 * Informs the screen of certain drawing phases.
-	 * <p>
-	 * A '0' will be sent when beginning to draw persistent
-	 * features (ie. those which should remain the same from
-	 * frame to frame), and a '1' will be sent prior to drawing
-	 * ephemeral details which should vanish if not redrawn next
-	 * frame.
-	 * 
-	 * @param iMarker Marker number
-	 */	
-	public abstract void SendMarker(int iMarker);
-	
   /** Draw a filled rectangle
 	* 
 	* @param x1 top left of rectangle (x coordinate)
@@ -140,12 +126,6 @@ public interface CDasherScreen {
 	 *
 	 */
 	public abstract void Blank();
-	
-	/**
-	 * Signals the end of a frame.
-	 *
-	 */
-	public abstract void Display();
 	
 	/**
 	 * Sets the colour scheme to use

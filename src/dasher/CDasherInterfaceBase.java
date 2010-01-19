@@ -84,6 +84,11 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * Current DasherScreen
 	 */
 	protected CDasherScreen m_DasherScreen;
+	/**
+	 * The screen (i.e. same as {@link #m_DasherScreen}), <em>iff</em> it's an instance of the {@link CMarkerScreen} subinterface;
+	 * otherwise, <code>null</code>. (Both set in {@link #ChangeScreen(CDasherScreen)}.
+	 */
+	protected CMarkerScreen m_MarkerScreen;
 	
 	/**
 	 * Current DasherView
@@ -817,29 +822,23 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	public void Draw(boolean bRedrawNodes) {
 		
-		// FIXME -- currently always drawing the nodes, since Swing's images
-		// do not persist.
-		
-		bRedrawNodes = true;
-		
 		if(m_DasherView == null || m_DasherModel == null)
 			return;
-		
-		if(bRedrawNodes) {
-			m_DasherView.Screen().SendMarker(0);
-			m_DasherModel.RenderToView(m_DasherView, true);
+		if (m_MarkerScreen!=null) {
+			if (bRedrawNodes) {
+				m_MarkerScreen.SendMarker(0);
+				m_DasherModel.RenderToView(m_DasherView, true);
+			}
+			m_MarkerScreen.SendMarker(1);
+			boolean bDecorationsChanged = (m_InputFilter != null) &&
+				m_InputFilter.DecorateView(m_DasherView);
+			if (bRedrawNodes || bDecorationsChanged)
+				m_MarkerScreen.Display();
+		} else {
+			//simple screen, no markers / caching, render whole frame every time
+			m_DasherModel.RenderToView(m_DasherView, bRedrawNodes);
+			m_InputFilter.DecorateView(m_DasherView);
 		}
-		
-		m_DasherView.Screen().SendMarker(1);
-		
-		boolean bDecorationsChanged = false;
-		
-		if(m_InputFilter != null) {
-			bDecorationsChanged = m_InputFilter.DecorateView(m_DasherView);
-		}
-		
-		if(bRedrawNodes || bDecorationsChanged)
-			m_DasherView.Display();
 	}
 	
 	/**
@@ -941,6 +940,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	public void ChangeScreen(CDasherScreen NewScreen) {
 		m_DasherScreen = NewScreen;
+		m_MarkerScreen = (NewScreen instanceof CMarkerScreen) ? (CMarkerScreen)NewScreen : null;
 		m_DasherScreen.SetColourScheme(m_Colours);
 		
 		if(m_DasherView != null) {

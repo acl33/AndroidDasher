@@ -309,15 +309,6 @@ public abstract class CDasherView extends CDasherComponent {
 	}
 	
 	/**
-	 * Deferred to our screen.
-	 *
-	 * @see CDasherScreen
-	 */
-	public void Display() {
-		m_Screen.Display();
-	}
-	
-	/**
 	 * Draws a polyline given a series of points in Dasher space.
 	 * <p>
 	 * Internally, we convert these to screen co-ordinates and pass
