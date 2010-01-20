@@ -137,7 +137,8 @@ public class CParamTables {
 			  new lp_table(Elp_parameters.LP_MAX_Y, "MaxY", PERS, 4096, "Maximum Y coordinate"),
 			  new lp_table(Elp_parameters.LP_INPUT_FILTER, "InputFilterID", PERS, 3, "Module ID of input filter"),
 			  new lp_table(Elp_parameters.LP_CIRCLE_PERCENT, "CirclePercent", PERS, 10, "Percentage of nominal vertical range to use for radius of start circle"),
-			  new lp_table(Elp_parameters.LP_TWO_BUTTON_OFFSET, "TwoButtonOffset", PERS, 1024, "Offset for two button dynamic mode")	};
+			  new lp_table(Elp_parameters.LP_TWO_BUTTON_OFFSET, "TwoButtonOffset", PERS, 1024, "Offset for two button dynamic mode"),
+			  new lp_table(Elp_parameters.LP_TAP_TIME, "TapTime", PERS, 100, "Max time for tap in Stylus Mode")};
 	
 	/**
 	 * Table of all available string parameters
@@ -157,7 +158,7 @@ public class CParamTables {
 			  new sp_table(Esp_parameters.SP_TRAIN_FILE, "TrainingFile", !PERS, "", "Training text for alphabet"),
 			  new sp_table(Esp_parameters.SP_SOCKET_INPUT_X_LABEL, "SocketInputXLabel", PERS, "x", "Label preceding X values for network input"),
 			  new sp_table(Esp_parameters.SP_SOCKET_INPUT_Y_LABEL, "SocketInputYLabel", PERS, "y", "Label preceding Y values for network input"),
-			  new sp_table(Esp_parameters.SP_INPUT_FILTER, "InputFilter", PERS, "Normal Control", "Input filter used to provide the current control mode"),
+			  new sp_table(Esp_parameters.SP_INPUT_FILTER, "InputFilter", PERS, "Stylus Control", "Input filter used to provide the current control mode"),
 			  new sp_table(Esp_parameters.SP_INPUT_DEVICE, "InputDevice", PERS, "Mouse Input", "Driver for the input device"),
 			  new sp_table(Esp_parameters.SP_LM_HOST, "LMHost", PERS, "", "Language Model Host")};
 }

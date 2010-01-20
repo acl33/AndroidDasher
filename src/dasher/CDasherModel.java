@@ -1979,6 +1979,13 @@ public class CDasherModel extends CDasherComponent {
 		return m_deGotoQueue.size();
 	}
 	
+	/**
+	 * Clears any currently-in-progress zoom (scheduled via {@link #ScheduleZoom})
+	 */
+	public void clearScheduledSteps() {
+		m_deGotoQueue.clear();
+	}
+	
 	/* CSFS: This class used to return a context; these have
 	 * been converted to a class as detailed in the notes found
 	 * in CLanguageModel.

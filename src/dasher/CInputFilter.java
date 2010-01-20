@@ -68,7 +68,7 @@ public class CInputFilter extends CDasherModule {
 	 * on registering this with the Interface as a usable
 	 * module.
 	 * 
-	 * @param intf Interface with which to register for events
+	 * @param EventHandler Event handler with which we should register ourselves
 	 * @param SettingsStore Settings repository to use
 	 * @param iID Unique identifier for this Module
 	 * @param iType Module type (see DasherModule for a list)

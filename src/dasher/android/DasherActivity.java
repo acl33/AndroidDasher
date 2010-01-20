@@ -2,6 +2,7 @@ package dasher.android;
 
 import dasher.CEventHandler;
 import dasher.CSettingsStore;
+import dasher.CStylusFilter;
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.opengl.GLSurfaceView;
@@ -28,7 +29,7 @@ public class DasherActivity extends Activity {
 			
 			@Override
 			protected void CreateModules() {
-				super.CreateModules();
+				RegisterModule(new CStylusFilter(this, m_SettingsStore));
 				surf.CreateModules();
 			}
         };
