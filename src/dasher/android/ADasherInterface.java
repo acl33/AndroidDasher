@@ -8,7 +8,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import android.content.SharedPreferences;
+import android.content.res.AssetManager;
 
+import dasher.CColourIO;
 import dasher.CDasherInterfaceBase;
 import dasher.CEventHandler;
 import dasher.CSettingsStore;
@@ -50,18 +52,6 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	@Override
 	public int GetFileSize(String strFileName) {
 		return (int)new File(strFileName).length();
-	}
-
-	@Override
-	public void ScanAlphabetFiles(Collection<String> vFileList) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void ScanColourFiles(Collection<String> vFileList) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override

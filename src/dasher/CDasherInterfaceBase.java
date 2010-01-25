@@ -160,16 +160,16 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	/**
 	 * Somehow determines which alphabet XML files to parse.
 	 * 
-	 * @param vFileList List to fill with filenames to process.
+	 * @param mAlphIO List to fill with filenames to process.
 	 */
-	public abstract void ScanAlphabetFiles(Collection<String> vFileList);
+	public abstract void ScanAlphabetFiles(CAlphIO mAlphIO);
 	
 	/**
-	 * Somehow determines which colour XML files to parse.
+	 * Somehow determine which colour XML files to parse
 	 * 
-	 * @param vFileList List to fill with filenames to process.
+	 * @param mColourIO CColourIO to which all files should be passed
 	 */
-	public abstract void ScanColourFiles(Collection<String> vFileList);
+	public abstract void ScanColourFiles(CColourIO mColourIO);
 	
 	/**
 	 * Should setup the system and user locations; called
@@ -251,13 +251,11 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		
 		SetupPaths();
 		
-		ArrayList<String> vAlphabetFiles = new ArrayList<String>();
-		ScanAlphabetFiles(vAlphabetFiles);
-		m_AlphIO = doAlphIO(vAlphabetFiles);
+		m_AlphIO = new CAlphIO(this);
+		ScanAlphabetFiles(m_AlphIO);
 		
-		ArrayList<String> vColourFiles = new ArrayList<String>();
-		ScanColourFiles(vColourFiles);
-		m_ColourIO = doColourIO(vColourFiles);
+		m_ColourIO = new CColourIO(this);
+		ScanColourFiles(m_ColourIO);
 		
 		/* CSFS: Added a back-pointer to each of these so they can use the Interface's
 		 * centralised GetResource method.
@@ -530,40 +528,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			CLockEvent LockEvent = ((CLockEvent)(Event));
 			m_bGlobalLock = LockEvent.m_bLock;
 		}
-	}
-	
-	/**
-	 * Reads a list of XML files and returns an instance
-	 * of CAlphIO which knows about the alphabets found in these
-	 * files.
-	 * <p>
-	 * This class does it by the simple expedient of creating a new
-	 * CAlphIO and passing these files, but some extensions may
-	 * redirect the request in the case that the XML files have
-	 * already been parsed.
-	 * 
-	 * @param vFiles List of files to be parsed
-	 * @return a CAlphIO which knows about the alphabets recorded in these files.
-	 */
-	public CAlphIO doAlphIO(ArrayList<String> vFiles) {
-		return new CAlphIO(GetStringParameter(Esp_parameters.SP_SYSTEM_LOC), GetStringParameter(Esp_parameters.SP_USER_LOC), vFiles, this);
-	}
-	
-	/**
-	 * Reads a list of XML files and returns an instance
-	 * of CColourIO which knows about the colours found in these
-	 * files.
-	 * <p>
-	 * This class does it by the simple expedient of creating a new
-	 * CColourIO and passing these files, but some extensions may
-	 * redirect the request in the case that the XML files have
-	 * already been parsed.
-	 * 
-	 * @param vFiles List of files to be parsed
-	 * @return a CColourIO which knows about the colours recorded in these files.
-	 */
-	public CColourIO doColourIO(ArrayList<String> vFiles) {
-		return new CColourIO(GetStringParameter(Esp_parameters.SP_SYSTEM_LOC), GetStringParameter(Esp_parameters.SP_USER_LOC), vFiles, this);
 	}
 	
 	/**

@@ -25,7 +25,6 @@
 
 package dasher;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -52,37 +51,17 @@ import org.xml.sax.helpers.DefaultHandler;
  * a full list of available colour schemes.
  *
  */
-public class CColourIO {
+public class CColourIO implements XMLFileParser {
 
-	/**
-	 * The current system data location, for locating DTDs.
-	 */
-	protected String SystemLocation;
-	
-	/**
-	 * The current user data location, for locating DTDs.
-	 */
-	protected String UserLocation;
-	
 	/**
 	 * Map from colour scheme names to their ColourInfo objects.
 	 */
 	protected HashMap<String, ColourInfo> Colours = new HashMap<String,ColourInfo>(); // map short names (file names) to descriptions
-	
-	/**
-	 * Files which are to be parsed.
-	 */
-	protected ArrayList<String> Filenames;
-	
-	/**
-	 * Flag indicating whether or not the current colour scheme may be modified.
-	 */
-	public boolean LoadMutable;
-	
+		
 	/**
 	 * Interface which will be used for Applet style I/O.
 	 */
-	public CDasherInterfaceBase m_Interface;
+	private final CDasherInterfaceBase m_Interface;
 	
 	/**
 	 * SAXParser used to read XML files.
@@ -129,16 +108,10 @@ public class CColourIO {
 	 * 
 	 * @param SysLoc System data location to search for DTD files. 
 	 * @param UserLoc User data location to search for DTD files.
-	 * @param Fnames List of files to parse. 
 	 * @param dib Interface against which we can perform applet-style IO. Optional; if null, applet-style IO will not be attempted.
 	 */
-	public CColourIO(String SysLoc, String UserLoc, ArrayList<String> Fnames, CDasherInterfaceBase dib) {
-		
-		SystemLocation = SysLoc;
-		UserLocation = UserLoc;
-		Filenames = Fnames;
-		LoadMutable = false;
-		
+	public CColourIO(CDasherInterfaceBase dib) {
+				
 		m_Interface = dib;
 		
 		SAXParserFactory factory = SAXParserFactory.newInstance();
@@ -150,21 +123,6 @@ public class CColourIO {
 		}
 		
 		CreateDefault();
-		
-		LoadMutable = false;
-		ParseFile(SystemLocation + "colour.xml");
-		if(Filenames.size() > 0) {
-			for(int i = 0; i < Filenames.size(); i++) {
-				ParseFile(SystemLocation + Filenames.get(i));
-			}
-		}
-		LoadMutable = true;
-		ParseFile(UserLocation + "colour.xml");
-		if(Filenames.size() > 0) {
-			for(int i = 0; i < Filenames.size(); i++) {
-				ParseFile(UserLocation + Filenames.get(i));
-			}
-		}
 	}
 	
 	/**
@@ -180,38 +138,76 @@ public class CColourIO {
 	 * files stored in a JAR.
 	 * 
 	 * @param filename Relative or absolute path to the file to be parsed.
+	 * @throws IOException 
+	 * @throws SAXException 
 	 */
-	public void ParseFile(String filename) {
+	public void ParseFile(InputStream in, final boolean bLoadMutable) throws SAXException, IOException {
 		
-		InputStream FileInput;
-		try {
-			FileInput = new FileInputStream(filename);
-			// Try ordinary IO
-		}
-		catch(Exception e) {
-			try {
-				FileInput = m_Interface.getResourceStream(filename);
-				// Try applet-style IO
+		InputSource XMLInput = new InputSource(in);
+		
+		DefaultHandler handler = new DefaultHandler() {
+			protected CColourIO.ColourInfo currentColour;
+				
+			public void startElement(String namespaceURI, String simpleName, String qualName, Attributes tagAttributes) throws SAXException {
+				
+				String tagName = (simpleName.equals("") ? qualName : simpleName);
+				
+				if(tagName == "palette") {
+					currentColour = new CColourIO.ColourInfo();
+					currentColour.Mutable = bLoadMutable;
+					for(int i = 0; i < tagAttributes.getLength(); i++) {
+				    	String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+				    	if(attributeName == "name") {
+				    		currentColour.ColourID = tagAttributes.getValue(i); 
+				    	}
+					}
+				}
+				else if(tagName == "colour") {
+					for(int i = 0; i < tagAttributes.getLength(); i++) {
+				    	String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+				    	if(attributeName == "r") {
+				    		currentColour.Reds.add(Integer.parseInt(tagAttributes.getValue(i)));
+				    	}
+				    	if(attributeName == "g") {
+				    		currentColour.Greens.add(Integer.parseInt(tagAttributes.getValue(i)));
+				    	}
+				    	if(attributeName == "b") {
+				    		currentColour.Blues.add(Integer.parseInt(tagAttributes.getValue(i)));
+				    	}
+					}
+				}
 			}
-			catch(Exception ex) {
-				return; // If the file cannot be retrieved, act as if it does not exist at all.
+			
+			public void endElement(String namespaceURI, String simpleName, String qualName) {
+				String tagName = (simpleName.equals("") ? qualName : simpleName);
+				
+				if(tagName == "palette") {
+					Colours.put(currentColour.ColourID, currentColour);
+				}
+			
 			}
-		}
+			
+			public InputSource resolveEntity(String publicName, String systemName) throws IOException, SAXException {
+				/* CSFS: This is here because SAX will by default look in a system location
+				 * first, which throws a security exception when running as an Applet.
+				 */
+				if(systemName.contains("colour.dtd")) {
+					return new InputSource(m_Interface.getResourceStream("colour.dtd"));
+				}
+				else {
+					return null;
+				}
+			}
+			
+		};
 		
-		InputSource XMLInput = new InputSource(FileInput);
-		
-		DefaultHandler handler = new ColourXMLHandler(Colours, this, SystemLocation, UserLocation);
-		// Back-pointer passed so it can modify our colours ArrayList.
-		
-		
-		
-		try {
+		//try {
 			parser.parse(XMLInput, handler);
-		}
-		catch (Exception e) {
-			System.out.printf("Exception reading %s: %s%n", filename, e.toString());
-			return; // Again, an invalid file should be treated as if it isn't there.
-		}
+		//}
+		//catch (Exception e) {
+		//	System.out.printf("Exception reading %s: %s%n", filename, e.toString());
+		//	return; // Again, an invalid file should be treated as if it isn't there.
+		//}
 		
 	}
 	
@@ -1053,91 +1049,6 @@ public class CColourIO {
 		Default.Blues.add(0);
 		
 		Colours.put("Default", Default);
-	}
-	
-}
-
-class ColourXMLHandler extends DefaultHandler {
-	protected HashMap<String, CColourIO.ColourInfo> Colours;
-	protected CColourIO m_Parent;
-	
-	protected String userLoc;
-	protected String sysLoc;
-	
-	protected CColourIO.ColourInfo currentColour;
-		
-	public ColourXMLHandler(HashMap<String, CColourIO.ColourInfo> Cols, CColourIO parent, String sys, String usr) {
-		Colours = Cols;
-		m_Parent = parent;
-		
-		sysLoc = sys;
-		userLoc = usr;
-	}
-	
-	public void startElement(String namespaceURI, String simpleName, String qualName, Attributes tagAttributes) throws SAXException {
-		
-		String tagName = (simpleName.equals("") ? qualName : simpleName);
-		
-		if(tagName == "palette") {
-			currentColour = new CColourIO.ColourInfo();
-			currentColour.Mutable = m_Parent.LoadMutable;
-			for(int i = 0; i < tagAttributes.getLength(); i++) {
-		    	String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-		    	if(attributeName == "name") {
-		    		currentColour.ColourID = tagAttributes.getValue(i); 
-		    	}
-			}
-		}
-		else if(tagName == "colour") {
-			for(int i = 0; i < tagAttributes.getLength(); i++) {
-		    	String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-		    	if(attributeName == "r") {
-		    		currentColour.Reds.add(Integer.parseInt(tagAttributes.getValue(i)));
-		    	}
-		    	if(attributeName == "g") {
-		    		currentColour.Greens.add(Integer.parseInt(tagAttributes.getValue(i)));
-		    	}
-		    	if(attributeName == "b") {
-		    		currentColour.Blues.add(Integer.parseInt(tagAttributes.getValue(i)));
-		    	}
-			}
-		}
-	}
-	
-	public void endElement(String namespaceURI, String simpleName, String qualName) {
-		String tagName = (simpleName.equals("") ? qualName : simpleName);
-		
-		if(tagName == "palette") {
-			Colours.put(currentColour.ColourID, currentColour);
-		}
-	
-	}
-	
-	public InputSource resolveEntity(String publicName, String systemName) throws IOException, SAXException {
-		
-		if(systemName.contains("colour.dtd")) {
-			try {
-				return new InputSource(new FileInputStream(sysLoc + "colour.dtd"));
-			}
-			catch(Exception e) {
-				try {
-					return new InputSource(new FileInputStream(userLoc + "colour.dtd"));
-				}
-				catch(Exception ex) {
-					return new InputSource(m_Parent.m_Interface.getResourceStream(sysLoc + "colour.dtd"));
-				}
-			}
-		}
-		else {
-			return null;
-		}
-		
-		/* CSFS: This is here because SAX will by default look in a system location
-		 * first, which throws a security exception when running as an Applet.
-		 * All other requests are deferred to SAX.
-		 */
-		
-		
 	}
 	
 }

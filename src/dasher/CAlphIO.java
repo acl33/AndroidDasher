@@ -46,7 +46,7 @@ import javax.xml.parsers.SAXParser;
  * a full list of available alphabets.
  *
  */
-public class CAlphIO {
+public class CAlphIO implements XMLFileParser {
 
 	/* CSFS: I'm not exactly sure which of these strings are plain ASCII used internally
 	 * and which are UTF-8. For now I've made mostly everything UTF-8 except for filenames.
@@ -65,28 +65,11 @@ public class CAlphIO {
 	public CDasherInterfaceBase m_Interface;
 	
 	/**
-	 * Path of system resource files, used in the course
-	 * of locating DTD files where necessary.
-	 */
-	protected String SystemLocation;
-	
-	/**
-	 * Path of user resource files, used in the course
-	 * of locating DTD files where necessary.
-	 */
-	protected String UserLocation;
-	
-	/**
 	 * Map from Strings to AlphInfo objects, used in getting
 	 * an alphabet by name.
 	 */
 	protected HashMap <String, AlphInfo> Alphabets = new HashMap<String, AlphInfo>(); 
 	// map short names (file names) to descriptions
-	
-	/**
-	 * List of filenames to parse.
-	 */
-	protected ArrayList<String> Filenames;
 	
 	/**
 	 * Map from String alphabet types to enumerated constants
@@ -258,11 +241,7 @@ public class CAlphIO {
 	 * @param Fnames Filenames to parse; these may be relative or absolute.
 	 * @param Interface Reference to the InterfaceBase parent class for applet-style IO. Optional; if not supplied, applet-style IO will fail.
 	 */
-	public CAlphIO(String SysLoc, String UserLoc, ArrayList<String> Fnames, CDasherInterfaceBase Interface) {
-		SystemLocation = SysLoc;
-		UserLocation = UserLoc;
-		Filenames = Fnames;
-		LoadMutable = false;
+	public CAlphIO(CDasherInterfaceBase Interface) {
 		m_Interface = Interface;
 		CreateDefault();
 		
@@ -301,22 +280,6 @@ public class CAlphIO {
 			StoT.put(m.getValue(), m.getKey());
 		}
 	
-		LoadMutable = false;
-		ParseFile(SystemLocation + "alphabet.xml");
-		if(Filenames.size() > 0) {
-			for(int i = 0; i < Filenames.size(); i++) {
-				ParseFile(SystemLocation + Filenames.get(i));
-			}
-		}
-		LoadMutable = true;
-		ParseFile(UserLocation + "alphabet.xml");
-		if(Filenames.size() > 0) {
-			for(int i = 0; i < Filenames.size(); i++) {
-				ParseFile(UserLocation + Filenames.get(i));
-			}
-		} 
-		
-		
 	}
 	
 	/**
@@ -326,35 +289,328 @@ public class CAlphIO {
 	 * 
 	 * @param filename File to parse
 	 */
-	public void ParseFile(String filename) {
+	public void ParseFile(InputStream in, final boolean bLoadMutable) throws SAXException, IOException {
 		
-		InputStream FileInput;
-		try {
-			FileInput = new FileInputStream(filename);
-			// Try ordinary IO
-		}
-		catch(Exception e) {
-			try {
-				FileInput = m_Interface.getResourceStream(filename);
-				// Try applet-style IO
-			}
-			catch(Exception ex) {
-				return; // If the file cannot be retrieved, act as if it does not exist at all.
-			}
-		}
+		InputSource XMLInput = new InputSource(in);
+		
+		DefaultHandler handler = new DefaultHandler() {
+			
+			protected CAlphIO.AlphInfo currentAlph;
+			protected String currentTag;
+			protected SGroupInfo currentGroup;
+			protected boolean bFirstGroup;
+			
+			public void startElement(String namespaceURI, String simpleName, String qualName, Attributes tagAttributes) throws SAXException {
 				
-		InputSource XMLInput = new InputSource(FileInput);
-		
-		DefaultHandler handler = new AlphXMLHandler(Alphabets, this, SystemLocation, UserLocation);
+				String tagName = (simpleName.equals("") ? qualName : simpleName);
+				
+				if(tagName == "alphabet") {
+					/* A new alphabet is beginnning. Initialise the data structure
+					 * and fill it with default values. */
+					
+					currentAlph = new CAlphIO.AlphInfo();
+					currentAlph.Mutable = bLoadMutable;
+				    currentAlph.SpaceCharacter.Colour = -1;
+				    currentAlph.ParagraphCharacter.Colour = -1;
+				    currentAlph.ControlCharacter.Colour = -1;
+				    currentAlph.StartConvertCharacter.Text = "";
+				    currentAlph.EndConvertCharacter.Text = "";
+				    currentAlph.m_iCharacters = 1; // Start at 1 as 0 is the root node symbol
+				    currentAlph.m_BaseGroup = null;
+				    
+				    bFirstGroup = true;
+				    
+				    /* Find the 'name' attribute */
+				    for(int i = 0; i < tagAttributes.getLength(); i++) {
+				    	String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+				    	if(attributeName == "name") {
+				    		currentAlph.AlphID = tagAttributes.getValue(i);
+				    	}
+				    }
+				    
+				}
+				
+				else if(tagName == "orientation") {
+					for(int i = 0; i < tagAttributes.getLength(); i++) {
+						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+						if(attributeName == "type") {
+							String orient = tagAttributes.getValue(i);
+							if(orient == "RL") {
+								currentAlph.Orientation = Opts.ScreenOrientations.RightToLeft;
+							}
+							else if(orient == "TB") {
+								currentAlph.Orientation = Opts.ScreenOrientations.TopToBottom;
+							}
+							else if(orient == "BT") {
+								currentAlph.Orientation = Opts.ScreenOrientations.BottomToTop;
+							}
+							else {
+								currentAlph.Orientation = Opts.ScreenOrientations.LeftToRight;
+							}
+						}
+					}
+				}
+				
+				else if(tagName == "encoding") {
+					for(int i = 0; i < tagAttributes.getLength(); i++) {
+						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+						if(attributeName == "type") {
+							currentAlph.Encoding = StoT.get(tagAttributes.getValue(i));
+						}
+					}
+				}
+				
+				else if(tagName == "palette") {
+					currentTag = "palette"; // will be handled by characters routine
+				}
+				
+				else if(tagName == "train") {
+					currentTag = "train"; // Likewise
+				}
+				
+				else if(tagName == "paragraph") {
+					for(int i = 0; i < tagAttributes.getLength(); i++) {
+						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+						if(attributeName == "d") {
+							currentAlph.ParagraphCharacter.Display = tagAttributes.getValue(i);
+							currentAlph.ParagraphCharacter.Text = String.format("%n");
+							
+							/* CSFS: This slightly odd route is used because the traditional method,
+							 * which is to read the system property 'line.seperator' is in fact
+							 * forbidden for applets! Why it's potentially dangerous to establish
+							 * how to terminate lines, I'm not sure.
+							 */
+							
+						}
+						if(attributeName == "b") {
+							currentAlph.ParagraphCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
+						}
+						if(attributeName == "f") {
+							currentAlph.ParagraphCharacter.Foreground = tagAttributes.getValue(i);
+						}
+					}	
+				}
+				
+				else if(tagName == "paragraph") {
+					for(int i = 0; i < tagAttributes.getLength(); i++) {
+						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+						if(attributeName == "d") {
+							currentAlph.ParagraphCharacter.Display = tagAttributes.getValue(i);
+							currentAlph.ParagraphCharacter.Text = System.getProperty("line.seperator");
+						}
+						if(attributeName == "b") {
+							currentAlph.ParagraphCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
+						}
+						if(attributeName == "f") {
+							currentAlph.ParagraphCharacter.Foreground = tagAttributes.getValue(i);
+						}
+					}	
+				}
+				
+				else if(tagName == "space") {
+					for(int i = 0; i < tagAttributes.getLength(); i++) {
+						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+						if(attributeName == "d") {
+							currentAlph.SpaceCharacter.Display = tagAttributes.getValue(i);
+						}
+						if(attributeName == "t") {
+							currentAlph.SpaceCharacter.Text = tagAttributes.getValue(i);
+						}
+						if(attributeName == "b") {
+							currentAlph.SpaceCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
+						}
+						if(attributeName == "f") {
+							currentAlph.SpaceCharacter.Foreground = tagAttributes.getValue(i);
+						}
+					}	
+				}
+				
+				else if(tagName == "control") {
+					for(int i = 0; i < tagAttributes.getLength(); i++) {
+						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+						if(attributeName == "d") {
+							currentAlph.ControlCharacter.Display = tagAttributes.getValue(i);
+						}
+						if(attributeName == "t") {
+							currentAlph.ControlCharacter.Text = tagAttributes.getValue(i);
+						}
+						if(attributeName == "b") {
+							currentAlph.ControlCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
+						}
+						if(attributeName == "f") {
+							currentAlph.ControlCharacter.Foreground = tagAttributes.getValue(i);
+						}
+					}	
+				}
+				
+				else if(tagName == "convert") {
+					for(int i = 0; i < tagAttributes.getLength(); i++) {
+						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+						if(attributeName == "d") {
+							currentAlph.StartConvertCharacter.Display = tagAttributes.getValue(i);
+						}
+						if(attributeName == "t") {
+							currentAlph.StartConvertCharacter.Text = tagAttributes.getValue(i);
+						}
+						if(attributeName == "b") {
+							currentAlph.StartConvertCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
+						}
+						if(attributeName == "f") {
+							currentAlph.StartConvertCharacter.Foreground = tagAttributes.getValue(i);
+						}
+					}	
+				}
+				
+				else if(tagName == "protect") {
+					for(int i = 0; i < tagAttributes.getLength(); i++) {
+						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+						if(attributeName == "d") {
+							currentAlph.EndConvertCharacter.Display = tagAttributes.getValue(i);
+						}
+						if(attributeName == "t") {
+							currentAlph.EndConvertCharacter.Text = tagAttributes.getValue(i);
+						}
+						if(attributeName == "b") {
+							currentAlph.EndConvertCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
+						}
+						if(attributeName == "f") {
+							currentAlph.EndConvertCharacter.Foreground = tagAttributes.getValue(i);
+						}
+					}	
+				}
+				
+				else if(tagName == "group") {
+					
+					currentGroup = new SGroupInfo();
+					
+					if(bFirstGroup) {
+						currentGroup.bVisible = false;
+						bFirstGroup = false;
+					}
+					else {
+						currentGroup.bVisible = true;
+					}
+					
+					currentGroup.strLabel = "";
+					currentGroup.iColour = 0;
+					
+					for(int i = 0; i < tagAttributes.getLength(); i++) {
+						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+						if(attributeName == "b") {
+							currentGroup.iColour = Integer.parseInt(tagAttributes.getValue(i));
+						}
+						if(attributeName == "visible") {
+							if(tagAttributes.getValue(i).equals("yes") || tagAttributes.getValue(i).equals("on")) {
+								currentGroup.bVisible = true;
+							}
+							else if(tagAttributes.getValue(i).equals("no") || tagAttributes.getValue(i).equals("off")) {						
+								currentGroup.bVisible = false;
+							}
+						}
+						if(attributeName == "label") {
+							currentGroup.strLabel = tagAttributes.getValue(i);
+						}
+					}
+					
+				    currentGroup.iStart = currentAlph.m_iCharacters;
+
+				    currentGroup.Child = null;
+
+				    if(currentAlph.m_vGroups.size() > 0) {
+				      currentGroup.Next = currentAlph.m_vGroups.get(currentAlph.m_vGroups.size() - 1).Child;
+				      currentAlph.m_vGroups.get(currentAlph.m_vGroups.size() - 1).Child = currentGroup;
+				    }
+				    else {
+				      currentGroup.Next = currentAlph.m_BaseGroup;
+				      currentAlph.m_BaseGroup = currentGroup;
+				    }
+				    
+				    currentAlph.m_vGroups.add(currentGroup);
+				}
+						
+				else if(tagName == "s") {
+					CAlphIO.character newChar = new CAlphIO.character();
+					newChar.Colour = -1;
+					++currentAlph.m_iCharacters;
+					
+					for(int i = 0; i < tagAttributes.getLength(); i++) {
+						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+						if(attributeName == "d") {
+							newChar.Display = tagAttributes.getValue(i);
+						}
+						if(attributeName == "t") {
+							newChar.Text = tagAttributes.getValue(i);
+						}
+						if(attributeName == "b") {
+							newChar.Colour = Integer.parseInt(tagAttributes.getValue(i));
+						}
+						if(attributeName == "f") {
+							newChar.Foreground = tagAttributes.getValue(i);
+						}
+					}
+					
+					currentAlph.m_vCharacters.add(newChar);
+				}
+			}
+			
+			public void endElement(String namespaceURI, String simpleName, String qualName) {
+				String tagName = (simpleName.equals("") ? qualName : simpleName);
+				
+				if(tagName == "alphabet") {
+					Alphabets.put(currentAlph.AlphID, currentAlph);
+				}
+				
+				else if(tagName == "palette") {
+					currentTag = "";
+				}
+				
+				else if(tagName == "train") {
+					currentTag = "";
+				}
+				// Both of these are to prevent the parser from dumping unwanted CDATA
+				// once the tags we're interested in have been closed.
+
+				else if(tagName == "group") {
+					currentAlph.m_vGroups.get(currentAlph.m_vGroups.size() - 1).iEnd = currentAlph.m_iCharacters;
+					currentAlph.m_vGroups.remove(currentAlph.m_vGroups.get(currentAlph.m_vGroups.size() - 1));
+				}
+				
+
+				
+			}
+
+			public void characters(char[] chars, int start, int length) throws SAXException {
+				
+				if(currentTag == "palette") {
+					currentAlph.PreferredColours = new String(chars, start, length);
+				}
+				
+				if(currentTag == "train") {
+					currentAlph.TrainingFile = new String(chars, start, length);
+				}
+				
+			}
+
+			public InputSource resolveEntity(String publicName, String systemName) throws IOException, SAXException {
+				
+				if(systemName.contains("alphabet.dtd")) {
+					return new InputSource(m_Interface.getResourceStream("alphabet.dtd"));
+				}
+				else {
+					return null;
+				}
+				
+				
+				/* CSFS: This is here because SAX will by default look in a system location
+				 * first, which throws a security exception when running as an Applet.
+				 */
+			
+			}
+			
+		};
 		// Pass in the Alphabet HashMap so it can be modified
-		try {
-			parser.parse(XMLInput, handler);
-		}
-		catch (Exception e) {
-			System.out.printf("Exception reading %s: %s%n", filename, e.toString());
-			return; // Again, an invalid file should be treated as if it isn't there.
-		}
-				
+
+		parser.parse(XMLInput, handler);
 	}
 	
 	/**
@@ -493,346 +749,3 @@ public class CAlphIO {
 	
 }
 
-/**
- * 
- * SAX XML handler which populates AlphInfo objects and adds them
- * to the AlphIO class list of available alphabets.
- *
- */
-class AlphXMLHandler extends DefaultHandler {
-	
-	protected HashMap<String, CAlphIO.AlphInfo> Alphs;
-	protected CAlphIO m_Parent;
-	protected CAlphIO.AlphInfo currentAlph;
-	protected String currentTag;
-	protected SGroupInfo currentGroup;
-	protected boolean bFirstGroup;
-	
-	protected String systemLoc, userLoc;
-	
-	public AlphXMLHandler(HashMap<String, CAlphIO.AlphInfo> i_Alph, CAlphIO parent, String sysloc, String userloc) {
-		Alphs = i_Alph;
-		m_Parent = parent; 
-		
-		userLoc = userloc;
-		systemLoc = sysloc;
-	}
-
-	public void startElement(String namespaceURI, String simpleName, String qualName, Attributes tagAttributes) throws SAXException {
-		
-		String tagName = (simpleName.equals("") ? qualName : simpleName);
-		
-		if(tagName == "alphabet") {
-			/* A new alphabet is beginnning. Initialise the data structure
-			 * and fill it with default values. */
-			
-			currentAlph = new CAlphIO.AlphInfo();
-			currentAlph.Mutable = m_Parent.LoadMutable;
-		    currentAlph.SpaceCharacter.Colour = -1;
-		    currentAlph.ParagraphCharacter.Colour = -1;
-		    currentAlph.ControlCharacter.Colour = -1;
-		    currentAlph.StartConvertCharacter.Text = "";
-		    currentAlph.EndConvertCharacter.Text = "";
-		    currentAlph.m_iCharacters = 1; // Start at 1 as 0 is the root node symbol
-		    currentAlph.m_BaseGroup = null;
-		    
-		    bFirstGroup = true;
-		    
-		    /* Find the 'name' attribute */
-		    for(int i = 0; i < tagAttributes.getLength(); i++) {
-		    	String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-		    	if(attributeName == "name") {
-		    		currentAlph.AlphID = tagAttributes.getValue(i);
-		    	}
-		    }
-		    
-		}
-		
-		else if(tagName == "orientation") {
-			for(int i = 0; i < tagAttributes.getLength(); i++) {
-				String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-				if(attributeName == "type") {
-					String orient = tagAttributes.getValue(i);
-					if(orient == "RL") {
-						currentAlph.Orientation = Opts.ScreenOrientations.RightToLeft;
-					}
-					else if(orient == "TB") {
-						currentAlph.Orientation = Opts.ScreenOrientations.TopToBottom;
-					}
-					else if(orient == "BT") {
-						currentAlph.Orientation = Opts.ScreenOrientations.BottomToTop;
-					}
-					else {
-						currentAlph.Orientation = Opts.ScreenOrientations.LeftToRight;
-					}
-				}
-			}
-		}
-		
-		else if(tagName == "encoding") {
-			for(int i = 0; i < tagAttributes.getLength(); i++) {
-				String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-				if(attributeName == "type") {
-					currentAlph.Encoding = m_Parent.StoT.get(tagAttributes.getValue(i));
-				}
-			}
-		}
-		
-		else if(tagName == "palette") {
-			currentTag = "palette"; // will be handled by characters routine
-		}
-		
-		else if(tagName == "train") {
-			currentTag = "train"; // Likewise
-		}
-		
-		else if(tagName == "paragraph") {
-			for(int i = 0; i < tagAttributes.getLength(); i++) {
-				String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-				if(attributeName == "d") {
-					currentAlph.ParagraphCharacter.Display = tagAttributes.getValue(i);
-					currentAlph.ParagraphCharacter.Text = String.format("%n");
-					
-					/* CSFS: This slightly odd route is used because the traditional method,
-					 * which is to read the system property 'line.seperator' is in fact
-					 * forbidden for applets! Why it's potentially dangerous to establish
-					 * how to terminate lines, I'm not sure.
-					 */
-					
-				}
-				if(attributeName == "b") {
-					currentAlph.ParagraphCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
-				}
-				if(attributeName == "f") {
-					currentAlph.ParagraphCharacter.Foreground = tagAttributes.getValue(i);
-				}
-			}	
-		}
-		
-		else if(tagName == "paragraph") {
-			for(int i = 0; i < tagAttributes.getLength(); i++) {
-				String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-				if(attributeName == "d") {
-					currentAlph.ParagraphCharacter.Display = tagAttributes.getValue(i);
-					currentAlph.ParagraphCharacter.Text = System.getProperty("line.seperator");
-				}
-				if(attributeName == "b") {
-					currentAlph.ParagraphCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
-				}
-				if(attributeName == "f") {
-					currentAlph.ParagraphCharacter.Foreground = tagAttributes.getValue(i);
-				}
-			}	
-		}
-		
-		else if(tagName == "space") {
-			for(int i = 0; i < tagAttributes.getLength(); i++) {
-				String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-				if(attributeName == "d") {
-					currentAlph.SpaceCharacter.Display = tagAttributes.getValue(i);
-				}
-				if(attributeName == "t") {
-					currentAlph.SpaceCharacter.Text = tagAttributes.getValue(i);
-				}
-				if(attributeName == "b") {
-					currentAlph.SpaceCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
-				}
-				if(attributeName == "f") {
-					currentAlph.SpaceCharacter.Foreground = tagAttributes.getValue(i);
-				}
-			}	
-		}
-		
-		else if(tagName == "control") {
-			for(int i = 0; i < tagAttributes.getLength(); i++) {
-				String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-				if(attributeName == "d") {
-					currentAlph.ControlCharacter.Display = tagAttributes.getValue(i);
-				}
-				if(attributeName == "t") {
-					currentAlph.ControlCharacter.Text = tagAttributes.getValue(i);
-				}
-				if(attributeName == "b") {
-					currentAlph.ControlCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
-				}
-				if(attributeName == "f") {
-					currentAlph.ControlCharacter.Foreground = tagAttributes.getValue(i);
-				}
-			}	
-		}
-		
-		else if(tagName == "convert") {
-			for(int i = 0; i < tagAttributes.getLength(); i++) {
-				String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-				if(attributeName == "d") {
-					currentAlph.StartConvertCharacter.Display = tagAttributes.getValue(i);
-				}
-				if(attributeName == "t") {
-					currentAlph.StartConvertCharacter.Text = tagAttributes.getValue(i);
-				}
-				if(attributeName == "b") {
-					currentAlph.StartConvertCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
-				}
-				if(attributeName == "f") {
-					currentAlph.StartConvertCharacter.Foreground = tagAttributes.getValue(i);
-				}
-			}	
-		}
-		
-		else if(tagName == "protect") {
-			for(int i = 0; i < tagAttributes.getLength(); i++) {
-				String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-				if(attributeName == "d") {
-					currentAlph.EndConvertCharacter.Display = tagAttributes.getValue(i);
-				}
-				if(attributeName == "t") {
-					currentAlph.EndConvertCharacter.Text = tagAttributes.getValue(i);
-				}
-				if(attributeName == "b") {
-					currentAlph.EndConvertCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
-				}
-				if(attributeName == "f") {
-					currentAlph.EndConvertCharacter.Foreground = tagAttributes.getValue(i);
-				}
-			}	
-		}
-		
-		else if(tagName == "group") {
-			
-			currentGroup = new SGroupInfo();
-			
-			if(bFirstGroup) {
-				currentGroup.bVisible = false;
-				bFirstGroup = false;
-			}
-			else {
-				currentGroup.bVisible = true;
-			}
-			
-			currentGroup.strLabel = "";
-			currentGroup.iColour = 0;
-			
-			for(int i = 0; i < tagAttributes.getLength(); i++) {
-				String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-				if(attributeName == "b") {
-					currentGroup.iColour = Integer.parseInt(tagAttributes.getValue(i));
-				}
-				if(attributeName == "visible") {
-					if(tagAttributes.getValue(i).equals("yes") || tagAttributes.getValue(i).equals("on")) {
-						currentGroup.bVisible = true;
-					}
-					else if(tagAttributes.getValue(i).equals("no") || tagAttributes.getValue(i).equals("off")) {						
-						currentGroup.bVisible = false;
-					}
-				}
-				if(attributeName == "label") {
-					currentGroup.strLabel = tagAttributes.getValue(i);
-				}
-			}
-			
-		    currentGroup.iStart = currentAlph.m_iCharacters;
-
-		    currentGroup.Child = null;
-
-		    if(currentAlph.m_vGroups.size() > 0) {
-		      currentGroup.Next = currentAlph.m_vGroups.get(currentAlph.m_vGroups.size() - 1).Child;
-		      currentAlph.m_vGroups.get(currentAlph.m_vGroups.size() - 1).Child = currentGroup;
-		    }
-		    else {
-		      currentGroup.Next = currentAlph.m_BaseGroup;
-		      currentAlph.m_BaseGroup = currentGroup;
-		    }
-		    
-		    currentAlph.m_vGroups.add(currentGroup);
-		}
-				
-		else if(tagName == "s") {
-			CAlphIO.character newChar = new CAlphIO.character();
-			newChar.Colour = -1;
-			++currentAlph.m_iCharacters;
-			
-			for(int i = 0; i < tagAttributes.getLength(); i++) {
-				String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-				if(attributeName == "d") {
-					newChar.Display = tagAttributes.getValue(i);
-				}
-				if(attributeName == "t") {
-					newChar.Text = tagAttributes.getValue(i);
-				}
-				if(attributeName == "b") {
-					newChar.Colour = Integer.parseInt(tagAttributes.getValue(i));
-				}
-				if(attributeName == "f") {
-					newChar.Foreground = tagAttributes.getValue(i);
-				}
-			}
-			
-			currentAlph.m_vCharacters.add(newChar);
-		}
-	}
-	
-	public void endElement(String namespaceURI, String simpleName, String qualName) {
-		String tagName = (simpleName.equals("") ? qualName : simpleName);
-		
-		if(tagName == "alphabet") {
-			Alphs.put(currentAlph.AlphID, currentAlph);
-		}
-		
-		else if(tagName == "palette") {
-			currentTag = "";
-		}
-		
-		else if(tagName == "train") {
-			currentTag = "";
-		}
-		// Both of these are to prevent the parser from dumping unwanted CDATA
-		// once the tags we're interested in have been closed.
-
-		else if(tagName == "group") {
-			currentAlph.m_vGroups.get(currentAlph.m_vGroups.size() - 1).iEnd = currentAlph.m_iCharacters;
-			currentAlph.m_vGroups.remove(currentAlph.m_vGroups.get(currentAlph.m_vGroups.size() - 1));
-		}
-		
-
-		
-	}
-
-	public void characters(char[] chars, int start, int length) throws SAXException {
-		
-		if(currentTag == "palette") {
-			currentAlph.PreferredColours = new String(chars, start, length);
-		}
-		
-		if(currentTag == "train") {
-			currentAlph.TrainingFile = new String(chars, start, length);
-		}
-		
-	}
-
-	public InputSource resolveEntity(String publicName, String systemName) throws IOException, SAXException {
-		
-		if(systemName.contains("alphabet.dtd")) {
-			try {
-				return new InputSource(new FileInputStream(systemLoc + "alphabet.dtd"));
-			}
-			catch(Exception e) {
-				try {
-					return new InputSource(new FileInputStream(userLoc + "alphabet.dtd"));
-				}
-				catch(Exception ex) {
-					return new InputSource(m_Parent.m_Interface.getResourceStream(systemLoc + "alphabet.dtd"));
-				}
-			}
-		}
-		else {
-			return null;
-		}
-		
-		
-		/* CSFS: This is here because SAX will by default look in a system location
-		 * first, which throws a security exception when running as an Applet.
-		 */
-	
-	}
-	
-}
