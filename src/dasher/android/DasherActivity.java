@@ -2,7 +2,11 @@ package dasher.android;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import dasher.CAlphIO;
 import dasher.CColourIO;
@@ -12,9 +16,11 @@ import dasher.CStylusFilter;
 import dasher.XMLFileParser;
 import android.app.Activity;
 import android.content.SharedPreferences;
+import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.TextView;
 
 public class DasherActivity extends Activity {
@@ -72,6 +78,38 @@ public class DasherActivity extends Activity {
 						catch (Exception e) {
 							System.err.println("Could not parse/read user file "+aFile+": "+e);
 						}
+				}
+			}
+			
+			protected void train(String trainFileName) {
+				int iTotalBytes=0;
+				List<InputStream> streams=new ArrayList<InputStream>();
+				//1. system file...
+				try {
+					InputStream in = DasherActivity.this.getAssets().open(trainFileName);
+					iTotalBytes+=in.available();
+					streams.add(in);
+					//AssetFileDescriptor fd = DasherActivity.this.getAssets().openFd(trainFileName);
+					//iTotalBytes += fd.getLength();
+					//streams.add(fd.createInputStream());
+				} catch (IOException e) {
+					//no system training file present. Which is fine; silently skip.
+				}
+				//2. user file
+				File f=new File(trainFileName);
+				if (f.exists()) {
+					try {
+					iTotalBytes += f.length();
+						streams.add(new FileInputStream(f));
+					} catch (FileNotFoundException fnf) {
+						//we checked f.exists()...
+						throw new AssertionError();
+					}
+				}
+				
+				int iRead = 0;
+				for (InputStream in : streams) {
+					iRead = TrainStream(in, iTotalBytes, iRead);
 				}
 			}
 			

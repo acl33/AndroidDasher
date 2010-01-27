@@ -50,11 +50,6 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	}
 
 	@Override
-	public int GetFileSize(String strFileName) {
-		return (int)new File(strFileName).length();
-	}
-
-	@Override
 	public void SetupPaths() {
 		// TODO Auto-generated method stub
 

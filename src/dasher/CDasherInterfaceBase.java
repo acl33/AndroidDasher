@@ -194,15 +194,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	protected abstract CSettingsStore createSettingsStore(CEventHandler handler);
 	
 	/**
-	 * Should return the size of a given file, or 0 if the
-	 * file does not exist or cannot be accessed.
-	 * 
-	 * @param strFileName File to be read
-	 * @return Size of this file, or 0 on error.
-	 */
-	public abstract int GetFileSize(String strFileName);
-	
-	/**
 	 * Sole constructor. Creates an EventHandler, sets up an
 	 * initial context, and creates a ModuleManager. This does
 	 * only enough that we can retrieve the event handler for the
@@ -550,45 +541,24 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		// TODO: Move training into model?
 		// TODO: Do we really need to check for a valid language model?
 		int lmID = (int)GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID);
-		if( lmID != -1 ) {
+		if( lmID == -1 ) return;
 			
-			// Train the new language model
-			CLockEvent Event;
-			
-			Event = new CLockEvent("Training Dasher", true, 0);
-			InsertEvent(Event);
-			Event = null;
-			
-			// Delete the old model and create a new one
-			if(m_DasherModel != null) {
-				m_DasherModel.deleteLM(); // Added CSFS: The language model was
-				// previously given no opportunity to unregister itself.
-				m_DasherModel.UnregisterComponent();
-			}
-			
-			m_DasherModel = new CDasherModel(this, m_SettingsStore, m_AlphIO);
-			m_Alphabet = m_DasherModel.GetAlphabetNew();
-			
-			String T = m_Alphabet.GetTrainingFile();
-			
-			int iTotalBytes = 0;
-			iTotalBytes += GetFileSize(GetStringParameter(Esp_parameters.SP_SYSTEM_LOC) + T);
-			iTotalBytes += GetFileSize(GetStringParameter(Esp_parameters.SP_USER_LOC) + T);
-			
-			if(iTotalBytes > 0) {
-				int iOffset;
-				iOffset = TrainFile(GetStringParameter(Esp_parameters.SP_SYSTEM_LOC) + T, iTotalBytes, 0);
-				TrainFile(GetStringParameter(Esp_parameters.SP_USER_LOC) + T, iTotalBytes, iOffset);
-			}
-			else {
-				CMessageEvent oEvent = new CMessageEvent("No training text is avilable for the selected alphabet. Dasher will function, but it may be difficult to enter text.\nPlease see http://www.dasher.org.uk/alphabets/ for more information.", 0, 0);
-				InsertEvent(oEvent);
-			}
-			
-			Event = new CLockEvent("Training Dasher", false, 0);
-			InsertEvent(Event);
-			Event = null;
+		// Train the new language model
+		InsertEvent(new CLockEvent("Training Dasher", true, 0));
+		
+		// Delete the old model and create a new one
+		if(m_DasherModel != null) {
+			m_DasherModel.deleteLM(); // Added CSFS: The language model was
+			// previously given no opportunity to unregister itself.
+			m_DasherModel.UnregisterComponent();
 		}
+		
+		m_DasherModel = new CDasherModel(this, m_SettingsStore, m_AlphIO);
+		m_Alphabet = m_DasherModel.GetAlphabetNew();
+		
+		train(m_Alphabet.GetTrainingFile());
+		
+		InsertEvent(new CLockEvent("Training Dasher", false, 0));
 	}
 	
 	/**
@@ -984,41 +954,12 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		m_ColourIO.GetColours(ColourList);
 	}
 	
-	/**
-	 * Trains our Model from the text found in a given file,
-	 * which must be UTF-8 encoded.
-	 * <p>
-	 * The actual training is done by TrainStream; this just
-	 * creates a FileInputStream and passes it into TrainStream.
+	/** Subclasses should implement to train the model with both user &amp; system texts.
+	 * Progress updates via CLockEvents are an optional extra for subclasses, albeit desirable.
 	 * 
-	 * @param Filename Path (absolute or relative) to file containing training text.
-	 * @param iTotalBytes Number of bytes to read
-	 * @param iOffset Offset at which to start reading
-	 * @return Number of bytes read
+	 * @param T alphabet-provided name of training file, e.g. "training_english_GB.txt"
 	 */
-	public int TrainFile(String Filename, int iTotalBytes, int iOffset) {
-		
-		/* CSFS: This has now been split into two parts in order to accomodate
-		 * training from streams which aren't files. This is especially
-		 * relevant using an Applet. This method is overridden in JDasher to
-		 * permit the use of JAR resources instead. The bulk of the functionality
-		 * is now in TrainStream, which takes an InputStream as an argument.
-		 */
-		
-		if(Filename == "")
-			return 0;
-		
-		InputStream FileIn;
-		try {
-			FileIn = new BufferedInputStream(new FileInputStream(Filename));
-		}
-		catch (Exception e){
-			return 0;
-		}
-
-		return TrainStream(FileIn, iTotalBytes, iOffset);
-		
-	}
+	protected abstract void train(String T);
 	
 	/**
 	 * Trains the language model from a given InputStream, which
