@@ -771,7 +771,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		} else {
 			//simple screen, no markers / caching, render whole frame every time
 			m_DasherModel.RenderToView(m_DasherView, bRedrawNodes);
-			m_InputFilter.DecorateView(m_DasherView);
+			if (m_InputFilter!=null) m_InputFilter.DecorateView(m_DasherView);
 		}
 	}
 	
