@@ -171,6 +171,7 @@ public class DasherCanvas extends SurfaceView implements Callback {
 		public void DrawString(String string, int x1, int y1, long Size) {
 			p.setTextSize(Size);
 			p.setARGB(255, 0, 0, 0);
+			p.setStyle(Style.FILL_AND_STROKE);
 			canvas.drawText(string, x1, y1, p);
 		}
 		
