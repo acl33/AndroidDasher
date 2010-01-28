@@ -152,36 +152,22 @@ public class CColourIO implements XMLFileParser {
 				
 				String tagName = (simpleName.equals("") ? qualName : simpleName);
 				
-				if(tagName == "palette") {
+				if(tagName.equals("palette")) {
 					currentColour = new CColourIO.ColourInfo();
 					currentColour.Mutable = bLoadMutable;
-					for(int i = 0; i < tagAttributes.getLength(); i++) {
-				    	String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-				    	if(attributeName == "name") {
-				    		currentColour.ColourID = tagAttributes.getValue(i); 
-				    	}
-					}
+					currentColour.ColourID = tagAttributes.getValue("name");
 				}
-				else if(tagName == "colour") {
-					for(int i = 0; i < tagAttributes.getLength(); i++) {
-				    	String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-				    	if(attributeName == "r") {
-				    		currentColour.Reds.add(Integer.parseInt(tagAttributes.getValue(i)));
-				    	}
-				    	if(attributeName == "g") {
-				    		currentColour.Greens.add(Integer.parseInt(tagAttributes.getValue(i)));
-				    	}
-				    	if(attributeName == "b") {
-				    		currentColour.Blues.add(Integer.parseInt(tagAttributes.getValue(i)));
-				    	}
-					}
+				else if(tagName.equals("colour")) {
+					currentColour.Reds.add(Integer.parseInt(tagAttributes.getValue("r")));
+					currentColour.Greens.add(Integer.parseInt(tagAttributes.getValue("g")));
+					currentColour.Blues.add(Integer.parseInt(tagAttributes.getValue("b")));
 				}
 			}
 			
 			public void endElement(String namespaceURI, String simpleName, String qualName) {
 				String tagName = (simpleName.equals("") ? qualName : simpleName);
 				
-				if(tagName == "palette") {
+				if(tagName.equals("palette")) {
 					Colours.put(currentColour.ColourID, currentColour);
 				}
 			
