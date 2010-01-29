@@ -330,33 +330,27 @@ public class CPPMLanguageModel extends CLanguageModel {
 
 		assert(sym >= 0 && sym < GetSize());
 
-		CPPMnode vineptr, temp;
-		int updatecnt = 1;
-
-		temp = context.head.vine;
-
 		/* CSFS: AddSymbolToNode calls want to update two values, one of which
 		 * is a primitive and passed by value in Java. Therefore I have modified it
 		 * to return a small wrapper class, doubtless at the expense of some
 		 * performance.
 		 */
 
-		CAddSymReturnValue temp2 = AddSymbolToNode(context.head, sym, updatecnt);
-		context.head = temp2.node;
+		CPPMnode vineptr=null, temp=context.head;
+		int updatecnt = 1;
 
-		updatecnt = temp2.update;
+		do {
+			CAddSymReturnValue rv = AddSymbolToNode(temp, sym, updatecnt);
+			if (vineptr==null) {
+				context.head = rv.node;
+				context.order++;
+			} else vineptr.vine = rv.node;
+			updatecnt = rv.update;
+			vineptr = rv.node;
+			temp=temp.vine;
+		} while (temp != null);
 
-		vineptr = context.head;
-		context.order++;
-		while(temp != null) {
-			temp2 = AddSymbolToNode(temp, sym, updatecnt);
-			vineptr.vine = temp2.node;
-			updatecnt = temp2.update;
-			vineptr = vineptr.vine;
-			temp = temp.vine;
-		}
 		vineptr.vine = m_Root;
-
 		m_iMaxOrder = (int)GetLongParameter( Elp_parameters.LP_LM_MAX_ORDER );
 
 		while(context.order > m_iMaxOrder) {
