@@ -14,14 +14,10 @@ import dasher.CEventHandler;
 import dasher.CSettingsStore;
 import dasher.CStylusFilter;
 import dasher.XMLFileParser;
+import dasher.CLockEvent;
 import android.app.Activity;
-import android.content.SharedPreferences;
-import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
-import android.opengl.GLSurfaceView;
 import android.os.Bundle;
-import android.util.Log;
-import android.widget.TextView;
 
 public class DasherActivity extends Activity {
 	private ADasherInterface intf;
@@ -81,7 +77,7 @@ public class DasherActivity extends Activity {
 				}
 			}
 			
-			protected void train(String trainFileName) {
+			protected void train(String trainFileName, CLockEvent evt) {
 				int iTotalBytes=0;
 				List<InputStream> streams=new ArrayList<InputStream>();
 				//1. system file...
@@ -109,7 +105,11 @@ public class DasherActivity extends Activity {
 				
 				int iRead = 0;
 				for (InputStream in : streams) {
-					iRead = TrainStream(in, iTotalBytes, iRead);
+					try {
+						iRead = TrainStream(in, iTotalBytes, iRead, evt);
+					} catch (IOException e) {
+						android.util.Log.e("dasher", "error in training - rest of text skipped", e);
+					}
 				}
 			}
 			

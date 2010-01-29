@@ -25,95 +25,156 @@
 
 package dasher;
 
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.PushbackReader;
+import java.io.Reader;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.SortedMap;
 
 /**
- * Simple map from the textual representation of alphabet symbols
- * to their symbol numbers. This used to be a lot more complicated
- * but now essentially just wraps a Java HashMap and could easily
- * be removed and replaced by a HashMap member of Alphabet.
+ * Map from the textual representation of alphabet symbols
+ * (which can be multiple characters!) to symbol numbers.
  */
 public class CAlphabetMap {
 
-	/* CSFS: Reimplemented this class, since it was a pain to get working
-	 * in the same way as the C++ version, plus the original code actually
-	 * included a brief essay at the beginning warning against its being
-	 * suboptimal, and advising us to use a proper hash table.
+	/** Value used (internally - in {@link #singleChars} and as a return value)
+	 * to indicate 'no such symbol' */
+	private static final int UNDEFINED = -1;
+	
+	/** Value used (internally) to indicate that the text/etc. is a prefix of the
+	 * string for a symbol (or more than one) but does not make up a symbol itself. */
+	private static final int PREFIX = -2;
+	
+	/** Map to symbol number from string representing display text,
+	 * but <emph>only</emph> for symbols whose display text is more than
+	 * one character long. Note that all prefixes, of strings that are symbols,
+	 * are also stored in the map with value {@link #PREFIX}.
+	 * @see #singleChars
 	 */
+	protected final HashMap<String, Integer> multiChars = new HashMap<String, Integer>();
 	
 	/**
-	 * The map itself, from Strings to SSymbols (a small class
-	 * giving its integer index and a boolean value
-	 * which determines whether it constitutes a prefix symbol.
-	 * This is always set to false by the constructor, so the
-	 * class too is redundant and should be replaced by a simple
-	 * Integer.
-	 * 
-	 * @see SSymbol
+	 * Map to symbol number from display text, but <emph>only</emph> for
+	 * symbols whose display text is a single character. (However prefixes
+	 * of multicharacter symbols are also stored, with value {@link #PREFIX}).
 	 */
-	protected HashMap<String, SSymbol> hashTable;
-	// maps string representations to symbol indexes
+	protected int[] singleChars = new int[0];
 	
 	/**
-	 * Constant used to represent any string which does not
-	 * correspond to a valid symbol.
+	 * Adds a symbol to the map
+	 * @param key the text for the symbol
+	 * @param value unique code of the symbol
+	 * @throws IllegalArgumentException if <code>value&lt;0</code>, if there is another symbol
+	 * with the same text, or if another symbol is a prefix of this one or vice versa.
 	 */
-	private final int Undefined = 0;
-	
+	public void Add(String key, int value) {
+		if (key.length()==1) {Add(key.charAt(0), value); return;}
+		if (value<=0) throw new IllegalArgumentException("Illegal symbol number "+value + " for display text "+key);
+		if (multiChars.containsKey(key))
+			throw new IllegalArgumentException(
+					(multiChars.get(key)==PREFIX) ? "symbol "+value+" with display text "+key+" is prefix of another symbol"
+							: "symbols "+value+" and "+multiChars.get(key)+" share display text "+key);
+		StringBuilder sb = new StringBuilder(key);
+		for (;;) {
+			sb.deleteCharAt(sb.length()-1);
+			if (sb.length()==1) break;
+			Integer existing=multiChars.get(sb.toString());
+			if (existing!=null && existing.intValue() != PREFIX)
+				throw new IllegalArgumentException("symbol "+value+" with display text "+key+" is suffix of symbol "+existing+" with displaytext "+sb);
+			multiChars.put(sb.toString(), PREFIX);
+		}
+		char first = sb.charAt(0);
+		if (singleChars.length>first && singleChars[first]>=0)
+			throw new IllegalArgumentException("symbol "+value+" with display text "+key+" is suffix of symbol "+singleChars[first]+" with displaytext "+first);
+		multiChars.put(key,value);
+	}
+
 	/**
-	 * Creates the Hash Table with a given initial size.
-	 * 
-	 * @param InitialTableSize Initial size
+	 * Adds a symbol to the map
+	 * @param key the text for the symbol
+	 * @param value unique code of the symbol
+	 * @throws IllegalArgumentException if <code>value&lt;0</code>, if there is another symbol
+	 * with the same text, or if this symbol is a prefix of another symbol added previously.
 	 */
-	public CAlphabetMap(int InitialTableSize)	{
-		hashTable = new HashMap<String, SSymbol>(InitialTableSize);
+	public void Add(char key,int value) {
+		if (value<=0) throw new IllegalArgumentException("Illegal symbol number "+value + " for display text "+key);
+		if (key >= singleChars.length) {
+			int[] old = singleChars;
+			singleChars = new int[Math.max(old.length*2+1, key+1)];
+			System.arraycopy(old, 0, singleChars, 0, old.length);
+			Arrays.fill(singleChars, old.length, singleChars.length, UNDEFINED);
+		} else if (singleChars[key]!=UNDEFINED)
+			throw new IllegalArgumentException(
+					(singleChars[key]==PREFIX) ? "Symbol "+value+" with display text "+key+" is prefix of anothr symbol"
+							: "Symbols "+value+" and "+singleChars[key]+" share display text "+key
+					);
+		singleChars[key]=value;
+	}
+	
+	private int get(String s) {
+		if (s.length()==1) {
+			char c=s.charAt(0);
+			return (c < singleChars.length) ? singleChars[c] : UNDEFINED;
+		}
+		Integer i = multiChars.get(s);
+		return (i==null) ? UNDEFINED : i;
 	}
 	
 	/**
-	 * Default constructor; creates the hash table with a size
-	 * of 255.
-	 */
-	public CAlphabetMap() {
-		this(255); // Default value from alphabet_map.h
-	}
-	
-	/* CSFS: It looks to me as if even in the original C++,
-	 * nothing ever gets to use the KeyIsPrefix flag -- there are
-	 * actions to be taken if it's true, but nothing ever sets it so.
-	 * Consider removing and reverting to a plain integer to represent
-	 * a symbol?
-	 */
-	
-	/**
-	 * Adds a new key/value pair to the table.
+	 * Retrieves the next symbol in a stream of characters. Characters are read
+	 * from the stream until a complete representation of a symbol is obtained,
+	 * tho this may require skipping over earlier characters which are not part
+	 * of said symbol.
 	 * 
-	 * @param Key String representation of a symbol
-	 * @param Value Integer index of same symbol
-	 */
-	public void Add(String Key, int Value) {
-		SSymbol newsym = new SSymbol();
-		newsym.prefix = false;
-		newsym.symbol = Value;
-		hashTable.put(Key, newsym);
-	}
-	
-	/**
-	 * Retrieves a symbol index given the string representation.
+	 * <p>TODO: Note that if a symbol has text 'abcdef' and another 'bcd' (not
+	 * a prefix!), and the stream contains 'abcdx'
+	 * 
 	 * 
 	 * @param Key String to look up
 	 * @return SSymbol containing the integer index of the symbol, or Undefined if the supplied String did not correspond to any symbol.
 	 */	
-	public SSymbol Get(String Key) {
-		
-		if(hashTable.containsKey(Key)) {
-			return hashTable.get(Key);
+	public int GetNext(Reader rdr) throws IOException {
+		int c;
+		while (true) {
+			c = rdr.read();
+			if (c==-1) throw new EOFException();
+			if (c < singleChars.length) {
+				int sym = singleChars[c];
+				if (sym>=0) return sym;
+				else if (sym==PREFIX) break;
+			}
 		}
-		else {
-			SSymbol retval = new SSymbol();
-			retval.symbol = Undefined;
-			retval.prefix = false;
-			return retval;
-		
+		//not a symbol itself, but is a prefix of something else.
+		//Slow-case string/character handling, as it's easier and this shouldn't happen often.
+		StringBuilder sb=new StringBuilder();
+		sb.append((char)c);
+		while (true) {
+			if ((c=rdr.read())==-1) throw new EOFException();
+			sb.append((char)c);
+			//now chop 0 or more characters off the beginning until
+			// we have something that's (a prefix of) a symbol
+			int sym;
+			chop: while ((sym=get(sb.toString()))==UNDEFINED && sb.length()>0) {
+				sb.delete(0,1);
+				//look for symbols whose text we've already matched...
+				// (e.g. if there are symbols 'abcdef' and 'bcd' and text was 'abcd',
+				// a prefix of 'abcdef', and then we read an 'x',
+				// 'abcdx' is not a prefix; but chopping off the 'a' leads to 'bcdx',
+				// which is a symbol and should be returned.)
+				for (int i=sb.length(); (i--)>1;)
+					if ((sym=get(sb.substring(0,i)))!=UNDEFINED) {
+						//first 'i' characters of sb are symbol. push back the rest...
+						if (!(rdr instanceof PushbackReader))
+							rdr = new PushbackReader(rdr);
+						((PushbackReader)rdr).unread(sb.toString().toCharArray(), i, sb.length());
+						break chop; //and return the symbol
+					}
+			}
+			if (sym>0) return sym;
 		}
 	}
 }

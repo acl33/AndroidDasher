@@ -196,61 +196,6 @@ public class CDasherModel extends CDasherComponent {
 	}
 	
 	/**
-	 * Helper class to assist in training of the language model.
-	 * 
-	 */
-	class CTrainer {
-		/**
-		 * Context which we are extending in the training process
-		 */
-		protected CContextBase m_Context;
-		
-		/**
-		 * Model which we are training
-		 */
-	    protected CDasherModel m_DasherModel;
-	    
-	    /**
-	     * Sole constructor. Produces a Trainer with an empty
-	     * context which is ready to train. 
-	     * 
-	     * @param DasherModel Model whose LanguageModel we are training. Must not be null.
-	     */
-	    public CTrainer(CDasherModel DasherModel) {
-	    	m_DasherModel = DasherModel;
-	    	m_Context = m_DasherModel.m_LanguageModel.CreateEmptyContext();
-	    }
-	    
-	   	/**
-	   	 * Trains this trainer's associated language model according
-	   	 * to the symbols specified. Note that these are not character codes
-	   	 * but integer symbol indices; these may be obtained by passing characters
-	   	 * to the relevant Alphabet's GetSymbols method.
-	   	 * 
-	   	 * @param vSymbols Symbols to teach the model.
-	   	 */    
-	    public void Train(ArrayList<Integer> vSymbols) {
-	    	
-	    	for(int i : vSymbols)
-	    		m_DasherModel.m_LanguageModel.LearnSymbol(m_Context, i);
-	    }
-	    
-	    /* CSFS: IMPORTANT DESTRUCTOR. The only place where this ever gets
-	     * called is in CInterfaceBase, which contains one "delete pTrainer"
-	     * statement. This must call this method first.
-	     */
-	    
-	    /**
-	     * Destroys our context; this should only be called when
-	     * the language model is of no further use.
-	     */
-	    public void DeleteTrainer() {
-	    	m_DasherModel.m_LanguageModel.ReleaseContext(m_Context);
-	    }
-
-	}
-	
-	/**
 	 * Initialise a new DasherModel. This consists of:
 	 * <p><ul>
 	 * <li>Retrieving an AlphInfo object describing the user's chosen alphabet
@@ -748,7 +693,7 @@ public class CDasherModel extends CDasherComponent {
 		}
 		else {
 			ArrayList<Integer> vSymbols = new ArrayList<Integer>();
-			m_LanguageModel.SymbolAlphabet().GetAlphabetPointer().GetSymbols(vSymbols, sNewContext, false);
+			m_LanguageModel.SymbolAlphabet().GetAlphabetPointer().GetSymbols(vSymbols, sNewContext);
 
 			int iRootSymbol = (vSymbols.get(vSymbols.size()-1));
 			
@@ -1436,10 +1381,10 @@ public class CDasherModel extends CDasherComponent {
 	 * @param TheText Text to add
 	 * @param IsMore Ignored
 	 */	
-	public void LearnText(CContextBase context, String TheText, boolean IsMore) {
+	public void LearnText(CContextBase context, String TheText) {
 		ArrayList <Integer> Symbols = new ArrayList<Integer>();
 		
-		m_cAlphabet.GetSymbols(Symbols, TheText, IsMore);
+		m_cAlphabet.GetSymbols(Symbols, TheText);
 		
 		for(int i = 0; i < Symbols.size(); i++)
 			m_LanguageModel.LearnSymbol(context, Symbols.get(i)); // FIXME - conversion to symbol alphabet
@@ -1457,18 +1402,9 @@ public class CDasherModel extends CDasherComponent {
 	 */
 	public void EnterText(CContextBase context, String TheText) {
 		ArrayList <Integer> Symbols = new ArrayList<Integer>();
-		m_cAlphabet.GetSymbols(Symbols, TheText, false); // UTF8 bytes become Unicode Integers
+		m_cAlphabet.GetSymbols(Symbols, TheText); // UTF8 bytes become Unicode Integers
 		for(int i = 0; i < Symbols.size(); i++)
 			m_LanguageModel.EnterSymbol(context, Symbols.get(i)); // FIXME - conversion to symbol alphabet
-	}
-	
-	/**
-	 * Gets this model's helper training class.
-	 * 
-	 * @return Trainer class
-	 */
-	public CTrainer GetTrainer() {
-		return new CTrainer(this);
 	}
 	
 	/**

@@ -24,6 +24,9 @@
 */
 package dasher;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -269,12 +272,16 @@ public class CAlphabet {
 	 * 				 used internally.
 	 */
 	
-	public void GetSymbols(Collection<Integer> Symbols, String Input, boolean IsMore) {
-		
-		for(char c : Input.toCharArray()) {
-			Symbols.add((TextMap.Get(new Character(c).toString())).symbol);
+	public void GetSymbols(Collection<Integer> Symbols, String input) {
+		StringReader rdr=new StringReader(input);
+		while (true) {
+			try {
+				Symbols.add(TextMap.GetNext(rdr));
+			} catch (IOException e) {
+				assert (e instanceof FileNotFoundException);
+				break;
+			}
 		}
-	
 	}
 	
 	/**
@@ -293,8 +300,10 @@ public class CAlphabet {
 		m_Colours.add(Colour);
 		m_Foreground.add(Foreground);
 		
-		int ThisSymbol = m_Characters.size() - 1;
-		TextMap.Add(NewCharacter, ThisSymbol);
+		//don't add a symbol with no text (the map's only used for
+		// importing training text, i.e. converting from text to symbol!)
+		if (NewCharacter.length()>0)
+			TextMap.Add(NewCharacter, m_Characters.size() - 1);
 	}
 	
 	/**

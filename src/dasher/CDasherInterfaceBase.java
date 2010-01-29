@@ -544,7 +544,8 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		if( lmID == -1 ) return;
 			
 		// Train the new language model
-		InsertEvent(new CLockEvent("Training Dasher", true, 0));
+		CLockEvent evt = new CLockEvent("Training Dasher", true, 0); 
+		InsertEvent(evt);
 		
 		// Delete the old model and create a new one
 		if(m_DasherModel != null) {
@@ -556,9 +557,10 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		m_DasherModel = new CDasherModel(this, m_SettingsStore, m_AlphIO);
 		m_Alphabet = m_DasherModel.GetAlphabetNew();
 		
-		train(m_Alphabet.GetTrainingFile());
+		train(m_Alphabet.GetTrainingFile(),evt);
 		
-		InsertEvent(new CLockEvent("Training Dasher", false, 0));
+		evt.m_bLock = false;
+		InsertEvent(evt);
 	}
 	
 	/**
@@ -955,11 +957,12 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	}
 	
 	/** Subclasses should implement to train the model with both user &amp; system texts.
-	 * Progress updates via CLockEvents are an optional extra for subclasses, albeit desirable.
+	 * Progress updates are an optional extra for subclasses, albeit desirable.
 	 * 
 	 * @param T alphabet-provided name of training file, e.g. "training_english_GB.txt"
+	 * @param evt Event to use to notify of progress updates (null =&gt; no updates) by filling in m_iPercent field
 	 */
-	protected abstract void train(String T);
+	protected abstract void train(String T, CLockEvent evt);
 	
 	/**
 	 * Trains the language model from a given InputStream, which
@@ -973,150 +976,57 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * @param iTotalBytes Number of bytes to read.
 	 * @param iOffset Offset at which to start reading.
 	 * @return Number of bytes read
+	 * @throws IOException 
 	 */	
-	public int TrainStream(InputStream FileIn, int iTotalBytes, int iOffset) {
+	public int TrainStream(InputStream FileIn, int iTotalBytes, int iOffset, CLockEvent evt) throws IOException {
 		
-		/* CSFS: This function is going to be rather more involved
-		 * to port, so I am leaving a commented version of the C++
-		 * here for reference, annotated with my interpretations
-		 * of what it means, so as to help establish whether my Java
-		 * version is even *trying* to do the right thing, or if
-		 * I have misunderstood the original.
-		 */
+		class CountStream extends InputStream {
+			/*package*/ int iTotalRead;
+			private final InputStream in;
+			CountStream(InputStream in, int iStartBytes) {this.in=in; this.iTotalRead=iStartBytes;}
+			@Override public int available() throws IOException {return in.available();}
+			@Override public int read() throws IOException {
+				int res = in.read();
+				if (res != -1) iTotalRead++;
+				return res;
+			}
+			@Override public int read(byte[] buf) throws IOException {return read(buf,0,buf.length);}
+			@Override public int read(byte[] buf, int start, int len) throws IOException {
+				int res = in.read(buf,start,len);
+				if (res>0) iTotalRead+=res; //-1 = EOF
+				return res;
+			}
+			@Override public long skip(long n) throws IOException {//should never be called?
+				long res=super.skip(n);
+				if (res>0) iTotalRead+=res;
+				return res;
+			}
+		};
+		CountStream count = new CountStream(FileIn, iOffset);
+		Reader chars = new BufferedReader(new InputStreamReader(count));
+		CLanguageModel pLan = m_DasherModel.m_LanguageModel;
+		CContextBase trainContext = pLan.CreateEmptyContext();
+		CAlphabetMap alphSyms = m_Alphabet.GetAlphabetMap();
 		
-		/* CSFS: I have made significant changes to this function and CAlphabet.getSymbols
-		 * on the grounds that our internal character set is different. Under C++, the scheme
-		 * was that this function did the file I/O and fed UTF-8 bytes to CAlphabet to
-		 * find the symbol identifiers. Here, I am reading a UTF-8 file to produce
-		 * a UTF-16 String, which is then fed to CAlphabet.
-		 */
-		
-		// BEGIN C++
-		
-		/*
-		if(Filename == "")
-			return 0;
-		
-		FILE *InputFile;
-		if((InputFile = fopen(Filename.c_str(), "r")) == (FILE *) 0)
-			return 0;
-			
-			 * If the file-handle we get back is null, return zero.
-			 * So the Java version should handle an exception at this point
-			 * by returning zero.
-		
-		const int BufferSize = 1024;
-		char InputBuffer[BufferSize]; // 1024-byte buffer; should be doable using BufferedReader
-		string StringBuffer;
-		int NumberRead;
-		int iTotalRead(0);
-		
-		ArrayList < symbol > Symbols;
-		
-		CDasherModel::CTrainer * pTrainer = m_pDasherModel->GetTrainer();
-		do {
-			NumberRead = fread(InputBuffer, 1, BufferSize - 1, InputFile); // Means 'read 1023 bytes to InputBuffer'
-			InputBuffer[NumberRead] = '\0'; // Add a null terminator
-			StringBuffer += InputBuffer;
-			bool bIsMore = false;
-			if(NumberRead == (BufferSize - 1)) // Did we get as many bytes as expected?
-				bIsMore = true; // If so, there may be more!
-			
-			Symbols.clear(); // Empty ArrayList
-			m_Alphabet->GetSymbols(&Symbols, &StringBuffer, bIsMore); // Fill with symbols recognised by Alphabet
-			
-			pTrainer->Train(Symbols); // Train! 
-			iTotalRead += NumberRead; // Accumulate.
-			
-			// TODO: No reason for this to be a pointer (other than cut/paste laziness!)
-			CLockEvent *pEvent;
-			pEvent = new CLockEvent("Training Dasher", true, static_cast<int>((100.0 * (iTotalRead + iOffset))/iTotalBytes));
-			m_pEventHandler->InsertEvent(pEvent);
-			delete pEvent;
-			
-		} while(NumberRead == BufferSize - 1); // Until we appear to have reached EOF
-		
-		delete pTrainer;
-		
-		fclose(InputFile);
-		
-		return iTotalRead;
-		*/
-		
-		// END C++
-		
-		final int BufferSize = 1024;
-		byte[] InputBuffer = new byte[BufferSize];
-		
-		/* CSFS: Changed to bytes since Java chars are a 16-bit type. */
-		
-		// ArrayList<Byte> StrBuffer = new ArrayList<Byte>(); // For the reasons discussed above.
-		// Ought to be impossible that the buffer should have this much data in it at
-		// any given time.
-		int NumberRead = 0;
-		int iTotalRead = 0;
-		boolean bIsMore = false;
-		
-		ArrayList<Integer> Symbols = new ArrayList<Integer>();
-		
-		CDasherModel.CTrainer Trainer = m_DasherModel.GetTrainer();
-		
-		do {
-			
-			try {
-				//NumberRead = FileIn.read(InputBuffer, 0, BufferSize - 1); // Means 'read 1023 bytes to InputBuffer at offset 0'
-				
-				//System.out.printf("%d, %d+", NumberRead, FileIn.available());
-				
-				NumberRead = 0;
-				int temp = 0;
-				while(NumberRead < (BufferSize - 1)) {
-					temp = FileIn.read();
-					if(temp == -1) {
-						break;
-					}
-					else if(temp != 13) {
-						InputBuffer[NumberRead] = (byte)temp;
-						NumberRead++;
+		try {
+			while (true) {
+				int sym = alphSyms.GetNext(chars);
+				pLan.LearnSymbol(trainContext, sym);
+				if (evt!=null) {
+					int iNPercent = (count.iTotalRead *100)/iTotalBytes;
+					if (iNPercent != evt.m_iPercent) {
+						evt.m_iPercent = iNPercent;
+						InsertEvent(evt);
 					}
 				}
 			}
-			catch(IOException e) {
-				System.out.printf("Aborting training on an IOException%n");
-				return 0;
-			}
-			
-			InputBuffer[NumberRead] = 0; // Add a null terminator
-			
-			bIsMore = false;
-			if(NumberRead == (BufferSize - 1)) // Did we get as many bytes as expected?
-				bIsMore = true; // If so, there may be more!
-			
-			Symbols.clear(); // Empty ArrayList
-			
-			String translatedInput;
-			
-			try {
-				translatedInput = new String(InputBuffer, "UTF-8");
-			}
-			catch(Exception e) {
-				System.out.printf("Failed reading training file: This system cannot decode UTF-8.%n");
-				return 0;
-			}
-			
-			m_Alphabet.GetSymbols(Symbols, translatedInput, bIsMore); // Fill with symbols recognised by Alphabet
-			
-			Trainer.Train(Symbols); // Train! 
-			iTotalRead += NumberRead; // Accumulate.
-			
-			CLockEvent Event;
-			Event = new CLockEvent("Training Dasher", true, (int)((100.0 * (iTotalRead + iOffset))/iTotalBytes));
-			InsertEvent(Event);
-			Event = null;
-			
-		} while(NumberRead == BufferSize - 1); // Until we appear to have reached EOF
+		} catch (EOFException e) {
+			//that's fine!
+		} finally {
+			pLan.ReleaseContext(trainContext);
+		}
 		
-		return iTotalRead;
+		return count.iTotalRead;
 		
 	}
 	

@@ -11,15 +11,16 @@ import java.io.InputStream;
  */
 public abstract class GeneralInterface extends CDasherInterfaceBase {
 
-	protected void train(String T) {
+	@Override
+	protected void train(String T, CLockEvent evt) {
 		int iTotalBytes = 0;
 		iTotalBytes += GetFileSize(GetStringParameter(Esp_parameters.SP_SYSTEM_LOC) + T);
 		iTotalBytes += GetFileSize(GetStringParameter(Esp_parameters.SP_USER_LOC) + T);
 		
 		if(iTotalBytes > 0) {
 			int iOffset;
-			iOffset = TrainFile(GetStringParameter(Esp_parameters.SP_SYSTEM_LOC) + T, iTotalBytes, 0);
-			TrainFile(GetStringParameter(Esp_parameters.SP_USER_LOC) + T, iTotalBytes, iOffset);
+			iOffset = TrainFile(GetStringParameter(Esp_parameters.SP_SYSTEM_LOC) + T, iTotalBytes, 0, evt);
+			TrainFile(GetStringParameter(Esp_parameters.SP_USER_LOC) + T, iTotalBytes, iOffset, evt);
 		}
 		else {
 			CMessageEvent oEvent = new CMessageEvent("No training text is avilable for the selected alphabet. Dasher will function, but it may be difficult to enter text.\nPlease see http://www.dasher.org.uk/alphabets/ for more information.", 0, 0);
@@ -38,7 +39,7 @@ public abstract class GeneralInterface extends CDasherInterfaceBase {
 	 * @param iOffset Offset at which to start reading
 	 * @return Number of bytes read
 	 */
-	public int TrainFile(String Filename, int iTotalBytes, int iOffset) {
+	public int TrainFile(String Filename, int iTotalBytes, int iOffset, CLockEvent evt) {
 		
 		/* CSFS: This has now been split into two parts in order to accomodate
 		 * training from streams which aren't files. This is especially
@@ -52,13 +53,11 @@ public abstract class GeneralInterface extends CDasherInterfaceBase {
 		
 		InputStream FileIn;
 		try {
-			FileIn = new BufferedInputStream(new FileInputStream(Filename));
+			return TrainStream(new BufferedInputStream(new FileInputStream(Filename)), iTotalBytes, iOffset, evt);
 		}
 		catch (Exception e){
 			return 0;
 		}
-
-		return TrainStream(FileIn, iTotalBytes, iOffset);
 		
 	}
 

@@ -382,7 +382,7 @@ public class CAlphabetManager extends CNodeManager {
     	/* Extract a potential reply from the event */
     	
     	ArrayList<Integer> vSymbols = new ArrayList<Integer>();
-    	m_LanguageModel.SymbolAlphabet().GetAlphabetPointer().GetSymbols(vSymbols, strContext, false);
+    	m_LanguageModel.SymbolAlphabet().GetAlphabetPointer().GetSymbols(vSymbols, strContext);
     	
     	CDasherNode NewNode;
     	
