@@ -161,17 +161,6 @@ public class CPPMLanguageModel extends CLanguageModel {
 		}
 	}
 
-	/**
-	 * Small struct for use by CPPMLanguageModel's
-	 * AddSymbol method.
-	 * 
-	 * @see CPPMLanguageModel
-	 */
-	class CAddSymReturnValue {
-		public CPPMnode node;
-		public int update;
-	}
-
 	public CPPMLanguageModel(CEventHandler EventHandler, CSettingsStore SettingsStore, CSymbolAlphabet SymbolAlphabet) {
 
 		super(EventHandler, SettingsStore, SymbolAlphabet); // Constructor of CLanguageModel
@@ -330,23 +319,40 @@ public class CPPMLanguageModel extends CLanguageModel {
 
 		assert(sym >= 0 && sym < GetSize());
 
-		/* CSFS: AddSymbolToNode calls want to update two values, one of which
-		 * is a primitive and passed by value in Java. Therefore I have modified it
-		 * to return a small wrapper class, doubtless at the expense of some
-		 * performance.
-		 */
-
 		CPPMnode vineptr=null, temp=context.head;
 		int updatecnt = 1;
 
 		do {
-			CAddSymReturnValue rv = AddSymbolToNode(temp, sym, updatecnt);
+			///// inline what used to be AddSymbolToNode /////
+			// so we can get out both CPPMNode Return, and also modify updatecnt...
+			CPPMnode Return = temp.find_symbol(sym);
+
+			if(Return != null) {
+
+				if(updatecnt != 0 || !bUpdateExclusion) {  // perform update exclusions
+
+					/* CSFS: BUGFIX: This used to read 'bUpdateExclusion' without the !
+					 * This led to the language model generating probabilities which were
+					 * just ever so slightly off. FIXED.
+					 */
+
+					Return.count++;
+					updatecnt = 0;
+				}
+			} else {
+				Return = new CPPMnode(); //m_NodeAlloc.Alloc();        // count is initialized to 1
+				Return.symbol = sym;
+				Return.next = temp.child;
+				temp.child = Return;
+		
+				++NodesAllocated;
+			}
+			/////// end AddSymbolToNode ///////
 			if (vineptr==null) {
-				context.head = rv.node;
+				context.head = Return;
 				context.order++;
-			} else vineptr.vine = rv.node;
-			updatecnt = rv.update;
-			vineptr = rv.node;
+			} else vineptr.vine = Return;
+			vineptr = Return;
 			temp=temp.vine;
 		} while (temp != null);
 
@@ -440,43 +446,6 @@ public class CPPMLanguageModel extends CLanguageModel {
 			else
 				System.out.printf("%c", cc);
 		}
-	}
-
-	private CAddSymReturnValue AddSymbolToNode(CPPMnode Node, int sym, int updatein) {
-		CPPMnode Return = Node.find_symbol(sym);
-
-		int updateout = updatein;
-
-		if(Return != null) {
-
-			if(updatein != 0 || !bUpdateExclusion) {  // perform update exclusions
-
-				/* CSFS: BUGFIX: This used to read 'bUpdateExclusion' without the !
-				 * This led to the language model generating probabilities which were
-				 * just ever so slightly off. FIXED.
-				 */
-
-				Return.count++;
-				updateout = 0;
-			}
-			CAddSymReturnValue retval = new CAddSymReturnValue();
-			retval.node = Return;
-			retval.update = updateout;
-			return retval;
-		}
-
-		Return = new CPPMnode(); //m_NodeAlloc.Alloc();        // count is initialized to 1
-		Return.symbol = sym;
-		Return.next = Node.child;
-		Node.child = Return;
-
-		++NodesAllocated;
-
-		CAddSymReturnValue retval = new CAddSymReturnValue();
-		retval.node = Return;
-		retval.update = updateout;
-		return retval;
-
 	}
 
 	/* Excluded methods: it appears the DumpTrie methods are still
