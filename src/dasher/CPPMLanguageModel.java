@@ -117,7 +117,7 @@ public class CPPMLanguageModel extends CLanguageModel {
 		public CPPMnode next;
 		public CPPMnode vine;
 		public short count;
-		public int symbol;
+		public final int symbol;
 
 		/* CSFS: Found that the C++ code used a short
 		 * to represent a symbol in certain places and an
@@ -128,18 +128,15 @@ public class CPPMLanguageModel extends CLanguageModel {
 		 */
 
 		public CPPMnode(int sym) {
-			child = null;
-			next = null;
-			vine = null;
 			count = 1;
 			symbol = sym;
 		}
 
-		public CPPMnode() {
-			child = null;
-			next = null;
-			vine = null;
-			count = 1;
+		public CPPMnode(int sym, CPPMnode parent) {
+			this(sym);
+			next = parent.child;
+			parent.child = this;
+			++NodesAllocated;
 		}
 
 		public CPPMnode find_symbol(int sym) // see if symbol is a child of node
@@ -168,9 +165,8 @@ public class CPPMLanguageModel extends CLanguageModel {
 		NodesAllocated = 0;
 		// m_NodeAlloc = new CSimplePooledAlloc<CPPMnode>(8192);
 		// m_ContextAlloc = new CPooledAlloc<CPPMContext>(1024);
-		m_Root = new CPPMnode(); // m_NodeAlloc.Alloc();
-		m_Root.symbol = -1;
-
+		m_Root = new CPPMnode(-1); // m_NodeAlloc.Alloc();
+		
 		m_RootContext = new CPPMContext();// m_ContextAlloc.Alloc();
 		m_RootContext.head = m_Root;
 		m_RootContext.order = 0;
@@ -340,12 +336,7 @@ public class CPPMLanguageModel extends CLanguageModel {
 					updatecnt = 0;
 				}
 			} else {
-				Return = new CPPMnode(); //m_NodeAlloc.Alloc();        // count is initialized to 1
-				Return.symbol = sym;
-				Return.next = temp.child;
-				temp.child = Return;
-		
-				++NodesAllocated;
+				Return = new CPPMnode(sym, temp); //m_NodeAlloc.Alloc();        // count is initialized to 1
 			}
 			/////// end AddSymbolToNode ///////
 			if (vineptr==null) {
