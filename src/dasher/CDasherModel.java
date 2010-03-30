@@ -488,7 +488,7 @@ public class CDasherModel extends CDasherComponent {
 		RecursiveMakeRoot(Node);
 		ClearRootQueue();
 		Node.Delete_children();
-		Node.m_NodeManager.PopulateChildren(Node);
+		Node.PopulateChildren();
 	}
 
 	/**
@@ -518,6 +518,7 @@ public class CDasherModel extends CDasherComponent {
 		if(m_Root.Symbol() == 0)
 			return; // Don't try to reparent the root symbol
 		
+		
 		CDasherNode NewRoot;
 		
 		if(oldroots.size() == 0) {
@@ -531,7 +532,7 @@ public class CDasherModel extends CDasherComponent {
 				if (cur == m_Root) break;
 			}
 			
-			NewRoot = m_Root.m_NodeManager.RebuildParent(m_Root, allEntered);
+			NewRoot = m_Root.RebuildParent(allEntered);
 			
 		}
 		else {
@@ -928,12 +929,12 @@ public class CDasherModel extends CDasherComponent {
 		if(Node.Parent() != null && (!Node.Parent().isSeen())) 
 			RecursiveOutput(Node.Parent(), pAdded);
 		
-		if(Node.Parent() != null) Node.Parent().m_NodeManager.Leave(Node.Parent());
+		if(Node.Parent() != null) Node.Parent().Leave();
 			
-		Node.m_NodeManager.Enter(Node);
+		Node.Enter();
 		
 		Node.Seen(true);
-		Node.m_NodeManager.Output(Node, pAdded, (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION));
+		Node.Output(pAdded, (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION));
 	}
 
 	/*
@@ -1158,14 +1159,14 @@ public class CDasherModel extends CDasherComponent {
 		// text that we've seen already
 		if(newnode.isSeen() == true) {
 			if(oldnode.Parent() == newnode) {
-				oldnode.m_NodeManager.Undo(oldnode);
-				oldnode.Parent().m_NodeManager.Enter(oldnode.Parent());
+				oldnode.Undo();
+				oldnode.Parent().Enter();
 				oldnode.Seen(false);
 				return true;
 			}
 			if(DeleteCharacters(newnode, oldnode.Parent()) == true) {
-				oldnode.m_NodeManager.Undo(oldnode);
-				oldnode.Parent().m_NodeManager.Enter(oldnode.Parent());
+				oldnode.Undo();
+				oldnode.Parent().Enter();
 				oldnode.Seen(false);
 				return true;
 			}
@@ -1183,8 +1184,8 @@ public class CDasherModel extends CDasherComponent {
 				
 				oldnode.Seen(false);
 				
-				oldnode.m_NodeManager.Undo(oldnode);
-				oldnode.Parent().m_NodeManager.Enter(oldnode.Parent());
+				oldnode.Undo();
+				oldnode.Parent().Enter();
 				oldnode = oldnode.Parent();
 				if(oldnode == null) {
 					return false;
@@ -1401,7 +1402,7 @@ public class CDasherModel extends CDasherComponent {
 		
 		Node.Alive(true);
 		
-		Node.m_NodeManager.PopulateChildren(Node);
+		Node.PopulateChildren();
 		Node.SetHasAllChildren(true);
 	}
 	

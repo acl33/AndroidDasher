@@ -81,7 +81,6 @@ public class CAlphabetManager extends CNodeManager {
     
     public CAlphabetManager( CDasherModel Model, CLanguageModel LanguageModel) {
     	
-    	super(0); // Constructor of CNodeManager
     	this.m_LanguageModel = LanguageModel;
     	this.m_Model = Model;
     	SPSymbol = Model.GetSpaceSymbol();
@@ -100,15 +99,8 @@ public class CAlphabetManager extends CNodeManager {
     /**
      * Creates a new root CDasherNode with the supplied parameters.
      */
-    public CDasherNode GetRoot(CDasherNode Parent, long iLower, long iUpper, int UserData) { // VOID POINTER CHANGED TO INT
+    public CDasherNode GetRoot(CDasherNode Parent, long iLower, long iUpper, int iSymbol) { // VOID POINTER CHANGED TO INT
     	CDasherNode NewNode;
-
-    	/* CSFS: Replaced "void* UserData" with "int UserData" since as far as I can see
-    	 * it is always cast to an int* and then dereferenced. Will change this if I
-    	 * find a counterexample.
-    	 */
-    	
-    	  int iSymbol = UserData;
 
     	  // FIXME - Make this a CDasherComponent
 
@@ -121,12 +113,11 @@ public class CAlphabetManager extends CNodeManager {
 
 
     	  if(iSymbol == m_Model.GetSpaceSymbol())
-    	    NewNode = new CDasherNode(Parent, iSymbol, 0, EColorSchemes.Special1, iLower, iUpper, m_LanguageModel, iColour);
+    	    NewNode = new CAlphNode(Parent, iSymbol, 0, EColorSchemes.Special1, iLower, iUpper, m_LanguageModel, iColour);
     	  else
-    	    NewNode = new CDasherNode(Parent, iSymbol, 0, EColorSchemes.Nodes1, iLower, iUpper, m_LanguageModel, iColour);
+    	    NewNode = new CAlphNode(Parent, iSymbol, 0, EColorSchemes.Nodes1, iLower, iUpper, m_LanguageModel, iColour);
     	  
     	  NewNode.SetContext(m_LanguageModel.CreateEmptyContext()); // FIXME - handle context properly
-    	  NewNode.m_NodeManager = this;
     	  NewNode.m_bShove = true;
     	  NewNode.m_BaseGroup = m_Alphabet.m_BaseGroup;
     	  NewNode.m_strDisplayText = m_DisplayText.get(iSymbol);
@@ -135,27 +126,168 @@ public class CAlphabetManager extends CNodeManager {
     	  return NewNode;
     }
     
-    /**
-     * Stub: AlphabetManager is not reference counted.
-     */
-    public void Ref() {};
-	
-    /**
-     * Stub: AlphabetManager is not reference counted.
-     */    
-    public void Unref() {};
+    private class CAlphNode extends CDasherNode {
     
-    /**
-     * Populates the children of a given DasherNode.
-     * <p>
-     * This is exactly the same as calling PopulateChildrenWithSymbol(Node, -2, null);
-     * 
-     * @param Node Node to be given children.
-     */
-    public void PopulateChildren( CDasherNode Node ) {
-    	PopulateChildrenWithSymbol( Node, -2, null );
+        public CAlphNode(CDasherNode Parent, int Symbol, int iphase,
+				EColorSchemes ColorScheme, long ilbnd, long ihbnd,
+				CLanguageModel lm, int Colour) {
+			super(Parent, Symbol, iphase, ColorScheme, ilbnd, ihbnd, lm, Colour);
+			// TODO Auto-generated constructor stub
+		}
+
+		public void PopulateChildren( ) {
+        	PopulateChildrenWithSymbol( this, -2, null );
+        }
+        
+        /**
+         * Generates an EditEvent announcing a new character has been
+         * entered, inferring the character from the Node supplied.
+         * <p>
+         * The second and third parameters are solely for logging
+         * purposes. Logging is not currently enabled in JDasher
+         * and so these can safely be set to null and 0 respectively.
+         * <p>
+         * In the case that logging is enabled, passing the second parameter
+         * as null will cause this addition not to be logged.
+         * 
+         * @param Node The node whose symbol we wish to look up and announce.
+         * @param Added An ArrayList<CSymbolProb> to which the typed symbol, annotated with its probability, will be added for logging purposes.
+         * @param iNormalization The total to which probabilities should add (usually LP_NORMALIZATION) for the purposes of generating the logged probability.
+         */
+        public void Output( ArrayList<CSymbolProb> Added, int iNormalization) {
+        	m_Model.m_bContextSensitive = true;
+        	int t = Symbol();
+        	if(t != 0) { // Ignore symbol 0 (root node)
+        		CEditEvent oEvent = new CEditEvent(1, m_Alphabet.GetText(t));
+        		m_Model.InsertEvent(oEvent);
+        		
+        		// Track this symbol and its probability for logging purposes
+        		if (Added != null) {
+        			CSymbolProb sItem = new CSymbolProb();
+        			sItem.sym    = t;
+        			sItem.prob   = GetProb(iNormalization);
+        			
+        			Added.add(sItem);
+        		}
+        	}
+        }
+
+        /**
+         * Generates an EditEvent announcing that the character represented
+         * by this Node should be removed.
+         * 
+         * @param Node Node whose symbol we wish to remove.
+         */    
+        public void Undo() {
+        	int t = Symbol();
+        	if(t != 0) { // Ignore symbol 0 (root node)
+        		CEditEvent oEvent = new CEditEvent(2, m_Alphabet.GetText(t));
+        		m_Model.InsertEvent(oEvent);
+        	}
+        }
+
+		/**
+		 * Reconstructs the parent of a given node, in the case that
+		 * it had been deleted but the user has now backed off far
+		 * enough that we need to restore.
+		 * <p>
+		 * This will generate an EditContextEvent to try to extend
+		 * its knowledge of the current context; this is necessary
+		 * because Dasher only buffers a small amount of context
+		 * internally. Typically a UI component is expected to reply
+		 * with the appropriate context.
+		 * <p>
+		 * In the event that context is not available internally
+		 * and the dispatched EditContextEvent is not passed a new
+		 * context, the root symbol is created and returned.
+		 * 
+		 * @param iGeneration The depth in the tree of this node.
+		 * @param charsBefore TODO
+		 * @return The newly created parent, which may be the root node.
+		 */
+		public CDasherNode RebuildParent(ListIterator<Character> charsBefore) {
+			
+			/* This used to clear m_Model.strContextBuffer. Removed as per notes
+			 * at the top of CDasherInterfaceBase.
+			 */
+			
+			/* This reconstitutes the parent of the current root in the case
+			 * that we've backed off far enough to need to do so.
+			 */
+			
+			StringBuilder ctx = new StringBuilder();
+			while (charsBefore.hasPrevious() && ctx.length()<5) //ACL TODO, don't fix on 5 chars!
+				ctx.append(charsBefore.previous());
+			String strContext = ctx.reverse().toString();
+			
+			ArrayList<Integer> vSymbols = new ArrayList<Integer>();
+			m_LanguageModel.SymbolAlphabet().GetAlphabetPointer().GetSymbols(vSymbols, strContext);
+			
+			CDasherNode NewNode;
+			
+			if(vSymbols.isEmpty()) {
+				
+				/* In the case that there isn't enough context to rebuild the tree,
+				 * we magically reappear at the root node.
+				 */
+				
+				NewNode = new CAlphNode(null, 0, 0,  EColorSchemes.Nodes1, 0, 0, m_LanguageModel, 7);
+				
+				CContextBase oContext = m_LanguageModel.CreateEmptyContext();
+				m_Model.EnterText(oContext, ". ");
+				NewNode.SetContext(oContext);
+			}
+			else {
+				
+				EColorSchemes NormalScheme, SpecialScheme;
+				if((ColorScheme() == EColorSchemes.Nodes1) || (ColorScheme() == EColorSchemes.Special1)) {
+					NormalScheme = EColorSchemes.Nodes2;
+					SpecialScheme = EColorSchemes.Special2;
+				}
+				else {
+					NormalScheme = EColorSchemes.Nodes1;
+					SpecialScheme = EColorSchemes.Special1;
+				}
+				
+				EColorSchemes ChildScheme;
+				if(vSymbols.get(vSymbols.size() - 1) == m_Model.GetSpaceSymbol())
+					ChildScheme = SpecialScheme;
+				else
+					ChildScheme = NormalScheme;
+				
+				int NodeColour = m_Colours.get(vSymbols.get(vSymbols.size() - 2));
+				
+				if(NormalScheme == EColorSchemes.Nodes2) {
+					NodeColour += 130;
+				}
+				
+				NewNode = new CAlphNode(null, vSymbols.get(vSymbols.size() - 2), 0, ChildScheme, 0, 0, m_LanguageModel, NodeColour);
+				
+				CContextBase oContext = (m_LanguageModel.CreateEmptyContext());
+				
+				for(int i = (0); i < vSymbols.size() - 1; ++i)
+					m_LanguageModel.EnterSymbol(oContext, vSymbols.get(i));
+					
+					NewNode.SetContext(oContext);
+					
+			}
+			
+			NewNode.m_bShove = true;
+			NewNode.Seen(true);
+			NewNode.m_BaseGroup = m_Alphabet.m_BaseGroup;
+			
+			PopulateChildrenWithSymbol( NewNode, Symbol(), this );
+			if(m_Model.GetBoolParameter(Ebp_parameters.BP_LM_REMOTE)) {
+				WaitForChildren(NewNode);
+			}
+			
+			SetParent(NewNode);
+			
+			return NewNode;
+		}
+        
     }
-    
+        
     /**
      * Populates the children of a given Node. This function
      * calls CLanguageModel.getProbs on the Context associated
@@ -266,8 +398,7 @@ public class CAlphabetManager extends CNodeManager {
     				iColour += 130;
     			}
 
-    			NewNode = new CDasherNode(Node, j, j, ChildScheme, iLbnd, cum[j], m_LanguageModel, iColour);
-    			NewNode.m_NodeManager = this;
+    			NewNode = new CAlphNode(Node, j, j, ChildScheme, iLbnd, cum[j], m_LanguageModel, iColour);
     			NewNode.m_bShove = true;
     			NewNode.m_BaseGroup = m_Alphabet.m_BaseGroup;
     		}
@@ -275,7 +406,6 @@ public class CAlphabetManager extends CNodeManager {
     		NewNode.m_strDisplayText = m_DisplayText.get(j);
     		NewChildren.add(j, NewNode);
     		iLbnd = cum[j];
-    		
     		
     	}
     	
@@ -298,154 +428,6 @@ public class CAlphabetManager extends CNodeManager {
 
     }
 
-    /**
-     * Generates an EditEvent announcing a new character has been
-     * entered, inferring the character from the Node supplied.
-     * <p>
-     * The second and third parameters are solely for logging
-     * purposes. Logging is not currently enabled in JDasher
-     * and so these can safely be set to null and 0 respectively.
-     * <p>
-     * In the case that logging is enabled, passing the second parameter
-     * as null will cause this addition not to be logged.
-     * 
-     * @param Node The node whose symbol we wish to look up and announce.
-     * @param Added An ArrayList<CSymbolProb> to which the typed symbol, annotated with its probability, will be added for logging purposes.
-     * @param iNormalization The total to which probabilities should add (usually LP_NORMALIZATION) for the purposes of generating the logged probability.
-     */
-    public void Output( CDasherNode Node, ArrayList<CSymbolProb> Added, int iNormalization) {
-    	m_Model.m_bContextSensitive = true;
-    	int t = Node.Symbol();
-    	if(t != 0) { // Ignore symbol 0 (root node)
-    		CEditEvent oEvent = new CEditEvent(1, m_Alphabet.GetText(t));
-    		m_Model.InsertEvent(oEvent);
-    		
-    		// Track this symbol and its probability for logging purposes
-    		if (Added != null) {
-    			CSymbolProb sItem = new CSymbolProb();
-    			sItem.sym    = t;
-    			sItem.prob   = Node.GetProb(iNormalization);
-    			
-    			Added.add(sItem);
-    		}
-    	}
-    }
-
-    /**
-     * Generates an EditEvent announcing that the character represented
-     * by this Node should be removed.
-     * 
-     * @param Node Node whose symbol we wish to remove.
-     */    
-    public void Undo( CDasherNode Node ) {
-    	int t = Node.Symbol();
-    	if(t != 0) { // Ignore symbol 0 (root node)
-    		CEditEvent oEvent = new CEditEvent(2, m_Alphabet.GetText(t));
-    		m_Model.InsertEvent(oEvent);
-    	}
-    }
-    
-    /**
-     * Reconstructs the parent of a given node, in the case that
-     * it had been deleted but the user has now backed off far
-     * enough that we need to restore.
-     * <p>
-     * This will generate an EditContextEvent to try to extend
-     * its knowledge of the current context; this is necessary
-     * because Dasher only buffers a small amount of context
-     * internally. Typically a UI component is expected to reply
-     * with the appropriate context.
-     * <p>
-     * In the event that context is not available internally
-     * and the dispatched EditContextEvent is not passed a new
-     * context, the root symbol is created and returned.
-     * 
-     * @param Node The node whose parent we wish to recreated.
-     * @param iGeneration The depth in the tree of this node.
-     * @return The newly created parent, which may be the root node.
-     */
-    public CDasherNode RebuildParent(CDasherNode Node, ListIterator<Character> charsBefore) {
-    	
-    	/* This used to clear m_Model.strContextBuffer. Removed as per notes
-    	 * at the top of CDasherInterfaceBase.
-    	 */
-    	
-    	/* This reconstitutes the parent of the current root in the case
-    	 * that we've backed off far enough to need to do so.
-    	 */
-    	
-    	StringBuilder ctx = new StringBuilder();
-    	while (charsBefore.hasPrevious() && ctx.length()<5) //ACL TODO, don't fix on 5 chars!
-    		ctx.append(charsBefore.previous());
-    	String strContext = ctx.reverse().toString();
-    	
-    	ArrayList<Integer> vSymbols = new ArrayList<Integer>();
-    	m_LanguageModel.SymbolAlphabet().GetAlphabetPointer().GetSymbols(vSymbols, strContext);
-    	
-    	CDasherNode NewNode;
-    	
-    	if(vSymbols.isEmpty()) {
-    		
-    		/* In the case that there isn't enough context to rebuild the tree,
-    		 * we magically reappear at the root node.
-    		 */
-    		
-    		NewNode = new CDasherNode(null, 0, 0,  EColorSchemes.Nodes1, 0, 0, m_LanguageModel, 7);
-    		
-    		CContextBase oContext = m_LanguageModel.CreateEmptyContext();
-    		m_Model.EnterText(oContext, ". ");
-    		NewNode.SetContext(oContext);
-    	}
-    	else {
-    		
-    		EColorSchemes NormalScheme, SpecialScheme;
-    		if((Node.ColorScheme() == EColorSchemes.Nodes1) || (Node.ColorScheme() == EColorSchemes.Special1)) {
-    			NormalScheme = EColorSchemes.Nodes2;
-    			SpecialScheme = EColorSchemes.Special2;
-    		}
-    		else {
-    			NormalScheme = EColorSchemes.Nodes1;
-    			SpecialScheme = EColorSchemes.Special1;
-    		}
-    		
-    		EColorSchemes ChildScheme;
-    		if(vSymbols.get(vSymbols.size() - 1) == m_Model.GetSpaceSymbol())
-    			ChildScheme = SpecialScheme;
-    		else
-    			ChildScheme = NormalScheme;
-    		
-    		int NodeColour = m_Colours.get(vSymbols.get(vSymbols.size() - 2));
-    		
-    		if(NormalScheme == EColorSchemes.Nodes2) {
-    			NodeColour += 130;
-    		}
-    		
-    		NewNode = new CDasherNode(null, vSymbols.get(vSymbols.size() - 2), 0, ChildScheme, 0, 0, m_LanguageModel, NodeColour);
-    		
-    		CContextBase oContext = (m_LanguageModel.CreateEmptyContext());
-    		
-    		for(int i = (0); i < vSymbols.size() - 1; ++i)
-    			m_LanguageModel.EnterSymbol(oContext, vSymbols.get(i));
-    			
-    			NewNode.SetContext(oContext);
-    			
-    	}
-    	
-    	NewNode.m_NodeManager = this;
-    	NewNode.m_bShove = true;
-    	NewNode.Seen(true);
-    	NewNode.m_BaseGroup = m_Alphabet.m_BaseGroup;
-    	
-    	PopulateChildrenWithSymbol( NewNode, Node.Symbol(), Node );
-    	if(m_Model.GetBoolParameter(Ebp_parameters.BP_LM_REMOTE)) {
-    		WaitForChildren(NewNode);
-    	}
-    	
-    	Node.SetParent(NewNode);
-    	
-    	return NewNode;
-    }
-    
     /**
      * Suspends the current thread until a given Node's children
      * have been created. This is for use with specialised

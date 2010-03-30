@@ -37,7 +37,7 @@ import java.util.ListIterator;
  * and of performing certain tree modifications (such as deleting
  * its children) but otherwise mainly acts as a data structure.
  */
-public class CDasherNode {
+public abstract class CDasherNode {
 
 	//	Information required to display the node
 	/**
@@ -119,12 +119,7 @@ public class CDasherNode {
 	 */
 	public SGroupInfo m_BaseGroup;
 	
-	/**
-	 * NodeManager responsible for populating this Node's
-	 * children.
-	 */
-	public CNodeManager m_NodeManager;
-    /* CSFS: This was a void pointer in the original C++. Since it always seemed
+	/* CSFS: This was a void pointer in the original C++. Since it always seemed
      * to get cast to an int and used as such, I've made it an int for now.
      * If trouble crops up this may need to become an Object or something else
      * awkward.
@@ -183,6 +178,74 @@ public class CDasherNode {
 		
 	}
 
+    /**
+	 * Fills this Node's child list.
+	 */
+	public abstract void PopulateChildren();
+	
+	/**
+	 * Removes all references to this node and deallocates storage
+	 * if appropriate. Essentially we should do whatever is necessary
+	 * to make this Node available for garbage collection.
+	 * 
+	 * @param Node Node to free
+	 */
+	//ACL??? public abstract void ClearNode(CDasherNode Node);
+	
+	/**
+	 * Performs output appropriate to the Node, if any.
+	 * <p>
+	 * This method will be called when a user enters a given Node.
+	 * <p>
+	 * @param Added CSymbolProbs detailing what has been output should
+	 * be added to this list
+	 * @param iNormalization Normalisation value (total to which
+	 * node probabilities always add up)
+	 */
+	public abstract void Output(ArrayList<CSymbolProb> Added, int iNormalization);
+    
+	/**
+	 * Reverse or undo the output associated with this Node
+	 * <p>
+	 * This method is defined to do nothing in this class; if
+     * a subclass does not wish to take action at this point, it
+     * is safe to avoid overriding this. 
+	 */
+	public void Undo() {}
+
+    /**
+     * Signals that the user has entered the. Output
+     * should not be performed at this stage.
+     * <p>
+     * This method is defined to do nothing in this class; if
+     * a subclass does not wish to take action at this point, it
+     * is safe to avoid overriding this.
+     */
+	public void Enter() {}
+    
+	/**
+	 * Signals that the user has left this Node. Output should
+	 * not be performed at this stage.
+	 * <p>
+	 * This method is defined to do nothing in this class; if
+     * a subclass does not wish to take action at this point, it
+     * is safe to avoid overriding this.
+	 */
+    public void Leave() {}
+
+    /**
+     * Rebuild the parent of this Node. (If the parent exists already, it can be returned!)
+     * <p>
+     * The new Node should have all of its children populated, one
+     * of which should be this one.
+     * <p>
+     * See CAlphabetManager for a concrete example.
+     * 
+     * @param context ListIterator at end of characters immediately preceding this node
+     * @return Parent of this Node.
+     */
+    public abstract CDasherNode RebuildParent(ListIterator<Character> context);
+    
 	/**
 	 * At present, does nothing; Nodes will be "deleted" by virtue
 	 * of their parents cutting them loose at the appropriate time,
