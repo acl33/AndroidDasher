@@ -103,16 +103,10 @@ public class CDasherModel extends CDasherComponent {
 	protected long m_Rootmax;
 	
 	/**
-	 * Next lower bound which NewGoto will make the lower edge
-	 * of the viewport on its next call.
+	 * Amount to offset display by vs. what's "really" happening
+	 * (used to smooth offsets/bounces over several frames in button modes)
 	 */
-	protected long m_iTargetMin;
-	
-	/**
-	 * Next upper bound which NewGoto will make the upper edge
-	 * of the viewport on its next call.
-	 */
-	protected long m_iTargetMax;
+	protected long m_iDisplayOffset;
 	
 	/**
 	 * Minimum allowable value of m_Rootmin
@@ -416,12 +410,8 @@ public class CDasherModel extends CDasherComponent {
 		/* CSFS: These formerly used myint and have been changed to long */
 		
 		long range = m_Rootmax - m_Rootmin;
-		m_Rootmax = m_Rootmin + (range * m_Root.Hbnd()) / (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
-		m_Rootmin = m_Rootmin + (range * m_Root.Lbnd()) / (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
-		
-		long iTargetRange = m_iTargetMax - m_iTargetMin;
-		m_iTargetMax = m_iTargetMin + (iTargetRange * m_Root.Hbnd()) / (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
-		m_iTargetMin = m_iTargetMin + (iTargetRange * m_Root.Lbnd()) / (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
+		m_Rootmax = m_Rootmin + (range * m_Root.Hbnd()) / GetLongParameter(Elp_parameters.LP_NORMALIZATION);
+		m_Rootmin = m_Rootmin + (range * m_Root.Lbnd()) / GetLongParameter(Elp_parameters.LP_NORMALIZATION);
 	}
 	
 	/**
@@ -517,7 +507,7 @@ public class CDasherModel extends CDasherComponent {
 	 * @param lower Current root's Lbnd
 	 * @param upper Current root's Hbnd
 	 */
-	protected void Reparent_root(long lower, long upper) {
+	protected void Reparent_root() {
 		
 		/* Change the root node to the parent of the existing node
 		 We need to recalculate the coordinates for the "new" root as the 
@@ -525,7 +515,6 @@ public class CDasherModel extends CDasherComponent {
 		
 		if(m_Root.Symbol() == 0)
 			return; // Don't try to reparent the root symbol
-		
 		
 		CDasherNode NewRoot;
 		
@@ -543,9 +532,6 @@ public class CDasherModel extends CDasherComponent {
 			
 			NewRoot = m_Root.m_NodeManager.RebuildParent(m_Root, iGenerations);
 			
-			lower = m_Root.Lbnd();
-			upper = m_Root.Hbnd();
-			
 		}
 		else {
 			
@@ -561,31 +547,38 @@ public class CDasherModel extends CDasherComponent {
 			return;
 		}
 		
-		/* Determine how zoomed in we are */
+		final long lNorm = GetLongParameter(Elp_parameters.LP_NORMALIZATION);
 		
-		/* CSFS: Used to be myints */
+		for (CDasherNode pCurrent = m_Root; pCurrent != NewRoot; ) {
+			long upper = pCurrent.Hbnd(), lower = pCurrent.Lbnd(), iWidth = upper-lower;
+			long iRootWidth = m_Rootmax - m_Rootmin;
+			pCurrent = pCurrent.Parent();
 		
-		long iRootWidth = m_Rootmax - m_Rootmin;
-		long iTargetWidth = m_iTargetMax - m_iTargetMin;
-		long iWidth = upper - lower;
-	
-		m_Root = NewRoot;
+			if ((lNorm - upper) / (double)iWidth >
+			(m_Rootmax_max - m_Rootmax) / (double)iRootWidth ||
+			lower / (double)iWidth > (m_Rootmin - m_Rootmin_min)/(double)iRootWidth) {
+				//Fail and undo root creation, new node would be too big
+				NewRoot.OrphanChild(m_Root); //ACL is this ok? Is NewRoot necessarily a parent of m_Root (subnodes!)?
+				return;
+			}
+			
+			m_Root = NewRoot;
+			
 		
-		m_Rootmax = m_Rootmax + (((GetLongParameter(Elp_parameters.LP_NORMALIZATION) - upper)) * iRootWidth / iWidth);
+			m_Rootmax +=  ((lNorm - upper)) * iRootWidth / iWidth;
 		
-		m_Rootmin = m_Rootmin - ((lower) * iRootWidth / iWidth);
+			m_Rootmin -= lower * iRootWidth / iWidth;
 		
-		m_iTargetMax = m_iTargetMax + (((GetLongParameter(Elp_parameters.LP_NORMALIZATION) - upper)) * iTargetWidth / iWidth);
-		m_iTargetMin = m_iTargetMin - ((lower) * iTargetWidth / iWidth);
-		
-		
+			for (SGotoItem it : m_deGotoQueue) {
+				iRootWidth = it.iN2 - it.iN1;
+				it.iN2 += (lNorm - upper) * iRootWidth / iWidth;
+				it.iN1 -= lower * iRootWidth / iWidth;
+			}
+		}
 	}
 
 	protected CDasherNode Get_node_under_crosshair() {
-		if(GetBoolParameter(Ebp_parameters.BP_DELAY_VIEW))
-			return m_Root.Get_node_under(GetLongParameter(Elp_parameters.LP_NORMALIZATION), m_iTargetMin, m_iTargetMax, GetLongParameter(Elp_parameters.LP_OX), GetLongParameter(Elp_parameters.LP_OY));
-			else
-				return m_Root.Get_node_under(GetLongParameter(Elp_parameters.LP_NORMALIZATION), m_Rootmin, m_Rootmax, GetLongParameter(Elp_parameters.LP_OX), GetLongParameter(Elp_parameters.LP_OY));
+		return m_Root.Get_node_under(GetLongParameter(Elp_parameters.LP_NORMALIZATION), m_Rootmin + m_iDisplayOffset, m_Rootmax + m_iDisplayOffset, GetLongParameter(Elp_parameters.LP_OX), GetLongParameter(Elp_parameters.LP_OY));
 	}
 	
 
@@ -597,24 +590,8 @@ public class CDasherModel extends CDasherComponent {
 	 * @return Reference to Node under mouse
 	 */
 	protected CDasherNode Get_node_under_mouse(long Mousex, long Mousey) {
-		if(GetBoolParameter(Ebp_parameters.BP_DELAY_VIEW))
-			return m_Root.Get_node_under(GetLongParameter(Elp_parameters.LP_NORMALIZATION), m_iTargetMin, m_iTargetMax, Mousex, Mousey);
-			else
-				return m_Root.Get_node_under(GetLongParameter(Elp_parameters.LP_NORMALIZATION), m_Rootmin, m_Rootmax, Mousex, Mousey);
+		return m_Root.Get_node_under(GetLongParameter(Elp_parameters.LP_NORMALIZATION), m_Rootmin + m_iDisplayOffset, m_Rootmax + m_iDisplayOffset, Mousex, Mousey);
 	}
-	
-/////////////////////////////////////////////////////////////////////////////
-	
-	/*public void Get_string_under_mouse(long Mousex, long Mousey, ArrayList<Integer> str) {
-		if(GetBoolParameter(Ebp_parameters.BP_DELAY_VIEW))
-			m_Root.Get_string_under(GetLongParameter(Elp_parameters.LP_NORMALIZATION), m_iTargetMin, m_iTargetMax, Mousex, Mousey, str);
-		else
-			m_Root.Get_string_under(GetLongParameter(Elp_parameters.LP_NORMALIZATION), m_Rootmin, m_Rootmax, Mousex, Mousey, str);
-	}*/
-	
-	// Redundant method.
-	
-/////////////////////////////////////////////////////////////////////////////
 	
 	/**
 	 * Sets a blank context. This method could use some work;
@@ -721,8 +698,7 @@ public class CDasherModel extends CDasherComponent {
 		m_Rootmin = GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 - iWidth / 2;
 		m_Rootmax = GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 + iWidth / 2;
 		
-		m_iTargetMin = m_Rootmin;
-		m_iTargetMax = m_Rootmax;
+		m_iDisplayOffset = 0;
 	}
 	
 	/**
@@ -1107,11 +1083,11 @@ public class CDasherModel extends CDasherComponent {
 		
 		// Update the max and min of the root node to make iTargetMin and iTargetMax the edges of the viewport.
 			
-		if(newRootmin > GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 - 1)
-			newRootmin = GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 - 1;
+		if(newRootmin + m_iDisplayOffset > GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 - 1)
+			newRootmin = GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 - 1 - m_iDisplayOffset;
 		
-		if(newRootmax < GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 + 1)
-			newRootmax = GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 + 1;
+		if(newRootmax + m_iDisplayOffset < GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 + 1)
+			newRootmax = GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 + 1 - m_iDisplayOffset;
 		
 		// Check that we haven't drifted too far. The rule is that we're not
 		// allowed to let the root max and min cross the midpoint of the
@@ -1129,12 +1105,7 @@ public class CDasherModel extends CDasherComponent {
 			m_Rootmax = newRootmax;
 			m_Rootmin = newRootmin;
 			
-			/* CSFS: These were implicit casts in the original C. Hopefully
-			 * the semantics are the same.
-			 */
-			
-			m_iTargetMax = (long)(m_iTargetMax + 0.1 * (m_Rootmax - m_iTargetMax));
-			m_iTargetMin = (long)(m_iTargetMin + 0.1 * (m_Rootmin - m_iTargetMin));
+			m_iDisplayOffset = (m_iDisplayOffset*9)/10;
 		}
 		else {
 			// TODO - force a new root to be chosen, so that we get better
@@ -1505,14 +1476,8 @@ public class CDasherModel extends CDasherComponent {
 		ArrayList<CDasherNode> vNodeList = new ArrayList<CDasherNode>();
 		ArrayList<CDasherNode> vDeleteList = new ArrayList<CDasherNode>();
 		
-		boolean bReturnValue;
-		
-		if(GetBoolParameter(Ebp_parameters.BP_DELAY_VIEW)) {
-			bReturnValue = View.Render(m_Root, m_iTargetMin, m_iTargetMax, vNodeList, vDeleteList, bRedrawDisplay);
-		}
-		else {
-			bReturnValue = View.Render(m_Root, m_Rootmin, m_Rootmax, vNodeList, vDeleteList, bRedrawDisplay);
-		}
+		boolean bReturnValue = View.Render(m_Root, m_Rootmin + m_iDisplayOffset, m_Rootmax + m_iDisplayOffset, vNodeList, vDeleteList, bRedrawDisplay);
+
 		if(!GetBoolParameter(Ebp_parameters.BP_OLD_STYLE_PUSH)) {
 			for(CDasherNode it : vNodeList) {
 				Push_Node(it);
@@ -1552,7 +1517,7 @@ public class CDasherModel extends CDasherComponent {
 		ArrayList<CDasherNode> children = m_Root.Children();
 		
 		if(View.IsNodeVisible(m_Rootmin,m_Rootmax)) {
-			Reparent_root(root.Lbnd(), root.Hbnd());
+			Reparent_root();
 			return(m_Root != root); // Has the reparent method changed the root?
 		}
 		
@@ -1709,8 +1674,10 @@ public class CDasherModel extends CDasherComponent {
 	 * @param iOffset Offset to add
 	 */
 	public void Offset(int iOffset) {
-		m_Rootmin = m_iTargetMin + iOffset;
-		m_Rootmax = m_iTargetMax + iOffset;
+		m_Rootmin += iOffset;
+		m_Rootmax += iOffset;
+		if (GetBoolParameter(Ebp_parameters.BP_DELAY_VIEW))
+			m_iDisplayOffset -= iOffset;
 	} 
 	
 	/**
@@ -1718,8 +1685,9 @@ public class CDasherModel extends CDasherComponent {
 	 * their TargetMax and TargetMin partners.
 	 */
 	protected void MatchTarget() {
-		m_Rootmin = m_iTargetMin;
-		m_Rootmax = m_iTargetMax;
+		m_Rootmin += m_iDisplayOffset;
+		m_Rootmax += m_iDisplayOffset;
+		m_iDisplayOffset = 0;
 	}
 	
 	/* CSFS: Both of these methods currently use boolean types to
