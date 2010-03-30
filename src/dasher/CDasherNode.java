@@ -26,6 +26,7 @@
 package dasher;
 
 import java.util.ArrayList;
+import java.util.ListIterator;
 
 /**
  * A DasherNode represents a node in the DasherModel's tree; it
@@ -281,6 +282,18 @@ public class CDasherNode {
 	 */
 	public CContextBase Context() {
 	  return m_Context;
+	}
+	
+	/**
+	 * Move the supplied ListIterator backwards over the characters output by this node.
+	 * ACL this is a temporary hack solution, and is wrong - it uses the display text, not
+	 * the edit text. TODO.
+	 * @param it
+	 */
+	public void absorbContext(ListIterator<Character> it) {
+		for (int i=m_strDisplayText.length(); i-->0; )
+			if (it.previous() != m_strDisplayText.charAt(i))
+				throw new IllegalArgumentException("Previous character "+it.next()+" but node would have output "+m_strDisplayText.substring(0,i+1));		
 	}
 	
 	/**

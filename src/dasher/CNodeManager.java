@@ -26,6 +26,7 @@
 package dasher;
 
 import java.util.ArrayList;
+import java.util.ListIterator;
 
 /**
  * A NodeManager is used by the DasherModel to perform
@@ -160,10 +161,10 @@ public abstract class CNodeManager {
      * See CAlphabetManager for a concrete example.
      * 
      * @param Node Node whose parent is to be rebuilt
-     * @param iGeneration Tree depth of the node to be created
+     * @param context ListIterator of characters appearing before <code>Node</code>
      * @return Parent of the input Node
      */
-    public CDasherNode RebuildParent (CDasherNode Node, int iGeneration) {
+    public CDasherNode RebuildParent (CDasherNode Node, ListIterator<Character> context) {
       return null;
     }
 }

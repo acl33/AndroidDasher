@@ -26,6 +26,7 @@
 package dasher;
 
 import java.util.ArrayList;
+import java.util.ListIterator;
 
 /**
  * AlphabetManager is a specialisation of NodeManager which
@@ -363,7 +364,7 @@ public class CAlphabetManager extends CNodeManager {
      * @param iGeneration The depth in the tree of this node.
      * @return The newly created parent, which may be the root node.
      */
-    public CDasherNode RebuildParent(CDasherNode Node, int iGeneration) {
+    public CDasherNode RebuildParent(CDasherNode Node, ListIterator<Character> charsBefore) {
     	
     	/* This used to clear m_Model.strContextBuffer. Removed as per notes
     	 * at the top of CDasherInterfaceBase.
@@ -373,20 +374,17 @@ public class CAlphabetManager extends CNodeManager {
     	 * that we've backed off far enough to need to do so.
     	 */
     	
-    	CEditContextEvent oEvent = new CEditContextEvent(10);
-    	m_Model.InsertEvent(oEvent);
-    	    	
-    	String strContext = oEvent.newContext;
-    	// String strContext = new String();
-    	
-    	/* Extract a potential reply from the event */
+    	StringBuilder ctx = new StringBuilder();
+    	while (charsBefore.hasPrevious() && ctx.length()<5) //ACL TODO, don't fix on 5 chars!
+    		ctx.append(charsBefore.previous());
+    	String strContext = ctx.reverse().toString();
     	
     	ArrayList<Integer> vSymbols = new ArrayList<Integer>();
     	m_LanguageModel.SymbolAlphabet().GetAlphabetPointer().GetSymbols(vSymbols, strContext);
     	
     	CDasherNode NewNode;
     	
-    	if(vSymbols.size() <= iGeneration + 1) {
+    	if(vSymbols.isEmpty()) {
     		
     		/* In the case that there isn't enough context to rebuild the tree,
     		 * we magically reappear at the root node.
@@ -411,22 +409,22 @@ public class CAlphabetManager extends CNodeManager {
     		}
     		
     		EColorSchemes ChildScheme;
-    		if(vSymbols.get(vSymbols.size() - (iGeneration + 1)) == m_Model.GetSpaceSymbol())
+    		if(vSymbols.get(vSymbols.size() - 1) == m_Model.GetSpaceSymbol())
     			ChildScheme = SpecialScheme;
     		else
     			ChildScheme = NormalScheme;
     		
-    		int NodeColour = m_Colours.get(vSymbols.get(vSymbols.size() - (iGeneration + 2)));
+    		int NodeColour = m_Colours.get(vSymbols.get(vSymbols.size() - 2));
     		
     		if(NormalScheme == EColorSchemes.Nodes2) {
     			NodeColour += 130;
     		}
     		
-    		NewNode = new CDasherNode(null, vSymbols.get(vSymbols.size() - (iGeneration + 2)), 0, ChildScheme, 0, 0, m_LanguageModel, NodeColour);
+    		NewNode = new CDasherNode(null, vSymbols.get(vSymbols.size() - 2), 0, ChildScheme, 0, 0, m_LanguageModel, NodeColour);
     		
     		CContextBase oContext = (m_LanguageModel.CreateEmptyContext());
     		
-    		for(int i = (0); i < vSymbols.size() - iGeneration -1; ++i)
+    		for(int i = (0); i < vSymbols.size() - 1; ++i)
     			m_LanguageModel.EnterSymbol(oContext, vSymbols.get(i));
     			
     			NewNode.SetContext(oContext);

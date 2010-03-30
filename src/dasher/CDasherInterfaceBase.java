@@ -28,6 +28,7 @@ package dasher;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Collection;
+import java.util.ListIterator;
 import java.io.*;
 
 /**
@@ -114,11 +115,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * Entered text which has not yet been written out to disk
 	 */
 	protected StringBuffer strTrainfileBuffer;
-	
-	/**
-	 * Context of recently entered characters
-	 */
-	protected final LinkedList<Character> strCurrentContext = new LinkedList<Character>();
 		
 	/**
 	 * Our settings repository
@@ -194,6 +190,15 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	protected abstract CSettingsStore createSettingsStore(CEventHandler handler);
 	
 	/**
+	 * Returns an iterator over all characters that have been entered (i.e. up to
+	 * the node under the crosshair, inclusive). Initial position of the iterator
+	 * should be at the end, i.e. after the most recent character, such that we
+	 * can navigate *backwards* using previous()/hasPrevious().
+	 * @return a ListIterator of all characters entered
+	 */
+	public abstract ListIterator<Character> charactersEntered();
+	
+	/**
 	 * Sole constructor. Creates an EventHandler, sets up an
 	 * initial context, and creates a ModuleManager. This does
 	 * only enough that we can retrieve the event handler for the
@@ -207,8 +212,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	public CDasherInterfaceBase() {
 		m_SettingsStore = createSettingsStore(this);
-		strCurrentContext.add('.');
-		strCurrentContext.add(' ');
 		strTrainfileBuffer = new StringBuffer();
 		m_oModuleManager = new CModuleManager();
 				
@@ -389,9 +392,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * <i>SP_INPUT_DEVICE</i>: Runs CreateInput() to create the requested
 	 * input device.
 	 * <p>
-	 * It also responds to EditEvents by modifying strCurrentContext
-	 * according to the text the user is reported to have entered
-	 * or deleted, and LockEvents by setting m_bGlobalLock to the value
+	 * It also responds to LockEvents by setting m_bGlobalLock to the value
 	 * indicated.
 	 * 
 	 * @param Event The event the interface is to process.
@@ -463,42 +464,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 				CreateInputFilter();
 			}
 			
-		}
-		else if(Event.m_iEventType == 2) {
-			CEditEvent EditEvent= ((CEditEvent)(Event));
-			
-				
-			if(EditEvent.m_iEditType == 1) {				
-				for(char c : EditEvent.m_sText.toCharArray()) {
-					strCurrentContext.add(c);
-				}
-				while(strCurrentContext.size() > 20) {
-					strCurrentContext.removeFirst();
-				}
-			
-				
-				strTrainfileBuffer.append(EditEvent.m_sText);
-			}
-			
-			/* CSFS: The routines below used to use std::substr. substr(i, n) extracts
-			 * a substring of length n starting at character i, whereas Java's 
-			 * "somestring".substring(a, b) returns the substring beginning at index a and
-			 * ending at index b.
-			 * 
-			 * In both of these cases, the two ought to be identical since b == n
-			 * when a == i == 0.
-			 */
-			
-			else if(EditEvent.m_iEditType == 2) {
-				for(int i = 0; i < EditEvent.m_sText.length(); i++) {
-					if(strCurrentContext.size() > 0) {
-						strCurrentContext.removeFirst();
-						strTrainfileBuffer.setLength(strTrainfileBuffer.length() - 1);
-					}
-				}
-				
-				
-			}
 		}
 		else if(Event.m_iEventType == 6 /*EV_CONTROL*/) {
 			/* CControlEvent ControlEvent = ((CControlEvent)(Event));
@@ -573,7 +538,8 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		// thing
 		PauseAt(0, 0);
 		if(m_DasherModel != null) {
-			m_DasherModel.Start();
+			//ACL preserving behaviour etc., but this doesn't look right...use start-of-sentence ctx?
+			m_DasherModel.SetContext("");
 		}
 		if(m_DasherView != null) {
 			m_DasherView.ResetYAutoOffset();
@@ -1110,19 +1076,17 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		/* CSFS: This used to clear m_DasherModel.strContextBuffer,
 		 * which has been removed per the notes at the top of the file.
 		 */
-		
-		CEditContextEvent oEvent = new CEditContextEvent(10);
-		InsertEvent(oEvent);
-		
-		String strNewContext = oEvent.newContext;
-		
+		//ACL couldn't find said notes! But changing context system anyway.
+		// The previous code seemed to extract the most recent 10 characters,
+		// so I'm preserving that behaviour!
+		StringBuilder strLast = new StringBuilder(10);
+		for (ListIterator<Character> it = charactersEntered(); it.hasPrevious() && strLast.length()<10;)
+			strLast.append(it.previous());
+		//we build the string in reverse order, so reverse it now...
+		String strNewContext = strLast.reverse().toString();
 		strTrainfileBuffer.append(strNewContext);
-		
-		/* Extract a potential answer from the event packet */
-		
-		oEvent = null;
-				
-		if(bForceStart || !(strCurrentContext.isEmpty())) {
+						
+		if(bForceStart || charactersEntered().hasPrevious()) {
 			if(m_DasherModel != null) {
 				if(m_DasherModel.m_bContextSensitive || bForceStart) {
 					m_DasherModel.SetContext(strNewContext);

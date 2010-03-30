@@ -25,8 +25,10 @@
 
 package dasher;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ArrayList;
+import java.util.ListIterator;
 
 /**
  * Dasher 'world' data structures and dynamics.
@@ -522,15 +524,14 @@ public class CDasherModel extends CDasherComponent {
 			
 			/* If our internal buffer of old roots is exhausted, */
 			
-			CDasherNode CurrentNode = (Get_node_under_crosshair());
-			int iGenerations = 0;
+			ListIterator<Character> allEntered = m_DasherInterface.charactersEntered();
 			
-			while(CurrentNode != m_Root) {
-				++iGenerations;
-				CurrentNode = CurrentNode.Parent();
+			for (CDasherNode cur = Get_node_under_crosshair(); ; cur=cur.Parent()) {
+				cur.absorbContext(allEntered);
+				if (cur == m_Root) break;
 			}
 			
-			NewRoot = m_Root.m_NodeManager.RebuildParent(m_Root, iGenerations);
+			NewRoot = m_Root.m_NodeManager.RebuildParent(m_Root, allEntered);
 			
 		}
 		else {
@@ -593,31 +594,6 @@ public class CDasherModel extends CDasherComponent {
 		return m_Root.Get_node_under(GetLongParameter(Elp_parameters.LP_NORMALIZATION), m_Rootmin + m_iDisplayOffset, m_Rootmax + m_iDisplayOffset, Mousex, Mousey);
 	}
 	
-	/**
-	 * Sets a blank context. This method could use some work;
-	 * it looks as if it tries to request any known context
-	 * from the UI using an EditContextEvent, but this doesn't
-	 * work at present.
-	 * <p>
-	 * This ought not to matter as SetContext fulfils this purpose
-	 * with a given context, and so can duplicate the function
-	 * of Start by passing it the empty string.
-	 */
-	public void Start() {
-		
-		// FIXME - re-evaluate this function and SetContext...
-		
-		String strNewContext = "";
-		
-		SetContext(strNewContext);    // FIXME - REALLY REALLY broken!
-		
-		CEditContextEvent oEvent = new CEditContextEvent(5);
-		
-		InsertEvent(oEvent);
-		
-		// FIXME - what if we don't get a reply?
-		
-	}
 	
 	/**
 	 * Forces the current context to a given value, and resets
