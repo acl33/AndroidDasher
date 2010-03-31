@@ -94,44 +94,7 @@ public abstract class CDasherNode {
 	 */
 	protected CDasherNode m_Parent;
 
-	// TODO: The following should be included in m_pUserData, as they only apply to nodes managed by CAlphabetManager
-	
-	/**
-	 * LanguageModel which was responsible for generating this
-	 * node's probability
-	 */
-	protected CLanguageModel m_LanguageModel;     // pointer to the language model - in future, could be different for each node      
-	
-	/**
-	 * Language model context corresponding to this node's
-	 * position in the tree.
-	 */
-	protected CContextBase m_Context;
-	
-	/**
-	 * Symbol number represented by this node
-	 */
-	protected int m_Symbol;	// the character to display
-	
-	/**
-	 * Root of the tree of groups into which this Node's
-	 * children are arranged.
-	 */
-	public SGroupInfo m_BaseGroup;
-	
-	/* CSFS: This was a void pointer in the original C++. Since it always seemed
-     * to get cast to an int and used as such, I've made it an int for now.
-     * If trouble crops up this may need to become an Object or something else
-     * awkward.
-     */
-    
     /**
-     * Stores arbitrary information; may be extended to hold
-     * more in the future.
-     */
-	public int m_UserData;
-
-	/**
 	 * This Node's display text
 	 */
     public String m_strDisplayText;
@@ -143,7 +106,9 @@ public abstract class CDasherNode {
      */
     public boolean m_bShove;
 	
-	/**
+    public boolean bCommitted;
+    
+    /**
 	 * Creates a Node and sets its describing variables.
 	 * 
 	 * @param Parent Parent Node
@@ -155,10 +120,9 @@ public abstract class CDasherNode {
 	 * @param lm LanguageModel
 	 * @param Colour Colour number
 	 */
-    public CDasherNode(CDasherNode Parent, int Symbol, int iphase, EColorSchemes ColorScheme, long ilbnd, long ihbnd, CLanguageModel lm, int Colour) {
+    public CDasherNode(CDasherNode Parent, int iphase, EColorSchemes ColorScheme, long ilbnd, long ihbnd, int Colour) {
 		m_iLbnd = ilbnd;
 		m_iHbnd = ihbnd;
-		m_Symbol = Symbol;
 		m_mChildren = new ArrayList<CDasherNode>();
 		// m_bHasAllChildren = false; (default)
 		m_bAlive = true;
@@ -166,8 +130,6 @@ public abstract class CDasherNode {
 		m_ColorScheme = ColorScheme;
 		m_iPhase = iphase;
 		m_iColour = Colour;
-		m_LanguageModel = lm;
-		m_Context = CLanguageModel.nullContext;
 		m_Parent = Parent;
 		// m_strDisplayText = new String();
 		// WARNING: Whilst I think this is redundant it MAY get used uninitialised.
@@ -270,19 +232,6 @@ public abstract class CDasherNode {
 	  //  m_LanguageModel.ReleaseContext(m_Context);
 	}
 
-	/**
-	 * Sets the context associated with this node.
-	 * <p>
-	 * Releases its existing context with the language model
-	 * if one exists.
-	 * 
-	 * @param context New context
-	 */
-    public void SetContext(CContextBase context) {
-	  if(m_Context != null)
-	    m_LanguageModel.ReleaseContext(m_Context);
-	  m_Context = context;
-	}
 
     /**
      * Gets m_iLbnd
@@ -336,15 +285,6 @@ public abstract class CDasherNode {
 	 */
 	public synchronized void SetChildren(ArrayList<CDasherNode> in) {
 		m_mChildren = in;
-	}
-
-	/**
-	 * Retrives the LM context associated with this node.
-	 * 
-	 * @return Context
-	 */
-	public CContextBase Context() {
-	  return m_Context;
 	}
 	
 	/**
@@ -454,15 +394,11 @@ public abstract class CDasherNode {
 	public void Seen(boolean seen) {
 	    m_bSeen = seen;
 	}
-
-	/**
-	 * Gets this node's symbol
-	 * 
-	 * @return symbol number
+	
+	/** Called when we've gone far enough into the node that it is no
+	 *  longer a root (i.e. one of its children is!)
 	 */
-	public int Symbol() { 
-	    return m_Symbol; 
-	}
+	public void commit() {}
 
 	/**
 	 * Gets this node's colour-cycling phase

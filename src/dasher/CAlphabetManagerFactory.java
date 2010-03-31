@@ -26,7 +26,7 @@
 package dasher;
 
 // TODO Document
-public class CAlphabetManagerFactory extends CNodeManagerFactory {
+public class CAlphabetManagerFactory {
 	
 	protected CAlphabetManager m_AlphabetManager;
 	
@@ -39,8 +39,8 @@ public class CAlphabetManagerFactory extends CNodeManagerFactory {
 			}
 		}
 
-	public CDasherNode GetRoot(CDasherNode Parent, long iLower, long iUpper, int UserData) { // VOID POINTER CHANGED TO INT
-		  return m_AlphabetManager.GetRoot(Parent, iLower, iUpper, UserData);
+	public CDasherNode GetRoot(CDasherNode Parent, long iLower, long iUpper, int iSymbol, CContextBase ctx) { // VOID POINTER CHANGED TO INT
+		  return m_AlphabetManager.GetRoot(Parent, iLower, iUpper, iSymbol, ctx);
 		  
 	}
 

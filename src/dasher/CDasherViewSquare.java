@@ -420,8 +420,8 @@ public class CDasherViewSquare extends CDasherView {
 	public void RenderGroups(CDasherNode Render, long y1, long y2, int mostleft) {
 		
 		// This method takes mostleft by VALUE.
-		
-		SGroupInfo CurrentGroup = (Render.m_BaseGroup);
+		//ACL TODO HACK we need group info here, so this'll only have ever worked for alph nodes...
+		SGroupInfo CurrentGroup = ((CAlphabetManager.CAlphNode)Render).m_BaseGroup;
 		
 		while(CurrentGroup != null) {
 			RecursiveRenderGroups(CurrentGroup, Render, y1, y2, mostleft);

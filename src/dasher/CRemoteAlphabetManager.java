@@ -65,7 +65,7 @@ public class CRemoteAlphabetManager extends CAlphabetManager implements ProbsLis
 		/**
 		 * Node to be populated
 		 */
-		CDasherNode Node;
+		CAlphNode Node;
 		
 		/**
 		 * Symbol belonging to its existing child, if any
@@ -115,7 +115,8 @@ public class CRemoteAlphabetManager extends CAlphabetManager implements ProbsLis
 	 * @param ExistingChild Pre-existing child of the Node we are to
 	 * populate, if any. Null if none. 
 	 */
-	public void PopulateChildrenWithSymbol(CDasherNode Node, int iExistingSymbol, CDasherNode ExistingChild) {
+	@Override
+	public void PopulateChildrenWithSymbol(CAlphNode Node, int iExistingSymbol, CDasherNode ExistingChild) {
 		
 		PendingPopulate pend = new PendingPopulate();
 		
@@ -129,7 +130,7 @@ public class CRemoteAlphabetManager extends CAlphabetManager implements ProbsLis
 		// modified normalisation factor. I have altered the structure so that the
 		// normalisation factor can be retrieved seperately.
 		
-		((CRemotePPM)m_LanguageModel).PromptForProbs(Node.Context(), m_Model.getNonUniformNorm((int)m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION)));
+		((CRemotePPM)m_LanguageModel).PromptForProbs(Node.m_Context, m_Model.getNonUniformNorm((int)m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION)));
 		
 	}
 	

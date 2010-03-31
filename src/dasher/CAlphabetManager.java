@@ -41,7 +41,7 @@ import java.util.ListIterator;
  *
  */
 
-public class CAlphabetManager extends CNodeManager {
+public class CAlphabetManager {
 
 	/**
 	 * Pointer to the LanguageModel used in determining the
@@ -99,11 +99,7 @@ public class CAlphabetManager extends CNodeManager {
     /**
      * Creates a new root CDasherNode with the supplied parameters.
      */
-    public CDasherNode GetRoot(CDasherNode Parent, long iLower, long iUpper, int iSymbol) { // VOID POINTER CHANGED TO INT
-    	CDasherNode NewNode;
-
-    	  // FIXME - Make this a CDasherComponent
-
+    public CDasherNode GetRoot(CDasherNode Parent, long iLower, long iUpper, int iSymbol, CContextBase ctx) { // VOID POINTER CHANGED TO INT
     	  int iColour;
     	  
     	  if(iSymbol == 0)
@@ -112,12 +108,10 @@ public class CAlphabetManager extends CNodeManager {
     	    iColour = m_Colours.get(iSymbol);
 
 
-    	  if(iSymbol == m_Model.GetSpaceSymbol())
-    	    NewNode = new CAlphNode(Parent, iSymbol, 0, EColorSchemes.Special1, iLower, iUpper, m_LanguageModel, iColour);
-    	  else
-    	    NewNode = new CAlphNode(Parent, iSymbol, 0, EColorSchemes.Nodes1, iLower, iUpper, m_LanguageModel, iColour);
+    	  CAlphNode NewNode = new CAlphNode(Parent, iSymbol, 0,
+    			  (iSymbol== m_Model.GetSpaceSymbol()) ? EColorSchemes.Special1 : EColorSchemes.Nodes1,
+    					  iLower, iUpper, iColour, ctx);
     	  
-    	  NewNode.SetContext(m_LanguageModel.CreateEmptyContext()); // FIXME - handle context properly
     	  NewNode.m_bShove = true;
     	  NewNode.m_BaseGroup = m_Alphabet.m_BaseGroup;
     	  NewNode.m_strDisplayText = m_DisplayText.get(iSymbol);
@@ -125,13 +119,33 @@ public class CAlphabetManager extends CNodeManager {
 
     	  return NewNode;
     }
+    //ACL TODO had to make this package-visible as a hack to extract SGroupInfo...
+    class CAlphNode extends CDasherNode {
     
-    private class CAlphNode extends CDasherNode {
-    
+
+    	/**
+    	 * Language model context corresponding to this node's
+    	 * position in the tree.
+    	 */
+    	protected final CContextBase m_Context;
+    	
+    	/**
+    	 * Symbol number represented by this node
+    	 */
+    	protected final int m_Symbol;	// the character to display
+    	
+    	/**
+    	 * Root of the tree of groups into which this Node's
+    	 * children are arranged.
+    	 */
+    	public SGroupInfo m_BaseGroup;
+    	
         public CAlphNode(CDasherNode Parent, int Symbol, int iphase,
 				EColorSchemes ColorScheme, long ilbnd, long ihbnd,
-				CLanguageModel lm, int Colour) {
-			super(Parent, Symbol, iphase, ColorScheme, ilbnd, ihbnd, lm, Colour);
+				int Colour, CContextBase context) {
+			super(Parent, iphase, ColorScheme, ilbnd, ihbnd, Colour);
+			this.m_Symbol = Symbol; 
+			this.m_Context = context;
 			// TODO Auto-generated constructor stub
 		}
 
@@ -156,15 +170,14 @@ public class CAlphabetManager extends CNodeManager {
          */
         public void Output( ArrayList<CSymbolProb> Added, int iNormalization) {
         	m_Model.m_bContextSensitive = true;
-        	int t = Symbol();
-        	if(t != 0) { // Ignore symbol 0 (root node)
-        		CEditEvent oEvent = new CEditEvent(1, m_Alphabet.GetText(t));
+        	if(m_Symbol != 0) { // Ignore symbol 0 (root node)
+        		CEditEvent oEvent = new CEditEvent(1, m_Alphabet.GetText(m_Symbol));
         		m_Model.InsertEvent(oEvent);
         		
         		// Track this symbol and its probability for logging purposes
         		if (Added != null) {
         			CSymbolProb sItem = new CSymbolProb();
-        			sItem.sym    = t;
+        			sItem.sym    = m_Symbol;
         			sItem.prob   = GetProb(iNormalization);
         			
         			Added.add(sItem);
@@ -179,10 +192,10 @@ public class CAlphabetManager extends CNodeManager {
          * @param Node Node whose symbol we wish to remove.
          */    
         public void Undo() {
-        	int t = Symbol();
-        	if(t != 0) { // Ignore symbol 0 (root node)
-        		CEditEvent oEvent = new CEditEvent(2, m_Alphabet.GetText(t));
+        	if(m_Symbol != 0) { // Ignore symbol 0 (root node)
+        		CEditEvent oEvent = new CEditEvent(2, m_Alphabet.GetText(m_Symbol));
         		m_Model.InsertEvent(oEvent);
+        		bCommitted = false;
         	}
         }
 
@@ -223,19 +236,17 @@ public class CAlphabetManager extends CNodeManager {
 			ArrayList<Integer> vSymbols = new ArrayList<Integer>();
 			m_LanguageModel.SymbolAlphabet().GetAlphabetPointer().GetSymbols(vSymbols, strContext);
 			
-			CDasherNode NewNode;
+			CAlphNode NewNode;
 			
 			if(vSymbols.isEmpty()) {
 				
 				/* In the case that there isn't enough context to rebuild the tree,
 				 * we magically reappear at the root node.
 				 */
-				
-				NewNode = new CAlphNode(null, 0, 0,  EColorSchemes.Nodes1, 0, 0, m_LanguageModel, 7);
-				
 				CContextBase oContext = m_LanguageModel.CreateEmptyContext();
 				m_Model.EnterText(oContext, ". ");
-				NewNode.SetContext(oContext);
+				
+				NewNode = new CAlphNode(null, 0, 0,  EColorSchemes.Nodes1, 0, 0, 7, oContext);
 			}
 			else {
 				
@@ -261,22 +272,19 @@ public class CAlphabetManager extends CNodeManager {
 					NodeColour += 130;
 				}
 				
-				NewNode = new CAlphNode(null, vSymbols.get(vSymbols.size() - 2), 0, ChildScheme, 0, 0, m_LanguageModel, NodeColour);
-				
 				CContextBase oContext = (m_LanguageModel.CreateEmptyContext());
 				
 				for(int i = (0); i < vSymbols.size() - 1; ++i)
 					m_LanguageModel.EnterSymbol(oContext, vSymbols.get(i));
-					
-					NewNode.SetContext(oContext);
-					
+				
+				NewNode = new CAlphNode(null, vSymbols.get(vSymbols.size() - 2), 0, ChildScheme, 0, 0, NodeColour, oContext);
 			}
 			
 			NewNode.m_bShove = true;
 			NewNode.Seen(true);
 			NewNode.m_BaseGroup = m_Alphabet.m_BaseGroup;
 			
-			PopulateChildrenWithSymbol( NewNode, Symbol(), this );
+			PopulateChildrenWithSymbol( NewNode, m_Symbol, this );
 			if(m_Model.GetBoolParameter(Ebp_parameters.BP_LM_REMOTE)) {
 				WaitForChildren(NewNode);
 			}
@@ -286,6 +294,18 @@ public class CAlphabetManager extends CNodeManager {
 			return NewNode;
 		}
         
+		@Override
+		public void commit() {
+			if (bCommitted) return;
+			bCommitted=true;
+			//ACL this was used as an 'if' condition:
+			assert (m_Symbol < m_Alphabet.GetNumberTextSymbols());
+			//...before performing the following. But I can't see why it should ever fail?!
+			
+			if (m_Model.GetBoolParameter(Ebp_parameters.BP_LM_ADAPTIVE))
+				m_LanguageModel.LearnSymbol(m_Model.LearnContext, m_Symbol);
+			//ACL ...and using that (mutable!) context makes no sense if we ever reverse & rewrite!
+		}
     }
         
     /**
@@ -299,8 +319,8 @@ public class CAlphabetManager extends CNodeManager {
      * @param ExistingChild Reference to the pre-existing child, if one exists.  
      */
 
-    public void PopulateChildrenWithSymbol(CDasherNode Node, int iExistingSymbol, CDasherNode ExistingChild) {
-    	long[] cum = m_Model.GetProbs(Node.Context(), (int)m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION));
+    public void PopulateChildrenWithSymbol(CAlphNode Node, int iExistingSymbol, CDasherNode ExistingChild) {
+    	long[] cum = m_Model.GetProbs(Node.m_Context, (int)m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION));
     	
     	PopulateChildrenWithSymbol(Node, iExistingSymbol, ExistingChild, cum);
     }
@@ -318,7 +338,7 @@ public class CAlphabetManager extends CNodeManager {
      * @param cum Probabilities to be associated with the children,
      *            supplied in alphabet symbol order.
      */    
-    public void PopulateChildrenWithSymbol( CDasherNode Node, int iExistingSymbol, CDasherNode ExistingChild, long[] cum) {
+    public void PopulateChildrenWithSymbol( CAlphNode Node, int iExistingSymbol, CDasherNode ExistingChild, long[] cum) {
     	
     	// CSFS: In the name of efficiency have removed ArrayLists from all of this.
     	// It now uses a raw array and runs much faster.
@@ -398,15 +418,28 @@ public class CAlphabetManager extends CNodeManager {
     				iColour += 130;
     			}
 
-    			NewNode = new CAlphNode(Node, j, j, ChildScheme, iLbnd, cum[j], m_LanguageModel, iColour);
-    			NewNode.m_bShove = true;
-    			NewNode.m_BaseGroup = m_Alphabet.m_BaseGroup;
+    			//ACL make the new node's context ( - this used to be done only in PushNode(),
+    			// before calling populate...)
+    			CContextBase cont;
+    			if (j < m_Alphabet.GetNumberTextSymbols() && j > 0) {
+					// Normal symbol - derive context from parent
+					cont = m_LanguageModel.CloneContext(Node.m_Context);
+					m_LanguageModel.EnterSymbol(cont, j);
+				} else {
+					// For new "root" nodes (such as under control mode), we want to 
+					// mimic the root context
+					cont = m_LanguageModel.CreateEmptyContext();
+					//      EnterText(cont, "");
+				}
+    			CAlphNode n = new CAlphNode(Node, j, j, ChildScheme, iLbnd, cum[j], iColour, cont);
+    			n.m_bShove = true;
+    			n.m_BaseGroup = m_Alphabet.m_BaseGroup;
+    			NewNode = n;
     		}
 
     		NewNode.m_strDisplayText = m_DisplayText.get(j);
     		NewChildren.add(j, NewNode);
     		iLbnd = cum[j];
-    		
     	}
     	
     	Node.SetChildren(NewChildren);

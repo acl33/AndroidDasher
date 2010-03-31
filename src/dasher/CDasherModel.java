@@ -369,19 +369,7 @@ public class CDasherModel extends CDasherComponent {
 	protected void Make_root(CDasherNode whichchild)
 	//	find a new root node 
 	{
-		// TODO - support for this in alphabet manager
-		int t = m_Root.Symbol();
-		
-		/* CSFS: This structure is somewhat confusing. It seems to choose to
-		 * learn if the symbol is in range, but doesn't actually seem to bother
-		 * about any adaptive setting. 
-		 */
-		
-		if(t < (m_DasherInterface.GetAlphabet().GetNumberTextSymbols())) {
-			// Only learn if we have adaptive behaviour enabled
-			// This was m_bAdaptive, which should be a setting for all dasher?
-			m_LanguageModel.LearnSymbol(LearnContext, t);
-		}
+		m_Root.commit();
 		
 		m_Root.DeleteNephews(whichchild);
 		
@@ -515,10 +503,6 @@ public class CDasherModel extends CDasherComponent {
 		 We need to recalculate the coordinates for the "new" root as the 
 		 user may have moved around within the current root */
 		
-		if(m_Root.Symbol() == 0)
-			return; // Don't try to reparent the root symbol
-		
-		
 		CDasherNode NewRoot;
 		
 		if(oldroots.size() == 0) {
@@ -533,20 +517,11 @@ public class CDasherModel extends CDasherComponent {
 			}
 			
 			NewRoot = m_Root.RebuildParent(allEntered);
-			
+			if (NewRoot == null) return; // no existing parent and no way of recreating => give up
 		}
 		else {
-			
-			/* CSFS: Translated from .back() and .pop_back() */
-			
-			NewRoot = oldroots.getLast();
-			oldroots.removeLast();
-		}
-		
-		// Return if there's no existing parent and no way of recreating one
-		
-		if(NewRoot == null) { 
-			return;
+			NewRoot = oldroots.removeLast();
+			assert (NewRoot != null);
 		}
 		
 		final long lNorm = GetLongParameter(Elp_parameters.LP_NORMALIZATION);
@@ -639,33 +614,25 @@ public class CDasherModel extends CDasherComponent {
 		}
 		m_Root = null;
 			
-		CContextBase therootcontext = m_LanguageModel.CreateEmptyContext();
-		
+		int iRootSymbol;
 		if(sNewContext.length() == 0) {
-			m_Root = m_AlphabetManagerFactory.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), 0);
-			EnterText(therootcontext, ". ");  
-		}
-		else {
+			iRootSymbol = 0;
+			sNewContext = ". ";
+		} else {
 			ArrayList<Integer> vSymbols = new ArrayList<Integer>();
 			m_LanguageModel.SymbolAlphabet().GetAlphabetPointer().GetSymbols(vSymbols, sNewContext);
 
-			int iRootSymbol = (vSymbols.get(vSymbols.size()-1));
-			
-			m_Root = m_AlphabetManagerFactory.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), iRootSymbol);
-			
-			/* CSFS: This used to pass in the address of iRootSymbol; however, this only
-			 * led to the void pointer called "UserData" found in CAlphabetManager which
-			 * doesn't appear to ever do anything but dereference as an int and use read-only,
-			 * so this shouldn't cause problems.
-			 */
-			
-			EnterText(therootcontext, sNewContext);  
+			iRootSymbol = (vSymbols.get(vSymbols.size()-1));
 		}
 		
+		CContextBase therootcontext = m_LanguageModel.CreateEmptyContext();
+		EnterText(therootcontext, sNewContext);
+		
+		m_Root = m_AlphabetManagerFactory.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), iRootSymbol, therootcontext);
+		m_Root.bCommitted=true;
 		m_LanguageModel.ReleaseContext(LearnContext);
 		LearnContext = m_LanguageModel.CloneContext(therootcontext);
 		
-		m_Root.SetContext(therootcontext);   // node takes control of the context
 		Recursive_Push_Node(m_Root, 0);
 		
 		double dFraction = ( 1 - (1 - m_Root.MostProbableChild() / (double)(GetLongParameter(Elp_parameters.LP_NORMALIZATION))) / 2.0 );
@@ -1379,27 +1346,6 @@ public class CDasherModel extends CDasherComponent {
 		
 		Node.Delete_children();
 		
-		// if we haven't got a context then derive it
-		
-		if(Node.Context() == null) {
-			CContextBase cont;
-			// sym0
-			if(Node.Symbol() < m_cAlphabet.GetNumberTextSymbols() && Node.Symbol() > 0) {
-				CDasherNode Parent = Node.Parent();
-				assert(Parent != null);
-				// Normal symbol - derive context from parent
-				cont = m_LanguageModel.CloneContext(Parent.Context());
-				m_LanguageModel.EnterSymbol(cont, Node.Symbol());
-			} else {
-				// For new "root" nodes (such as under control mode), we want to 
-				// mimic the root context
-				cont = CreateEmptyContext();
-				//      EnterText(cont, "");
-			}
-			Node.SetContext(cont);
-			
-		}
-		
 		Node.Alive(true);
 		
 		Node.PopulateChildren();
@@ -1422,9 +1368,10 @@ public class CDasherModel extends CDasherComponent {
 			return;
 		}
 		
-		if(Node.Symbol() == GetControlSymbol()) {
-			return;
-		}
+		// Resurrect this if/when we redo control mode...
+		// if(Node.Symbol() == GetControlSymbol()) {
+		//	return;
+		//}
 		
 		Push_Node(Node);
 		
@@ -1806,7 +1753,8 @@ public class CDasherModel extends CDasherComponent {
 	 */
 	public CDasherNode GetRoot( int iType, CDasherNode Parent, long iLower, long iUpper, int UserData ) {
 		
-			return m_AlphabetManagerFactory.GetRoot(Parent, iLower, iUpper, UserData);
+		//ACL fake out empty context here. This method seems a bit meaningless/pointless right now...
+			return m_AlphabetManagerFactory.GetRoot(Parent, iLower, iUpper, UserData, m_LanguageModel.CreateEmptyContext());
 		// case 1:
 			// return m_ControlManagerFactory.GetRoot(Parent, iLower, iUpper, UserData);
 		//case 2:
