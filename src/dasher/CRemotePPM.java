@@ -397,15 +397,15 @@ public class CRemotePPM extends CLanguageModel {
 	
 	private LinkedList<ProbsListener> eventListeners;
 	
-	public CRemotePPM(CEventHandler EventHandler, CSettingsStore SettingsStore, CSymbolAlphabet SymbolAlphabet) {
+	public CRemotePPM(CEventHandler EventHandler, CSettingsStore SettingsStore, CAlphabet alph) {
 		
-		super(EventHandler, SettingsStore, SymbolAlphabet); // Constructor of CLanguageModel
+		super(EventHandler, SettingsStore, alph); // Constructor of CLanguageModel
 		
 		pendingMessageQueue = new LinkedList<RemotePPMOperation>();
 		eventListeners = new LinkedList<ProbsListener>();
 				
 		try {
-			dispatch = new MessageDispatcherThread(this, SymbolAlphabet.GetSize(), GetStringParameter(Esp_parameters.SP_LM_HOST), 2111);
+			dispatch = new MessageDispatcherThread(this, alph.GetNumberTextSymbols(), GetStringParameter(Esp_parameters.SP_LM_HOST), 2111);
 			dispatch.start();
 		}
 		catch(Exception e) {

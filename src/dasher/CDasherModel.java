@@ -234,19 +234,14 @@ public class CDasherModel extends CDasherComponent {
 	// but not in such a way that it causes everything to be rebuilt.
 	
 	CAlphIO.AlphInfo oAlphInfo = AlphIO.GetInfo(GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
-	m_cAlphabet = new CAlphabet(oAlphInfo);
+	CAlphabet alphabet = m_cAlphabet = new CAlphabet(oAlphInfo);
 	
 	SetStringParameter(Esp_parameters.SP_TRAIN_FILE, m_cAlphabet.GetTrainingFile());
 	SetStringParameter(Esp_parameters.SP_DEFAULT_COLOUR_ID, m_cAlphabet.GetPalette());
 	
 	if(GetLongParameter(Elp_parameters.LP_ORIENTATION) == Opts.AlphabetDefault)
 		SetLongParameter(Elp_parameters.LP_REAL_ORIENTATION, m_cAlphabet.GetOrientation());
-	// --
 		
-	CSymbolAlphabet alphabet = new CSymbolAlphabet(m_cAlphabet.GetNumberTextSymbols());
-	alphabet.SetSpaceSymbol(m_cAlphabet.GetSpaceSymbol());      // FIXME - is this right, or do we have to do some kind of translation?
-	alphabet.SetAlphabetPointer(m_cAlphabet);    // Horrible hack, but ignore for now.
-	
 	// Create an appropriate language model;
 	
 	switch ((int)GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)) {
@@ -620,7 +615,7 @@ public class CDasherModel extends CDasherComponent {
 			sNewContext = ". ";
 		} else {
 			ArrayList<Integer> vSymbols = new ArrayList<Integer>();
-			m_LanguageModel.SymbolAlphabet().GetAlphabetPointer().GetSymbols(vSymbols, sNewContext);
+			m_LanguageModel.getAlphabet().GetSymbols(vSymbols, sNewContext);
 
 			iRootSymbol = (vSymbols.get(vSymbols.size()-1));
 		}

@@ -234,7 +234,7 @@ public class CAlphabetManager {
 			String strContext = ctx.reverse().toString();
 			
 			ArrayList<Integer> vSymbols = new ArrayList<Integer>();
-			m_LanguageModel.SymbolAlphabet().GetAlphabetPointer().GetSymbols(vSymbols, strContext);
+			m_LanguageModel.getAlphabet().GetSymbols(vSymbols, strContext);
 			
 			CAlphNode NewNode;
 			

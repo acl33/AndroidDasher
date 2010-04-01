@@ -158,7 +158,7 @@ public class CPPMLanguageModel extends CLanguageModel {
 		}
 	}
 
-	public CPPMLanguageModel(CEventHandler EventHandler, CSettingsStore SettingsStore, CSymbolAlphabet SymbolAlphabet) {
+	public CPPMLanguageModel(CEventHandler EventHandler, CSettingsStore SettingsStore, CAlphabet SymbolAlphabet) {
 
 		super(EventHandler, SettingsStore, SymbolAlphabet); // Constructor of CLanguageModel
 		m_iMaxOrder = 4;

@@ -57,7 +57,7 @@ public abstract class CLanguageModel extends CDasherComponent {
 	/**
 	 * Alphabet in which we make predictions
 	 */
-	protected CSymbolAlphabet m_Alphabet;
+	protected CAlphabet m_Alphabet;
 	
 	/**
 	 * Creates a LanguageModel working in a given alphabet.
@@ -67,7 +67,7 @@ public abstract class CLanguageModel extends CDasherComponent {
 	 * @param Alphabet Alphabet to work in
 	 */
 	
-	public CLanguageModel(CEventHandler EventHandler, CSettingsStore SettingsStore, CSymbolAlphabet Alphabet) {
+	public CLanguageModel(CEventHandler EventHandler, CSettingsStore SettingsStore, CAlphabet Alphabet) {
 	  super(EventHandler, SettingsStore);
 	  m_Alphabet = Alphabet;
 	}
@@ -190,7 +190,7 @@ public abstract class CLanguageModel extends CDasherComponent {
 	 * 
 	 * @return m_Alphabet
 	 */
-	public CSymbolAlphabet SymbolAlphabet() {
+	public CAlphabet getAlphabet() {
 	    return m_Alphabet;
 	}
 
@@ -200,7 +200,7 @@ public abstract class CLanguageModel extends CDasherComponent {
 	 * @return m_Alphabet.size()
 	 */
 	protected int GetSize() {
-	    return m_Alphabet.GetSize();
+	    return m_Alphabet.GetNumberTextSymbols();
 	}
 
 
