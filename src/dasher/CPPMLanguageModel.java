@@ -185,7 +185,7 @@ public class CPPMLanguageModel extends CLanguageModel {
 	public void HandleEvent(CEvent Event) {
 		super.HandleEvent(Event);
 
-		if(Event.m_iEventType == 1) { // Parameter change notification
+		if(Event instanceof CParameterNotificationEvent) {
 			CParameterNotificationEvent evt = (CParameterNotificationEvent)Event;
 			if(evt.m_iParameter == Elp_parameters.LP_LM_ALPHA) {
 				lpAlpha = GetLongParameter(Elp_parameters.LP_LM_ALPHA);

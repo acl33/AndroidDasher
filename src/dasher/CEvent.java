@@ -26,30 +26,9 @@
 package dasher;
 
 /**
- * Base class representing a generic Event.
- * <p>
- * Generally this should not be instantiated and dispatched; rather
- * one should use a specialisation of this class with a non-zero
- * m_iEventType. As this will appear to have type 0, most components
- * will ignore it.
- * <p>
- * Currently assigned types:
- * <p>1: Parameter change (CParameterNotificationEvent)
- * <p>2: Edit event (CEditEvent)
- * <p>3: Edit context request (CEditContextEvent)
- * <p>4: Dasher Starting notification (CStartEvent)
- * <p>5: Dasher Stopping notification (CStopEvent)
- * <p>6: Control Mode related (CControlEvent)
- * <p>7: Lock event (locks/unlocks Dasher and may state
- * progress of the current operation) (CLockEvent)
- * <p>8: Message event -- typically interpreted
- * by showing the user a message box (CMessageEvent)
- */
-public class CEvent {
-	
-	/**
-	 * Event type. This is set by the constructor of various
-	 * superclasses of Event.
-	 */
-	public int m_iEventType;
+ * Abstract base/marker class for a generic Event. Subclasses will extend with own fields etc.
+ * but there are times we want to handle an event generically and this allows us to do so
+ * without falling back to Object.
+ * */
+public abstract class CEvent {
 }

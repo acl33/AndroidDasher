@@ -183,7 +183,7 @@ public class CDefaultFilter extends CInputFilter {
 	 * @param Event Event to handle
 	 */
 	public void HandleEvent(CEvent Event) {
-		if(Event.m_iEventType == 1) {
+		if(Event instanceof CParameterNotificationEvent) {
 			CParameterNotificationEvent Evt = (CParameterNotificationEvent)Event;
 			
 			if(Evt.m_iParameter == Ebp_parameters.BP_CIRCLE_START || 

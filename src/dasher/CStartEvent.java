@@ -32,11 +32,5 @@ package dasher;
  * situation.
  */
 public class CStartEvent extends CEvent {
-	
-	/**
-	 * Create a new StartEvent
-	 */
-	public CStartEvent() {
-	    m_iEventType = 4; // EV_START
-	} 
+	 
 }

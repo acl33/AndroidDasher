@@ -33,11 +33,4 @@ package dasher;
  */
 public class CStopEvent extends CEvent {
 	
-	/**
-	 * Creates a new Stop event
-	 *
-	 */
-	public CStopEvent() {
-	    m_iEventType = 5; // EV_STOP
-	} 
 }

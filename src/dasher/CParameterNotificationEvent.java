@@ -38,13 +38,12 @@ public class CParameterNotificationEvent extends CEvent {
 	 * @param iParameter Parameter which has changed
 	 */
 	public CParameterNotificationEvent(EParameters iParameter) {
-	    m_iEventType = 1; // EV_PARAM_NOTIFY
 	    m_iParameter = iParameter;
 	}
 
 	/**
 	 * Changed parameter
 	 */
-	public EParameters m_iParameter;
+	public final EParameters m_iParameter;
 	
 }

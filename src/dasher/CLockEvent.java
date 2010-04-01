@@ -49,7 +49,6 @@ public class CLockEvent extends CEvent {
 	 * @param iPercent Percentage completion
 	 */
 	public CLockEvent(String strMessage, boolean bLock, int iPercent) {
-		m_iEventType = 7; // EV_LOCK
 		m_strMessage = strMessage;
 		m_bLock = bLock;
 		m_iPercent = iPercent;
@@ -58,15 +57,15 @@ public class CLockEvent extends CEvent {
 	/**
 	 * Message intended for the user
 	 */
-	public String m_strMessage;
+	public final String m_strMessage;
 	
 	/**
-	 * Lock engaged
+	 * Lock engaged - mutable to allow reuse of event object
 	 */
 	public boolean m_bLock;
 	
 	/**
-	 * Percent completion
+	 * Percent completion - mutable to allow reuse of event object
 	 */
 	public int m_iPercent;
 }

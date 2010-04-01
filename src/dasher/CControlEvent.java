@@ -37,12 +37,11 @@ public class CControlEvent extends CEvent {
 	 * @param iID ID of the new event.
 	 */
 	public CControlEvent(int iID) {
-	    m_iEventType = 6; // EV_CONTROL
 	    m_iID = iID;
 	}
 	
 	/**
 	 * ID of this event.
 	 */
-	int m_iID;
+	final int m_iID;
 }

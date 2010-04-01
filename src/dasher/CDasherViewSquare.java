@@ -271,7 +271,7 @@ public class CDasherViewSquare extends CDasherView {
 		super.HandleEvent(Event);
 		
 		// And then interpret events for ourself
-		if(Event.m_iEventType == 1) {
+		if(Event instanceof CParameterNotificationEvent) {
 			CParameterNotificationEvent Evt = (CParameterNotificationEvent)Event;
 			
 			if (Evt.m_iParameter == Elp_parameters.LP_REAL_ORIENTATION) {

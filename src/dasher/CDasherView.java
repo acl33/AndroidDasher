@@ -190,7 +190,7 @@ public abstract class CDasherView extends CDasherComponent {
 	 * @param event Event to handle
 	 */
 	public void HandleEvent(CEvent event) {
-		if(event.m_iEventType == 1) { // Param-notify
+		if(event instanceof CParameterNotificationEvent) {
 			CParameterNotificationEvent evt = (CParameterNotificationEvent)event;
 			if(evt.m_iParameter ==  Elp_parameters.LP_REAL_ORIENTATION) {
 				realOrientation = (int)GetLongParameter(Elp_parameters.LP_REAL_ORIENTATION);

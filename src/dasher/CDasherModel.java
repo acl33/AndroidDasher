@@ -320,7 +320,7 @@ public class CDasherModel extends CDasherComponent {
 	 */	
 	public void HandleEvent(CEvent Event) {
 		
-		if(Event.m_iEventType == 1) {
+		if(Event instanceof CParameterNotificationEvent) {
 			CParameterNotificationEvent Evt = (CParameterNotificationEvent)(Event);
 			
 			if(Evt.m_iParameter == Elp_parameters.LP_MAX_BITRATE

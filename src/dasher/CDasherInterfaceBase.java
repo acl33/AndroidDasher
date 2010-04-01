@@ -399,11 +399,8 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	public void InsertEvent(CEvent Event) {
 		super.InsertEvent(Event);
-		/* CSFS: Changed to lots of if statements, since Java won't switch on a non-
-		 * constant such as the ordinal or ordinal of one of these parameters.
-		 */
 		
-		if(Event.m_iEventType == 1) {
+		if(Event instanceof CParameterNotificationEvent) {
 			CParameterNotificationEvent Evt = ((CParameterNotificationEvent)(Event));
 			
 			if(Evt.m_iParameter == Ebp_parameters.BP_COLOUR_MODE) {       // Forces us to redraw the display
@@ -465,7 +462,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			}
 			
 		}
-		else if(Event.m_iEventType == 6 /*EV_CONTROL*/) {
+		else if(Event instanceof CControlEvent) {
 			/* CControlEvent ControlEvent = ((CControlEvent)(Event));
 			
 			switch(ControlEvent.m_iID) {
@@ -479,7 +476,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			
 			// CSFS: Do nothing for the time being until Control Mode is brought back
 		}
-		else if(Event.m_iEventType == 7 /*EV_LOCK*/) {
+		else if(Event instanceof CLockEvent) {
 			// TODO: 'Reference counting' for locks?
 			CLockEvent LockEvent = ((CLockEvent)(Event));
 			m_bGlobalLock = LockEvent.m_bLock;

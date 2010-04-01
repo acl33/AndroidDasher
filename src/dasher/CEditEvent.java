@@ -43,7 +43,6 @@ public class CEditEvent extends CEvent {
 	 * @param sText Text to be added / deleted.
 	 */
 	public CEditEvent(int iEditType, String sText) {
-	    m_iEventType = 2; // EV_EDIT
 	    m_iEditType = iEditType;
 	    m_sText = sText;
 	};
@@ -51,11 +50,11 @@ public class CEditEvent extends CEvent {
 	/**
 	 * Edit event type
 	 */
-	public int m_iEditType;
+	public final int m_iEditType;
 	
 	/**
 	 * Text to add/remove
 	 */
-	public String m_sText;
+	public final String m_sText;
 	
 }

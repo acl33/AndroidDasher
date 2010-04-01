@@ -40,7 +40,6 @@ public class CMessageEvent extends CEvent {
 	 * @param iType 0 for informative, 1 for warning, 2 for error
 	 */
 	public CMessageEvent(String strMessage, int iID, int iType) {
-		m_iEventType = 8; // EV_MESSAGE
 		m_strMessage = strMessage;
 		m_iID = iID;
 		m_iType = iType; // 0: information. 1: warning. 2: error.
@@ -49,15 +48,15 @@ public class CMessageEvent extends CEvent {
 	/**
 	 * Message body
 	 */
-	public String m_strMessage;
+	public final String m_strMessage;
 
 	/**
 	 * Message UID
 	 */
-	public int m_iID;
+	public final int m_iID;
 
 	/**
 	 * Message type
 	 */
-	public int m_iType;
+	public final int m_iType;
 }

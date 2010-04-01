@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 
 import dasher.CAlphIO;
 import dasher.CColourIO;
@@ -27,6 +28,29 @@ public class DasherActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         intf = new ADasherInterface() {
+        	private String allEntered = "";
+        	@Override
+        	public ListIterator<Character> charactersEntered() {
+        		return new ListIterator<Character>() {
+    				private int index = allEntered.length();
+			
+					public boolean hasNext() {return index < allEntered.length();}
+
+					public boolean hasPrevious() {return index > 0;}
+
+					public Character next() {return allEntered.charAt(index++);}
+
+					public int nextIndex() {return index;}
+
+					public Character previous() {return allEntered.charAt(--index);}
+
+					public int previousIndex() {return index-1;}
+
+					public void add(Character object) {throw new UnsupportedOperationException("Immutable");}
+					public void remove() {throw new UnsupportedOperationException("Immutable");}
+					public void set(Character object) {throw new UnsupportedOperationException("Immutable");}
+				};
+        	}
         	@Override
         	public void Redraw(boolean bChanged) {
         		surf.requestRender();
