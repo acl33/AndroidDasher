@@ -26,6 +26,8 @@
 package dasher;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.ListIterator;
 
 /**
@@ -82,7 +84,7 @@ public abstract class CDasherNode {
 	/**
 	 * List of this node's child Nodes
 	 */
-	protected ArrayList<CDasherNode> m_mChildren;
+	private final ArrayList<CDasherNode> m_mChildren = new ArrayList<CDasherNode>();
 	
 	/**
 	 * Flag indicating whether all of this node's children are present
@@ -92,7 +94,7 @@ public abstract class CDasherNode {
 	/**
 	 * Parent Node
 	 */
-	protected CDasherNode m_Parent;
+	private CDasherNode m_Parent;
 
     /**
 	 * This Node's display text
@@ -123,7 +125,6 @@ public abstract class CDasherNode {
     public CDasherNode(CDasherNode Parent, int iphase, EColorSchemes ColorScheme, long ilbnd, long ihbnd, int Colour) {
 		m_iLbnd = ilbnd;
 		m_iHbnd = ihbnd;
-		m_mChildren = new ArrayList<CDasherNode>();
 		// m_bHasAllChildren = false; (default)
 		m_bAlive = true;
 		// m_bSeen = false; (default)
@@ -131,6 +132,7 @@ public abstract class CDasherNode {
 		m_iPhase = iphase;
 		m_iColour = Colour;
 		m_Parent = Parent;
+		if (Parent!=null) Parent.m_mChildren.add(this);
 		// m_strDisplayText = new String();
 		// WARNING: Whilst I think this is redundant it MAY get used uninitialised.
 		
@@ -261,30 +263,12 @@ public abstract class CDasherNode {
 	}
 
 	/**
-	 * Gets a reference to this Node's child list. 
+	 * Gets a (read-only) reference to this Node's child list. 
 	 * 
 	 * @return m_mChildren
 	 */
-	public synchronized ArrayList<CDasherNode> Children() {
-	  return m_mChildren;
-	}
-
-	/**
-	 * Gets a reference to this Node's child list. 
-	 * 
-	 * @return m_mChildren
-	 */
-	public synchronized ArrayList<CDasherNode> GetChildren() {
-	  return m_mChildren;
-	}
-	
-	/**
-	 * Sets this Node's child list. 
-	 * 
-	 * @param in The list of children to be attached to this node.
-	 */
-	public synchronized void SetChildren(ArrayList<CDasherNode> in) {
-		m_mChildren = in;
+	public List<CDasherNode> Children() {
+		return Collections.unmodifiableList(m_mChildren);
 	}
 	
 	/**
@@ -298,20 +282,6 @@ public abstract class CDasherNode {
 			if (it.previous() != m_strDisplayText.charAt(i))
 				throw new IllegalArgumentException("Previous character "+it.next()+" but node would have output "+m_strDisplayText.substring(0,i+1));		
 	}
-	
-	/**
-	 * Determine if a given node is this one's parent.
-	 * 
-	 * @param oldnode Potential parent
-	 * @return True if parent
-	 */
-	public boolean NodeIsParent(CDasherNode oldnode) {
-		  if(oldnode == m_Parent)
-		    return true;
-		  else
-		    return false;
-
-	}	
 	
 	/**
 	 * Returns the size of our child list.
@@ -454,7 +424,7 @@ public abstract class CDasherNode {
     	
     	long iMax = 0;
     	    	
-    	for(CDasherNode i : this.GetChildren()) {
+    	for(CDasherNode i : this.Children()) {
     		if(i.Range() > iMax) iMax = i.Range();
     	}
     	
@@ -484,7 +454,7 @@ public abstract class CDasherNode {
 		long miRange = miY2 - miY1;
         m_bAlive = true;
         
-        for(CDasherNode i : this.GetChildren()) {
+        for(CDasherNode i : this.Children()) {
         	long miNewy1 = miY1 + (miRange * i.m_iLbnd) / iNormalization;
         	long miNewy2 = miY1 + (miRange * i.m_iHbnd) / iNormalization;
         	if(miMousey < miNewy2 && miMousey > miNewy1 && miMousex < miNewy2 - miNewy1)
@@ -511,16 +481,15 @@ public abstract class CDasherNode {
 		   * leaving it ready for GC.
 		   */
 	  
-		  for(CDasherNode i : this.GetChildren()) {
+		  for(CDasherNode i : this.Children()) {
 			  if(i != pChild) {
 				  i.Delete_children();
 				  i.DeleteNode();
-				  i = null;
 			  }
 			  
 		  }
-		  Children().clear();
-		  SetHasAllChildren(false);
+		  //"Delete"ing anything is a misnomer, of course, due to GC. So same as:
+		  Delete_children();
 	}
 
 
@@ -531,9 +500,9 @@ public abstract class CDasherNode {
      * @param pChild Child whose children will NOT be deleted.
      */
 	public void DeleteNephews(CDasherNode pChild) {
-		  assert(Children().size() > 0);
+		  assert(ChildCount() > 0);
 		  
-		  for(CDasherNode i : this.GetChildren()) {
+		  for(CDasherNode i : this.Children()) {
 		    if(i != pChild) {
 		      i.Delete_children();
 		    }
@@ -553,7 +522,7 @@ public abstract class CDasherNode {
 			// i.DeleteNode(); (stub method)
 		//	i = null;
 		//}
-		Children().clear(); // This should be enough to render them GC-able.
+		m_mChildren.clear(); // This should be enough to render them GC-able.
 		SetHasAllChildren(false);
 	}
 

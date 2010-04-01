@@ -373,13 +373,6 @@ public class CAlphabetManager {
     	
     	long iLbnd = 0;
     	
-    	ArrayList<CDasherNode> NewChildren = new ArrayList<CDasherNode>(iChildCount);
-    	NewChildren.ensureCapacity(iChildCount);
-    	
-    	// System.out.printf("Populating with ChildCount: %d%n", iChildCount);
-    	
-    	// Node.Children().ensureCapacity(iChildCount);    	 
-    	
     	for(int j = 0; j < iChildCount; j++) {
     		if(j == SPSymbol)
     			ChildScheme = SpecialScheme;
@@ -438,12 +431,8 @@ public class CAlphabetManager {
     		}
 
     		NewNode.m_strDisplayText = m_DisplayText.get(j);
-    		NewChildren.add(j, NewNode);
     		iLbnd = cum[j];
     	}
-    	
-    	Node.SetChildren(NewChildren);
-
     }
 
     /**
@@ -473,7 +462,7 @@ public class CAlphabetManager {
      * @param node Node whose children we wish to wait for.
      */
     public void WaitForChildren(CDasherNode node) {
-    	while(!(node.Children() != null && node.ChildCount() != 0)) {
+    	while (node.ChildCount() == 0) {
     		try {
     			Thread.sleep(50);
     		}

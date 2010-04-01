@@ -95,11 +95,7 @@ public class CClickFilter extends CInputFilter {
 	  assert (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED));
 	  if (m_DasherModel.ScheduledSteps() == 0) {
 		  //that was last scheduled step. Pause...
-		  while(m_DasherModel.CheckForNewRoot(DasherView)) {
-			  // Do nothing. This allows the root to get reparented as many times as
-			  // are necessary before we pause.
-		  }
-		  
+		  m_DasherModel.CheckForNewRoot(DasherView);
 		  SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
 	  }
 	  return true;

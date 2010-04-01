@@ -1093,9 +1093,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		}
 		
 		if(m_DasherView != null)
-			while( m_DasherModel.CheckForNewRoot(m_DasherView) ) {
-				// Do nothing
-			}
+			m_DasherModel.CheckForNewRoot(m_DasherView);
 		
 		Redraw(true);
 		

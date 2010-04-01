@@ -451,7 +451,7 @@ public class CDasherModel extends CDasherComponent {
 		// FIXME - we really ought to check that pNewRoot is actually a
 		// descendent of the root, although that should be guaranteed
 		
-		if(!NewRoot.NodeIsParent(m_Root))
+		if(NewRoot.Parent() != m_Root)
 			RecursiveMakeRoot(NewRoot.Parent());
 		
 		Make_root(NewRoot);
@@ -1335,7 +1335,7 @@ public class CDasherModel extends CDasherComponent {
 	protected void Push_Node(CDasherNode Node) {
 		
 		if(Node.HasAllChildren()) {
-			assert(Node.Children().size() > 0);
+			assert(Node.ChildCount() > 0);
 			// if there are children just give them a poke
 			
 			for(CDasherNode i : Node.Children()) {
@@ -1378,8 +1378,8 @@ public class CDasherModel extends CDasherComponent {
 		if(iDepth == 0)
 			return;
 		
-		for(int i = 0; i < Node.ChildCount(); i++) {
-			Recursive_Push_Node(Node.Children().get(i), iDepth - 1);
+		for(CDasherNode ch : Node.Children()) {
+			Recursive_Push_Node(ch, iDepth - 1);
 		}
 	}
 	
@@ -1426,62 +1426,51 @@ public class CDasherModel extends CDasherComponent {
 	 * @param View View against which to check node visibility.
 	 * @return True if Reparent_root made any changes, false otherwise.
 	 */
-	public boolean CheckForNewRoot(CDasherView View) {
+	public void CheckForNewRoot(CDasherView View) {
 		
 		if(m_deGotoQueue.size() > 0)
-			return false;
+			return;
 		
-		/* CSFS: Some slightly doubtful semantics here. In the C++ version, the new
-		 * variable named root is created using a copy constructor on a pointer
-		 * which I think/hope means we ultimately get a pointer to the same object
-		 * as is done below.
-		 */
-		
-		CDasherNode root = m_Root;
-		ArrayList<CDasherNode> children = m_Root.Children();
-		
-		if(View.IsNodeVisible(m_Rootmin,m_Rootmax)) {
+		if(!View.NodeFillsScreen(m_Rootmin,m_Rootmax)) {
 			Reparent_root();
-			return(m_Root != root); // Has the reparent method changed the root?
+			return;
 		}
 		
-		if(children.size() == 0)
-			return false;
-		
-		int alive = 0;
-		CDasherNode theone = null;
-		
-		
-		// Find whether there is exactly one alive child; if more, we don't care.
+		while (true) {
+			int alive = 0;
+			CDasherNode theone = null;
 			
-		for(CDasherNode i : children) {
-			if(i.Alive()) {
-				alive++;
-				theone = i;
-				if(alive > 1)
-					break;
+			// Find whether there is exactly one alive child; if more, we don't care.
+				
+			for(CDasherNode i : m_Root.Children()) {
+				if(i.Alive()) {
+					alive++;
+					theone = i;
+					if(alive > 1)
+						break;
+				}
 			}
-		}
-		
-		if(alive == 1) {
-			// We must have zoomed sufficiently that only one child of the root node 
-			// is still alive.  Let's make it the root.
 			
-			/* CSFS: All formerly myints */
-			
-			long y1 = m_Rootmin;
-			long y2 = m_Rootmax;
-			long range = y2 - y1;
-			
-			long newy1 = y1 + (range * theone.Lbnd()) / (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
-			long newy2 = y1 + (range * theone.Hbnd()) / (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
-			if(!View.IsNodeVisible(newy1, newy2)) {
-				Make_root(theone);
-				return false;
+			if(alive == 1) {
+				// We must have zoomed sufficiently that only one child of the root node 
+				// is still alive.  Let's make it the root.
+				
+				/* CSFS: All formerly myints */
+				
+				long y1 = m_Rootmin;
+				long y2 = m_Rootmax;
+				long range = y2 - y1;
+				
+				long newy1 = y1 + (range * theone.Lbnd()) / (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
+				long newy2 = y1 + (range * theone.Hbnd()) / (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
+				if(View.NodeFillsScreen(newy1, newy2)) {
+					Make_root(theone);
+					continue; //try again, looking for a child of the new root...
+				}
 			}
+			//either no child on screen (?!), or more than one
+			return;
 		}
-		
-		return false;
 	}
 
 	/**

@@ -267,15 +267,16 @@ public abstract class CDasherView extends CDasherComponent {
 	
 	/**
 	 * Determines whether the node falling between two specified
-	 * y co-ordinates is visible.
+	 * y co-ordinates entirely covers the screen.
 	 * <p>
-	 * Always returns true if not overridden.
+	 * Returns false if the node does not fill the screen
+	 * (this includes the case where the node is not on the screen at all!)
 	 * 
 	 * @param y1 upper y co-ordinate
 	 * @param y2 lower y co-ordinate
-	 * @return True if visible, false if not.
+	 * @return True if that range covers the screen, false otherwise.
 	 */
-	public boolean IsNodeVisible(long y1, long y2) { return true; };
+	public abstract boolean NodeFillsScreen(long y1, long y2);
 	
 	/**
 	 * Sets our current reference input device and informs the

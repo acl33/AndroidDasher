@@ -388,7 +388,7 @@ public class CDasherViewSquare extends CDasherView {
 		/* Step 3: Draw our child nodes */
 		int norm = lpNormalisation;
 		
-		for(CDasherNode i : Render.GetChildren()) {
+		for(CDasherNode i : Render.Children()) {
 			
 			long Range = y2 - y1;
 			long newy1 = y1 + (Range * i.Lbnd()) / norm;
@@ -672,11 +672,12 @@ public class CDasherViewSquare extends CDasherView {
 	 *  @param y2 Node's bottom y co-ordinate
 	 *  @return True if falls within visible region, False otherwise
 	 */
-	public boolean IsNodeVisible(long y1, long y2) {
+	@Override
+	public boolean NodeFillsScreen(long y1, long y2) {
 		
 		CDasherView.DRect visreg = VisibleRegion();
 		
-		return (y1 > visreg.minY) || (y2 < visreg.maxY ) || (y2-y1 < visreg.maxX);
+		return (y1 <= visreg.minY) && (y2 >= visreg.maxY ) && (y2-y1 >= visreg.maxX);
 	}
 	
 	/** 
