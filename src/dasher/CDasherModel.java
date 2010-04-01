@@ -146,7 +146,7 @@ public class CDasherModel extends CDasherComponent {
 	 * Our alphabet manager, for functions which require knowledge
 	 * of an Alphabet.
 	 */
-	protected CAlphabetManagerFactory m_AlphabetManagerFactory;
+	protected CAlphabetManager m_AlphabetManager;
 	// protected CControlManagerFactory m_ControlManagerFactory;
 
 	/* CSFS: Converted a struct in the original C into this class */
@@ -289,7 +289,9 @@ public class CDasherModel extends CDasherComponent {
 	m_Rootmin_min = Long.MIN_VALUE / iNormalization / 2;
 	m_Rootmax_max = Long.MAX_VALUE / iNormalization / 2;
 	
-	m_AlphabetManagerFactory = new CAlphabetManagerFactory(this, m_LanguageModel);
+	m_AlphabetManager = (m_LanguageModel.isRemote())
+	                    ? new CRemoteAlphabetManager( this, m_LanguageModel)
+			            : new CAlphabetManager( this, m_LanguageModel);
 	// m_ControlManagerFactory = new CControlManagerFactory(this, m_LanguageModel);
 	
 	m_bContextSensitive = true;
@@ -623,7 +625,7 @@ public class CDasherModel extends CDasherComponent {
 		CContextBase therootcontext = m_LanguageModel.CreateEmptyContext();
 		EnterText(therootcontext, sNewContext);
 		
-		m_Root = m_AlphabetManagerFactory.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), iRootSymbol, therootcontext);
+		m_Root = m_AlphabetManager.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), iRootSymbol, therootcontext);
 		m_Root.bCommitted=true;
 		m_LanguageModel.ReleaseContext(LearnContext);
 		LearnContext = m_LanguageModel.CloneContext(therootcontext);
@@ -1738,7 +1740,7 @@ public class CDasherModel extends CDasherComponent {
 	public CDasherNode GetRoot( int iType, CDasherNode Parent, long iLower, long iUpper, int UserData ) {
 		
 		//ACL fake out empty context here. This method seems a bit meaningless/pointless right now...
-			return m_AlphabetManagerFactory.GetRoot(Parent, iLower, iUpper, UserData, m_LanguageModel.CreateEmptyContext());
+			return m_AlphabetManager.GetRoot(Parent, iLower, iUpper, UserData, m_LanguageModel.CreateEmptyContext());
 		// case 1:
 			// return m_ControlManagerFactory.GetRoot(Parent, iLower, iUpper, UserData);
 		//case 2:
