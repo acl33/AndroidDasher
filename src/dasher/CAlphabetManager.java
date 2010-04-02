@@ -47,26 +47,26 @@ public class CAlphabetManager {
 	 * Pointer to the LanguageModel used in determining the
 	 * relative probability assigned to new Nodes. 
 	 */
-	protected CLanguageModel m_LanguageModel;
+	protected final CLanguageModel m_LanguageModel;
 	
 	/**
 	 * Pointer to the DasherModel which performs some of the
 	 * work in the course of producing probabilities.
 	 */
-    protected CDasherModel m_Model;
+    protected final CDasherModel m_Model;
     
     // Undocumented, as these are present as caches only.
-    protected int SPSymbol, ConvertSymbol, ContSymbol;
+    protected final int SPSymbol, ConvertSymbol, ContSymbol;
     
     /**
      * Pointer to the current Alphabet, used to find out what a
      * given character looks like typed (for the purposes
      * of output) and displayed (if growing the DasherNode tree).
      */
-    protected CAlphabet m_Alphabet;
+    protected final CAlphabet m_Alphabet;
     
-    protected ArrayList<Integer> m_Colours;
-    protected ArrayList<String> m_DisplayText;
+    protected final ArrayList<Integer> m_Colours;
+    protected final ArrayList<String> m_DisplayText;
     // Both undocumented (caches)
         
     /**
@@ -99,7 +99,7 @@ public class CAlphabetManager {
     /**
      * Creates a new root CDasherNode with the supplied parameters.
      */
-    public CDasherNode GetRoot(CDasherNode Parent, long iLower, long iUpper, int iSymbol, CContextBase ctx) { // VOID POINTER CHANGED TO INT
+    public CDasherNode GetRoot(CDasherNode Parent, long iLower, long iUpper, int iSymbol, String string) {
     	  int iColour;
     	  
     	  if(iSymbol == 0)
@@ -107,7 +107,9 @@ public class CAlphabetManager {
     	  else
     	    iColour = m_Colours.get(iSymbol);
 
-
+    	  CContextBase ctx = m_LanguageModel.CreateEmptyContext();
+    	  m_LanguageModel.EnterText(ctx, string);
+    	  
     	  CAlphNode NewNode = new CAlphNode(Parent, iSymbol, 0,
     			  (iSymbol== m_Model.GetSpaceSymbol()) ? EColorSchemes.Special1 : EColorSchemes.Nodes1,
     					  iLower, iUpper, iColour, ctx);
@@ -122,7 +124,8 @@ public class CAlphabetManager {
     //ACL TODO had to make this package-visible as a hack to extract SGroupInfo...
     class CAlphNode extends CDasherNode {
     
-
+    	private boolean bCommitted;
+    	
     	/**
     	 * Language model context corresponding to this node's
     	 * position in the tree.
@@ -244,7 +247,7 @@ public class CAlphabetManager {
 				 * we magically reappear at the root node.
 				 */
 				CContextBase oContext = m_LanguageModel.CreateEmptyContext();
-				m_Model.EnterText(oContext, ". ");
+				m_LanguageModel.EnterText(oContext, ". ");
 				
 				NewNode = new CAlphNode(null, 0, 0,  EColorSchemes.Nodes1, 0, 0, 7, oContext);
 			}
@@ -302,8 +305,14 @@ public class CAlphabetManager {
 			assert (m_Symbol < m_Alphabet.GetNumberTextSymbols());
 			//...before performing the following. But I can't see why it should ever fail?!
 			
-			if (m_Model.GetBoolParameter(Ebp_parameters.BP_LM_ADAPTIVE))
-				m_LanguageModel.LearnSymbol(m_Model.LearnContext, m_Symbol);
+			if (m_Model.GetBoolParameter(Ebp_parameters.BP_LM_ADAPTIVE)) {
+				if (Parent() instanceof CAlphNode) {
+					CContextBase learnCtx = m_LanguageModel.CloneContext(((CAlphNode)Parent()).m_Context);
+					m_LanguageModel.LearnSymbol(learnCtx, m_Symbol);
+					m_LanguageModel.ReleaseContext(learnCtx);
+				}
+				//else - do we do anything? should mean root nodes ok...
+			}
 			//ACL ...and using that (mutable!) context makes no sense if we ever reverse & rewrite!
 		}
     }

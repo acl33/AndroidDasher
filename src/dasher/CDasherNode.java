@@ -108,8 +108,6 @@ public abstract class CDasherNode {
      */
     public boolean m_bShove;
 	
-    public boolean bCommitted;
-    
     /**
 	 * Creates a Node and sets its describing variables.
 	 * 

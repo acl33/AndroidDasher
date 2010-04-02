@@ -25,6 +25,8 @@
 
 package dasher;
 
+import java.util.ArrayList;
+
 /* CSFS: WARNING: This is a DasherComponent derived class and so MUST
  * have UnregisterComponent called on destruction.
  */
@@ -203,8 +205,23 @@ public abstract class CLanguageModel extends CDasherComponent {
 	    return m_Alphabet.GetNumberTextSymbols();
 	}
 
-
-	 
+	/**
+	 * Extends a given language model context without modifying
+	 * the model itself.
+	 * <p>
+	 * The bulk of the work itself is deferred to the LanguageModel's
+	 * EnterSymbol method.
+	 *  
+	 * @param cDasherModel TODO
+	 * @param context Context to extend
+	 * @param TheText Text to add
+	 */
+	public void EnterText(CContextBase context, String TheText) {
+		ArrayList <Integer> Symbols = new ArrayList<Integer>();
+		m_Alphabet.GetSymbols(Symbols, TheText); // UTF8 bytes become Unicode Integers
+		for(int i = 0; i < Symbols.size(); i++)
+			EnterSymbol(context, Symbols.get(i)); // FIXME - conversion to symbol alphabet
+	}
 
 	
 }

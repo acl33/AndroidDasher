@@ -74,11 +74,6 @@ public class CDasherModel extends CDasherComponent {
 	 */
 	protected CAlphabet m_cAlphabet;        // pointer to the alphabet
 	
-	/**
-	 * Our current prediction context.
-	 */
-	protected CContextBase LearnContext; // Used to add data to model as it is entered
-	
 /////////////////////////////////////////////////////////////////////////////
 	
 //	protected CDasherGameMode m_GameMode;
@@ -276,8 +271,6 @@ public class CDasherModel extends CDasherComponent {
 		m_LanguageModel = new CPPMLanguageModel(m_EventHandler, m_SettingsStore, alphabet);    
 		break;
 	}
-	
-	LearnContext = m_LanguageModel.CreateEmptyContext();
 	
 	int iNormalization = (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
 	
@@ -583,7 +576,6 @@ public class CDasherModel extends CDasherComponent {
 	 * This method also has the following side-effects:
 	 * <p>
 	 * <ul><li>Any zoom scheduled using ScheduleZoom will be cancelled.
-	 * <li>Our current LearnContext will be released.
 	 * <li>m_RootMax, m_TargetMax and their brethren will be altered
 	 * to reflect the changes.
 	 * 
@@ -622,13 +614,7 @@ public class CDasherModel extends CDasherComponent {
 			iRootSymbol = (vSymbols.get(vSymbols.size()-1));
 		}
 		
-		CContextBase therootcontext = m_LanguageModel.CreateEmptyContext();
-		EnterText(therootcontext, sNewContext);
-		
-		m_Root = m_AlphabetManager.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), iRootSymbol, therootcontext);
-		m_Root.bCommitted=true;
-		m_LanguageModel.ReleaseContext(LearnContext);
-		LearnContext = m_LanguageModel.CloneContext(therootcontext);
+		m_Root = m_AlphabetManager.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), iRootSymbol, sNewContext);
 		
 		Recursive_Push_Node(m_Root, 0);
 		
@@ -1282,44 +1268,6 @@ public class CDasherModel extends CDasherComponent {
 	}
 	
 	/**
-	 * Extends a given context with a given string of characters,
-	 * whilst modifying the language model itself based on what is
-	 * entered.
-	 * <p>
-	 * The bulk of the work is deferred to the language
-	 * model's LearnSymbol method.
-	 * 
-	 * @param context Context to extend
-	 * @param TheText Text to add
-	 * @param IsMore Ignored
-	 */	
-	public void LearnText(CContextBase context, String TheText) {
-		ArrayList <Integer> Symbols = new ArrayList<Integer>();
-		
-		m_cAlphabet.GetSymbols(Symbols, TheText);
-		
-		for(int i = 0; i < Symbols.size(); i++)
-			m_LanguageModel.LearnSymbol(context, Symbols.get(i)); // FIXME - conversion to symbol alphabet
-	}
-	
-	/**
-	 * Extends a given language model context without modifying
-	 * the model itself.
-	 * <p>
-	 * The bulk of the work itself is deferred to the LanguageModel's
-	 * EnterSymbol method.
-	 *  
-	 * @param context Context to extend
-	 * @param TheText Text to add
-	 */
-	public void EnterText(CContextBase context, String TheText) {
-		ArrayList <Integer> Symbols = new ArrayList<Integer>();
-		m_cAlphabet.GetSymbols(Symbols, TheText); // UTF8 bytes become Unicode Integers
-		for(int i = 0; i < Symbols.size(); i++)
-			m_LanguageModel.EnterSymbol(context, Symbols.get(i)); // FIXME - conversion to symbol alphabet
-	}
-	
-	/**
 	 * Deletes and then repopulates the children of a given
 	 * node.
 	 * <p>
@@ -1740,7 +1688,7 @@ public class CDasherModel extends CDasherComponent {
 	public CDasherNode GetRoot( int iType, CDasherNode Parent, long iLower, long iUpper, int UserData ) {
 		
 		//ACL fake out empty context here. This method seems a bit meaningless/pointless right now...
-			return m_AlphabetManager.GetRoot(Parent, iLower, iUpper, UserData, m_LanguageModel.CreateEmptyContext());
+			return m_AlphabetManager.GetRoot(Parent, iLower, iUpper, UserData, ". ");
 		// case 1:
 			// return m_ControlManagerFactory.GetRoot(Parent, iLower, iUpper, UserData);
 		//case 2:
