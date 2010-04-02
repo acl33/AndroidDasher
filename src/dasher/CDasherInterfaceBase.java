@@ -282,7 +282,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	public void DestroyInterface() {
 				
 		if(m_DasherModel != null) {
-			m_DasherModel.deleteLM();
 			m_DasherModel.UnregisterComponent();
 		}
 		  m_DasherModel = null;        // The order of some of these deletions matters
@@ -486,8 +485,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		
 		// Delete the old model and create a new one
 		if(m_DasherModel != null) {
-			m_DasherModel.deleteLM(); // Added CSFS: The language model was
-			// previously given no opportunity to unregister itself.
 			m_DasherModel.UnregisterComponent();
 		}
 		

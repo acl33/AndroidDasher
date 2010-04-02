@@ -1452,15 +1452,6 @@ public class CDasherModel extends CDasherComponent {
 	}
 	
 	/**
-	 * Runs the LanguageModel's UnregisterComponent method, if
-	 * there is currently a LanguageModel.
-	 *
-	 */
-	public void deleteLM() {
-		if(m_LanguageModel != null) m_LanguageModel.UnregisterComponent();
-	}
-	
-	/**
 	 * Unregisters the language model and then ourselves.
 	 */
 	public void UnregisterComponent() {
