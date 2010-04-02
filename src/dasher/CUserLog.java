@@ -33,7 +33,7 @@ import java.util.ArrayList;
  */
 public class CUserLog {
 
-	public CUserLog(CEventHandler EventHandler, CSettingsStore SetStore, int loglevel, CAlphabet Alpha) {
+	public CUserLog(CEventHandler EventHandler, CSettingsStore SetStore, int loglevel) {
 		//stub
 	}
 	

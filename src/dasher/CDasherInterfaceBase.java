@@ -67,11 +67,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	// public final int       g_iLogOptions = logTimeStamp | logDateStamp;
 	
 	/**
-	 * Current alphabet
-	 */
-	protected CAlphabet m_Alphabet;
-	
-	/**
 	 * Current colour scheme
 	 */
 	protected CCustomColours m_Colours;
@@ -256,15 +251,18 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		 */
 		
 		ChangeColours();
-		ChangeAlphabet();
 		
-		// Create the user logging object if we are suppose to.  We wait
-		// until now so we have the real value of the parameter and not
-		// just the default.
+		// Create the user logging object if we are suppose to.
+		// (ACL) Used to be done following ChangeAlphabet, with comment:
+		// "We wait until now so we have the real value of the parameter and not just the default."
+		// - hope it's ok to do before ChangeAlphabet, don't see any reason why LP_USER_LOG_LEVEL_MASK
+		// would be changed?!?!
 		
 		int iUserLogLevel = (int)GetLongParameter(Elp_parameters.LP_USER_LOG_LEVEL_MASK);
 		if (iUserLogLevel > 0) 
-			m_UserLog = new CUserLog(this, m_SettingsStore, iUserLogLevel, m_Alphabet);  
+			m_UserLog = new CUserLog(this, m_SettingsStore, iUserLogLevel);
+		
+		ChangeAlphabet();
 		
 		CreateModules();
 		CreateInput();
@@ -288,7 +286,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			m_DasherModel.UnregisterComponent();
 		}
 		  m_DasherModel = null;        // The order of some of these deletions matters
-		  m_Alphabet = null;
 		  m_DasherView = null;
 		  m_ColourIO = null;
 		  m_AlphIO = null;
@@ -470,10 +467,8 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * The DasherModel does most of the actual initialisation work,
 	 * so see the constructor documentation for DasherModel for details.
 	 * <p>
-	 * This function will also set m_Alphabet to that created in the
-	 * course of the DasherModel's initialisation, and will train
-	 * the newly created model using the new Alphabet's specified
-	 * training text. 
+	 * This function also trains the newly created model using the
+	 * using the new Alphabet's specified training text. 
 	 */
 	public void CreateDasherModel() 
 	{
@@ -496,9 +491,9 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			m_DasherModel.UnregisterComponent();
 		}
 		
-		m_DasherModel = new CDasherModel(this, m_SettingsStore, m_AlphIO);
-		m_Alphabet = m_DasherModel.GetAlphabetNew();
+		m_DasherModel = new CDasherModel(this, m_SettingsStore, m_AlphIO, m_UserLog);
 		
+		// SP_TRAIN_FILE parameter set by CDasherModel constructor... 
 		train(GetStringParameter(Esp_parameters.SP_TRAIN_FILE),evt);
 		
 		evt.m_bLock = false;
@@ -765,19 +760,11 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 				
 		CreateDasherModel();
 		
-		// Let our user log object know about the new alphabet since
-		// it needs to convert symbols into text for the log file.
-		if (m_UserLog != null)
-			m_UserLog.SetAlphabetPtr(m_Alphabet);
-			
-			// Apply options from alphabet
-			
-			SetBoolParameter( Ebp_parameters.BP_TRAINING, false );
-			
-			Start();
-			
-			
-		}
+		SetBoolParameter( Ebp_parameters.BP_TRAINING, false );
+		
+		Start();
+		
+	}
 	
 	/**
 	 * Changes the colour scheme to that described by SP_COLOUR_ID.
@@ -1348,15 +1335,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			strTrainfileBuffer.setLength(0);
 		}
 		
-	}
-	
-	/**
-	 * Gets the current alphabet
-	 * 
-	 * @return Current alphabet
-	 */
-	public CAlphabet GetAlphabet() {
-	    return m_Alphabet;
 	}
 	
 	/**

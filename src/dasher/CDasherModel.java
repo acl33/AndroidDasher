@@ -213,8 +213,9 @@ public class CDasherModel extends CDasherComponent {
 	 * @param SettingsStore Settings repository
 	 * @param DashIface Interface which we serve
 	 * @param AlphIO AlphIO object from which to retrieve the AlphInfo object describing the user's chosen alphabet
+	 * @param pUserLog 
 	 */
-	public CDasherModel(CDasherInterfaceBase iface, CSettingsStore SettingsStore, CAlphIO AlphIO) {
+	public CDasherModel(CDasherInterfaceBase iface, CSettingsStore SettingsStore, CAlphIO AlphIO, CUserLog pUserLog) {
 	super(iface, SettingsStore); 
 	m_DasherInterface = iface;
 	
@@ -242,7 +243,7 @@ public class CDasherModel extends CDasherComponent {
 	
 	if(GetLongParameter(Elp_parameters.LP_ORIENTATION) == Opts.AlphabetDefault)
 		SetLongParameter(Elp_parameters.LP_REAL_ORIENTATION, m_cAlphabet.GetOrientation());
-		
+	
 	// Create an appropriate language model;
 	
 	switch ((int)GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)) {
@@ -299,6 +300,7 @@ public class CDasherModel extends CDasherComponent {
 	
 	ControlSpace = getControlSpace((int)GetLongParameter(Elp_parameters.LP_NORMALIZATION));
 	
+	if (pUserLog != null) pUserLog.SetAlphabetPtr(alphabet);
 	}
 	
 	public int TrainStream(InputStream FileIn, int iTotalBytes, int iOffset,
