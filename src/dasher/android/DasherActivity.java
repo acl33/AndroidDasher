@@ -130,7 +130,7 @@ public class DasherActivity extends Activity {
 				int iRead = 0;
 				for (InputStream in : streams) {
 					try {
-						iRead = TrainStream(in, iTotalBytes, iRead, evt);
+						iRead = m_DasherModel.TrainStream(in, iTotalBytes, iRead, evt);
 					} catch (IOException e) {
 						android.util.Log.e("dasher", "error in training - rest of text skipped", e);
 					}

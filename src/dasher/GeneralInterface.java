@@ -53,7 +53,7 @@ public abstract class GeneralInterface extends CDasherInterfaceBase {
 		
 		InputStream FileIn;
 		try {
-			return TrainStream(new BufferedInputStream(new FileInputStream(Filename)), iTotalBytes, iOffset, evt);
+			return m_DasherModel.TrainStream(new BufferedInputStream(new FileInputStream(Filename)), iTotalBytes, iOffset, evt);
 		}
 		catch (Exception e){
 			return 0;

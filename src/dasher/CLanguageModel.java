@@ -25,6 +25,12 @@
 
 package dasher;
 
+import java.io.BufferedReader;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.util.ArrayList;
 
 /* CSFS: WARNING: This is a DasherComponent derived class and so MUST
@@ -223,5 +229,69 @@ public abstract class CLanguageModel extends CDasherComponent {
 			EnterSymbol(context, Symbols.get(i)); // FIXME - conversion to symbol alphabet
 	}
 
+	/**
+	 * Trains the language model from a given InputStream, which
+	 * must be UTF-8 encoded.
+	 * <p>
+	 * LockEvents will be inserted every 1KB of data read, informing
+	 * components and the interface of the progress made in reading
+	 * the file.
+	 * 
+	 * @param FileIn InputStream from which to read.
+	 * @param iTotalBytes Number of bytes to read.
+	 * @param iOffset Offset at which to start reading.
+	 * @return Number of bytes read
+	 * @throws IOException 
+	 */	
+	public int TrainStream(InputStream FileIn, int iTotalBytes, int iOffset, CLockEvent evt) throws IOException {
+		
+		class CountStream extends InputStream {
+			/*package*/ int iTotalRead;
+			private final InputStream in;
+			CountStream(InputStream in, int iStartBytes) {this.in=in; this.iTotalRead=iStartBytes;}
+			@Override public int available() throws IOException {return in.available();}
+			@Override public int read() throws IOException {
+				int res = in.read();
+				if (res != -1) iTotalRead++;
+				return res;
+			}
+			@Override public int read(byte[] buf) throws IOException {return read(buf,0,buf.length);}
+			@Override public int read(byte[] buf, int start, int len) throws IOException {
+				int res = in.read(buf,start,len);
+				if (res>0) iTotalRead+=res; //-1 = EOF
+				return res;
+			}
+			@Override public long skip(long n) throws IOException {//should never be called?
+				long res=super.skip(n);
+				if (res>0) iTotalRead+=res;
+				return res;
+			}
+		};
+		CountStream count = new CountStream(FileIn, iOffset);
+		Reader chars = new BufferedReader(new InputStreamReader(count));
+		CContextBase trainContext = CreateEmptyContext();
+		CAlphabetMap alphSyms = m_Alphabet.GetAlphabetMap();
+		
+		try {
+			while (true) {
+				int sym = alphSyms.GetNext(chars);
+				LearnSymbol(trainContext, sym);
+				if (evt!=null) {
+					int iNPercent = (count.iTotalRead *100)/iTotalBytes;
+					if (iNPercent != evt.m_iPercent) {
+						evt.m_iPercent = iNPercent;
+						InsertEvent(evt);
+					}
+				}
+			}
+		} catch (EOFException e) {
+			//that's fine!
+		} finally {
+			ReleaseContext(trainContext);
+		}
+		
+		return count.iTotalRead;
+		
+	}
 	
 }

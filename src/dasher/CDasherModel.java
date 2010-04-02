@@ -25,6 +25,12 @@
 
 package dasher;
 
+import java.io.BufferedReader;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ArrayList;
@@ -295,6 +301,11 @@ public class CDasherModel extends CDasherComponent {
 	
 	}
 	
+	public int TrainStream(InputStream FileIn, int iTotalBytes, int iOffset,
+			 CLockEvent evt) throws IOException {
+		return m_LanguageModel.TrainStream(FileIn, iTotalBytes, iOffset, evt);
+	}
+	
 	/**
 	 * The Model responds to the following events:
 	 * <p>
@@ -329,7 +340,15 @@ public class CDasherModel extends CDasherComponent {
 			}
 			else if(Evt.m_iParameter == Elp_parameters.LP_UNIFORM) {
 				uniformAdd = getUniformAdd((int)GetLongParameter(Elp_parameters.LP_NORMALIZATION));
+			} else if(Evt.m_iParameter ==  Elp_parameters.LP_ORIENTATION) {
+				if(GetLongParameter(Elp_parameters.LP_ORIENTATION) == Opts.AlphabetDefault)
+					// TODO) { See comment in DasherModel.cpp about prefered values
+					SetLongParameter(Elp_parameters.LP_REAL_ORIENTATION, m_cAlphabet.GetOrientation());
+				else
+					SetLongParameter(Elp_parameters.LP_REAL_ORIENTATION, GetLongParameter(Elp_parameters.LP_ORIENTATION));
+				m_DasherInterface.Redraw(true);
 			}
+			
 			
 		}
 		

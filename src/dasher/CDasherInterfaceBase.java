@@ -407,60 +407,40 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 				// TODO) { Is this variable ever used any more?
 				Start();
 				Redraw(true);
-			}
-			if(Evt.m_iParameter ==  Ebp_parameters.BP_OUTLINE_MODE) {
+			} else if(Evt.m_iParameter ==  Ebp_parameters.BP_OUTLINE_MODE) {
 				Redraw(true);
-			}
-			if(Evt.m_iParameter == Ebp_parameters.BP_CONNECT_LOCK) {
+			} else if(Evt.m_iParameter == Ebp_parameters.BP_CONNECT_LOCK) {
 				m_bConnectLock = GetBoolParameter(Ebp_parameters.BP_CONNECT_LOCK);
-			}
-			if(Evt.m_iParameter ==  Elp_parameters.LP_ORIENTATION) {
-				if(GetLongParameter(Elp_parameters.LP_ORIENTATION) == Opts.AlphabetDefault)
-					// TODO) { See comment in DasherModel.cpp about prefered values
-					SetLongParameter(Elp_parameters.LP_REAL_ORIENTATION, m_Alphabet.GetOrientation());
-				else
-					SetLongParameter(Elp_parameters.LP_REAL_ORIENTATION, GetLongParameter(Elp_parameters.LP_ORIENTATION));
-				Redraw(true);
-			}
-			if(Evt.m_iParameter ==  Esp_parameters.SP_ALPHABET_ID) {
+			} else if(Evt.m_iParameter ==  Esp_parameters.SP_ALPHABET_ID) {
 				ChangeAlphabet();
 				Start();
 				Redraw(true);
-			}
-			if(Evt.m_iParameter ==  Esp_parameters.SP_COLOUR_ID) {
+			} else if(Evt.m_iParameter ==  Esp_parameters.SP_COLOUR_ID) {
 				ChangeColours();
 				Redraw(true);
-			}
-			if(Evt.m_iParameter == Ebp_parameters.BP_PALETTE_CHANGE || Evt.m_iParameter == Esp_parameters.SP_DEFAULT_COLOUR_ID) { 
+			} else if(Evt.m_iParameter == Ebp_parameters.BP_PALETTE_CHANGE || Evt.m_iParameter == Esp_parameters.SP_DEFAULT_COLOUR_ID) { 
 				if(GetBoolParameter(Ebp_parameters.BP_PALETTE_CHANGE))
 					SetStringParameter(Esp_parameters.SP_COLOUR_ID, GetStringParameter(Esp_parameters.SP_DEFAULT_COLOUR_ID));
-			}
-			if(Evt.m_iParameter == Elp_parameters.LP_LANGUAGE_MODEL_ID) {
+			} else if(Evt.m_iParameter == Elp_parameters.LP_LANGUAGE_MODEL_ID) {
 				CreateDasherModel();
 				Start();
 				Redraw(true);
-			}
-			if(Evt.m_iParameter == Esp_parameters.SP_LM_HOST) {
+			} else if(Evt.m_iParameter == Esp_parameters.SP_LM_HOST) {
 				if(GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID) == 5) {
 					CreateDasherModel();
 					Start();
 					Redraw(true);
 				}
-			}
-			if(Evt.m_iParameter == Elp_parameters.LP_LINE_WIDTH) {
+			} else if(Evt.m_iParameter == Elp_parameters.LP_LINE_WIDTH) {
 				Redraw(false); // TODO - make this accessible everywhere
-			}
-			if(Evt.m_iParameter == Elp_parameters.LP_DASHER_FONTSIZE) {
+			} else if(Evt.m_iParameter == Elp_parameters.LP_DASHER_FONTSIZE) {
 				// TODO - make screen a CDasherComponent child?
 				Redraw(true);
-			}
-			if(Evt.m_iParameter == Esp_parameters.SP_INPUT_DEVICE) {
+			} else if(Evt.m_iParameter == Esp_parameters.SP_INPUT_DEVICE) {
 				CreateInput();
-			}
-			if(Evt.m_iParameter == Esp_parameters.SP_INPUT_FILTER) {
+			} else if(Evt.m_iParameter == Esp_parameters.SP_INPUT_FILTER) {
 				CreateInputFilter();
 			}
-			
 		}
 		else if(Event instanceof CControlEvent) {
 			/* CControlEvent ControlEvent = ((CControlEvent)(Event));
@@ -519,7 +499,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		m_DasherModel = new CDasherModel(this, m_SettingsStore, m_AlphIO);
 		m_Alphabet = m_DasherModel.GetAlphabetNew();
 		
-		train(m_Alphabet.GetTrainingFile(),evt);
+		train(GetStringParameter(Esp_parameters.SP_TRAIN_FILE),evt);
 		
 		evt.m_bLock = false;
 		InsertEvent(evt);
@@ -926,72 +906,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * @param evt Event to use to notify of progress updates (null =&gt; no updates) by filling in m_iPercent field
 	 */
 	protected abstract void train(String T, CLockEvent evt);
-	
-	/**
-	 * Trains the language model from a given InputStream, which
-	 * must be UTF-8 encoded.
-	 * <p>
-	 * LockEvents will be inserted every 1KB of data read, informing
-	 * components and the interface of the progress made in reading
-	 * the file.
-	 * 
-	 * @param FileIn InputStream from which to read.
-	 * @param iTotalBytes Number of bytes to read.
-	 * @param iOffset Offset at which to start reading.
-	 * @return Number of bytes read
-	 * @throws IOException 
-	 */	
-	public int TrainStream(InputStream FileIn, int iTotalBytes, int iOffset, CLockEvent evt) throws IOException {
-		
-		class CountStream extends InputStream {
-			/*package*/ int iTotalRead;
-			private final InputStream in;
-			CountStream(InputStream in, int iStartBytes) {this.in=in; this.iTotalRead=iStartBytes;}
-			@Override public int available() throws IOException {return in.available();}
-			@Override public int read() throws IOException {
-				int res = in.read();
-				if (res != -1) iTotalRead++;
-				return res;
-			}
-			@Override public int read(byte[] buf) throws IOException {return read(buf,0,buf.length);}
-			@Override public int read(byte[] buf, int start, int len) throws IOException {
-				int res = in.read(buf,start,len);
-				if (res>0) iTotalRead+=res; //-1 = EOF
-				return res;
-			}
-			@Override public long skip(long n) throws IOException {//should never be called?
-				long res=super.skip(n);
-				if (res>0) iTotalRead+=res;
-				return res;
-			}
-		};
-		CountStream count = new CountStream(FileIn, iOffset);
-		Reader chars = new BufferedReader(new InputStreamReader(count));
-		CLanguageModel pLan = m_DasherModel.m_LanguageModel;
-		CContextBase trainContext = pLan.CreateEmptyContext();
-		CAlphabetMap alphSyms = m_Alphabet.GetAlphabetMap();
-		
-		try {
-			while (true) {
-				int sym = alphSyms.GetNext(chars);
-				pLan.LearnSymbol(trainContext, sym);
-				if (evt!=null) {
-					int iNPercent = (count.iTotalRead *100)/iTotalBytes;
-					if (iNPercent != evt.m_iPercent) {
-						evt.m_iPercent = iNPercent;
-						InsertEvent(evt);
-					}
-				}
-			}
-		} catch (EOFException e) {
-			//that's fine!
-		} finally {
-			pLan.ReleaseContext(trainContext);
-		}
-		
-		return count.iTotalRead;
-		
-	}
 	
 	/**
 	 * Retrieves a list of available font sizes. This class
