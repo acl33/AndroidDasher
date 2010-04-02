@@ -48,7 +48,7 @@ public class CAlphabetManager {
 	 * Pointer to the LanguageModel used in determining the
 	 * relative probability assigned to new Nodes. 
 	 */
-	protected final CLanguageModel m_LanguageModel;
+	public final CLanguageModel m_LanguageModel;
 	
 	/**
 	 * Pointer to the DasherModel which performs some of the

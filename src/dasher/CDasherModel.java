@@ -71,11 +71,6 @@ public class CDasherModel extends CDasherComponent {
 	// Interfaces
 	
 	/**
-	 * LanguageModel used by this Model for prediction.
-	 */
-	protected CLanguageModel m_LanguageModel;     // pointer to the language model
-	
-	/**
 	 * Alphabet used by this Model 
 	 */
 	protected CAlphabet m_cAlphabet;        // pointer to the alphabet
@@ -251,10 +246,14 @@ public class CDasherModel extends CDasherComponent {
 		SetLongParameter(Elp_parameters.LP_REAL_ORIENTATION, m_cAlphabet.GetOrientation());
 	
 	// Create an appropriate language model;
+	CLanguageModel langMod;
 	
 	switch ((int)GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)) {
+	default:
+		// If there is a bogus value for the language model ID, we'll default
+		// to our trusty old PPM language model.
 	case 0:
-		m_LanguageModel = new CPPMLanguageModel(m_EventHandler, m_SettingsStore, alphabet);
+		langMod = new CPPMLanguageModel(m_EventHandler, m_SettingsStore, alphabet);
 		SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, false);
 		break;
 	/* case 2:
@@ -270,19 +269,13 @@ public class CDasherModel extends CDasherComponent {
 		#endif */
 		
 	case 5:
-		m_LanguageModel = new CRemotePPM(m_EventHandler, m_SettingsStore, alphabet);
+		langMod = new CRemotePPM(m_EventHandler, m_SettingsStore, alphabet);
 		SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, true);
 	
 		break;
 	/* CSFS: Commented out the other language models for the time being as they are not
 	 * implemented yet.
 	 */
-		
-	default:
-		// If there is a bogus value for the language model ID, we'll default
-		// to our trusty old PPM language model.
-		m_LanguageModel = new CPPMLanguageModel(m_EventHandler, m_SettingsStore, alphabet);    
-		break;
 	}
 	
 	int iNormalization = (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
@@ -295,9 +288,9 @@ public class CDasherModel extends CDasherComponent {
 	m_Rootmin_min = Long.MIN_VALUE / iNormalization / 2;
 	m_Rootmax_max = Long.MAX_VALUE / iNormalization / 2;
 	
-	m_AlphabetManager = (m_LanguageModel.isRemote())
-	                    ? new CRemoteAlphabetManager( this, m_LanguageModel)
-			            : new CAlphabetManager( this, m_LanguageModel);
+	m_AlphabetManager = (langMod.isRemote())
+	                    ? new CRemoteAlphabetManager( this, langMod)
+			            : new CAlphabetManager( this, langMod);
 	// m_ControlManagerFactory = new CControlManagerFactory(this, m_LanguageModel);
 	
 	m_bContextSensitive = true;
@@ -309,7 +302,7 @@ public class CDasherModel extends CDasherComponent {
 	
 	public int TrainStream(InputStream FileIn, int iTotalBytes, int iOffset,
 			 CLockEvent evt) throws IOException {
-		return m_LanguageModel.TrainStream(FileIn, iTotalBytes, iOffset, evt);
+		return m_AlphabetManager.m_LanguageModel.TrainStream(FileIn, iTotalBytes, iOffset, evt);
 	}
 	
 	/**
@@ -1455,7 +1448,7 @@ public class CDasherModel extends CDasherComponent {
 	 * Unregisters the language model and then ourselves.
 	 */
 	public void UnregisterComponent() {
-		if(m_LanguageModel != null) m_LanguageModel.UnregisterComponent();
+		m_AlphabetManager.m_LanguageModel.UnregisterComponent();
 		super.UnregisterComponent();
 	}
 
