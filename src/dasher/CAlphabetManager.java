@@ -331,7 +331,8 @@ public class CAlphabetManager {
      */
 
     public void PopulateChildrenWithSymbol(CAlphNode Node, int iExistingSymbol, CDasherNode ExistingChild) {
-    	long[] cum = m_Model.GetProbs(Node.m_Context, (int)m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION));
+    	long[] cum = m_LanguageModel.GetProbs(Node.m_Context, m_Model.getNonUniformNorm());
+    	m_Model.adjustProbs(cum);
     	
     	PopulateChildrenWithSymbol(Node, iExistingSymbol, ExistingChild, cum);
     }

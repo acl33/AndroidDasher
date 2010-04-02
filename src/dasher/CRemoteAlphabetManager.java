@@ -130,7 +130,7 @@ public class CRemoteAlphabetManager extends CAlphabetManager implements ProbsLis
 		// modified normalisation factor. I have altered the structure so that the
 		// normalisation factor can be retrieved seperately.
 		
-		((CRemotePPM)m_LanguageModel).PromptForProbs(Node.m_Context, m_Model.getNonUniformNorm((int)m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION)));
+		((CRemotePPM)m_LanguageModel).PromptForProbs(Node.m_Context, m_Model.getNonUniformNorm());
 		
 	}
 	

@@ -159,15 +159,21 @@ public class CDasherModel extends CDasherComponent {
 	protected LinkedList<SGotoItem> m_deGotoQueue = new LinkedList<SGotoItem>();
 	
 	/**
-	 * Amount to add to all symbols' probabilities, in order to
-	 * avoid a zero probability.
+	 * Amount to add to all symbols' probabilities, EXCEPT Root/Control mode symbols,
+	 * in order to avoid a zero probability.
 	 */
 	protected int uniformAdd;
 	
 	/**
-	 * Probability assinged to the Control Node
+	 * Probability assigned to the Control Node
 	 */
-	protected long ControlSpace;
+	protected long controlSpace;
+	
+	/**
+	 * Normalization factor as a fraction of which the Language Model should compute
+	 * symbol probabilities, prior to adjusting them with adjustProbs.
+	 */
+	protected long nonUniformNorm;
 	
 	// Both of these are to save repeated calculations of the same answers. Their
 	// values are calculated when the model is created and are recalculated
@@ -296,9 +302,7 @@ public class CDasherModel extends CDasherComponent {
 	
 	m_bContextSensitive = true;
 	
-	uniformAdd = getUniformAdd((int)GetLongParameter(Elp_parameters.LP_NORMALIZATION));
-	
-	ControlSpace = getControlSpace((int)GetLongParameter(Elp_parameters.LP_NORMALIZATION));
+	computeNormFactor();
 	
 	if (pUserLog != null) pUserLog.SetAlphabetPtr(alphabet);
 	}
@@ -309,7 +313,7 @@ public class CDasherModel extends CDasherComponent {
 	}
 	
 	/**
-	 * The Model responds to the following events:
+	 * The Model responds to changes in the following parameters:
 	 * <p>
 	 * <i>LP_MAX_BITRATE</i>: Informs the CFrameRate which performs
 	 * frame rate tracking for us of the new frame rate.
@@ -334,14 +338,13 @@ public class CDasherModel extends CDasherComponent {
 			}
 			else if(Evt.m_iParameter == Ebp_parameters.BP_CONTROL_MODE) { // Rebuild the model if control mode is switched on/off
 				RebuildAroundNode(Get_node_under_crosshair());
-				uniformAdd = getUniformAdd((int)GetLongParameter(Elp_parameters.LP_NORMALIZATION));
-				ControlSpace = getControlSpace((int)GetLongParameter(Elp_parameters.LP_NORMALIZATION));
+				computeNormFactor();
 			}
 			else if(Evt.m_iParameter == Ebp_parameters.BP_DELAY_VIEW) {
 				MatchTarget();
 			}
 			else if(Evt.m_iParameter == Elp_parameters.LP_UNIFORM) {
-				uniformAdd = getUniformAdd((int)GetLongParameter(Elp_parameters.LP_NORMALIZATION));
+				computeNormFactor();
 			} else if(Evt.m_iParameter ==  Elp_parameters.LP_ORIENTATION) {
 				if(GetLongParameter(Elp_parameters.LP_ORIENTATION) == Opts.AlphabetDefault)
 					// TODO) { See comment in DasherModel.cpp about prefered values
@@ -1167,50 +1170,21 @@ public class CDasherModel extends CDasherComponent {
 	}
 
 	/**
-	 * Requests node probabilities from the language model given
-	 * a context and a normalization value (usually LP_NORMALIZATION).
-	 * <p>
-	 * Internally, this recalculates the norm value using getNonUniformNorm,
-	 * and passes the context and this new norm onto m_LanguageModel.getProbs.
-	 * <p>
-	 * Once the probabilities are calculated, it runs them
-	 * through adjustProbs before returning.
-	 *  
-	 * @param context Language model context in which the
-	 * probabilities are to be found.
-	 * @param iNorm Normalization
-	 * @return Array of probabilities, in alphabet order.
-	 */
-	public long[] GetProbs(CContextBase context, int iNorm) {
-		
-		/* Lots of refactoring has gone on here. The model used to do three
-		 * things in this function: calculate the non-uniform norm, control
-		 * space and so forth, retrieve the probs, and then perform a little
-		 * post-processing before returning its answer. I have refactored
-		 * these out into three seperate stages. My reason for doing so was
-		 * so that the networking system can call the stages asynchronously,
-		 * but it also helps readability.
-		 */
-		
-		long[] probs = m_LanguageModel.GetProbs(context, getNonUniformNorm(iNorm));
-		
-		adjustProbs(probs);
-		
-		return probs;
-		
-	}
-	
-	/**
-	 * Increments all probabilities by the value of uniformAdd,
-	 * and sets the final probability to ControlSpace.
+	 * Increments all symbol probabilities by the value of {@link #uniformAdd},
+	 * and sets the final probability to {@link #controlSpace}. (The first and last
+	 * elements of the vector are taken as being the root and control symbols,
+	 * respectively)
 	 * 
 	 * @param probs The probabilities to modify
 	 */
 	public void adjustProbs(long[] probs) {
 		
-		for(int k = 1; k < probs.length; ++k) probs[k] += uniformAdd;
+		assert (probs.length == m_cAlphabet.GetNumberSymbols());
 		
-		probs[probs.length - 1] = ControlSpace;
+		//skip root and control symbols...
+		for(int k = 1; k < probs.length-1; ++k) probs[k] += uniformAdd;
+		
+		probs[probs.length - 1] = controlSpace;
 
 		
 	}
@@ -1218,10 +1192,11 @@ public class CDasherModel extends CDasherComponent {
 	/**
 	 * Calculates the non-uniform norm.
 	 * 
-	 * @param iNorm Normalization value, usually LP_NORMALIZATION
 	 * @return Non-uniform norm
 	 */
-	public int getNonUniformNorm(int iNorm) {
+	public long getNonUniformNorm() {return nonUniformNorm;}
+	
+	protected void computeNormFactor() {
 //		 Total number of symbols
 		int iSymbols = m_cAlphabet.GetNumberSymbols();      // note that this includes the control node and the root node
 		
@@ -1231,61 +1206,17 @@ public class CDasherModel extends CDasherComponent {
 		//}
 		
 		// TODO - sort out size of control node - for the timebeing I'll fix the control node at 5%
-		
-		int uniform_add;
-		long control_space; // CSFS: Changed to long to match the probs.
-		long uniform = GetLongParameter(Elp_parameters.LP_UNIFORM);
-		
-		if(!GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE)) {
-			control_space = 0;
-			uniform_add = (int)((iNorm * uniform) / 1000) / (iSymbols - 2);  // Subtract 2 from no symbols to lose control/root nodes
-			return iNorm - (iSymbols - 2) * uniform_add;
-		}
-		else {
-			control_space = (long)(iNorm * 0.05);
-			uniform_add = (int)(((iNorm - control_space) * uniform / 1000) / (iSymbols - 2));        // Subtract 2 from no symbols to lose control/root nodes
-			return (int)(iNorm - control_space - (iSymbols - 2) * uniform_add);
+		long iNorm = GetLongParameter(Elp_parameters.LP_NORMALIZATION);
+		if(GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE)) {
+			controlSpace = (long)(iNorm * 0.05);
+			iNorm -= controlSpace;
+		} else {
+			controlSpace = 0;
 		}
 		
-	}
-	
-	/**
-	 * Calculates a value to add to all probabilities before use,
-	 * preventing any zero values from being used and potentially
-	 * resulting in missing nodes.
-	 * 
-	 * @param iNorm Normalization value (usually LP_NORMALIZATION)
-	 * @return Uniform value to add to all probabilities.
-	 */
-	protected int getUniformAdd(int iNorm) {
+		uniformAdd = (int)((iNorm * GetLongParameter(Elp_parameters.LP_UNIFORM)) / 1000) / (iSymbols - 2);  // Subtract 2 from no symbols to lose control/root nodes
+		nonUniformNorm = iNorm - (iSymbols - 2) * uniformAdd;
 		
-		int iSymbols = m_cAlphabet.GetNumberSymbols();      // note that this includes the control node and the root node
-		long uniform = GetLongParameter(Elp_parameters.LP_UNIFORM);
-		
-		if(!GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE)) {
-			return (int)((iNorm * uniform) / 1000) / (iSymbols - 2);  // Subtract 2 from no symbols to lose control/root nodes
-		}
-		else {
-			return (int)(((iNorm - getControlSpace(iNorm)) * uniform / 1000) / (iSymbols - 2));        // Subtract 2 from no symbols to lose control/root nodes
-		}
-	}
-	
-	/**
-	 * Gets the probability to associate with the control node
-	 * <p>
-	 * This will be either 5% of the norm value if control mode
-	 * is enabled, or zero otherwise.
-	 * 
-	 * @param iNorm Normalization value (usually LP_NORMALIZATION)
-	 * @return Probability of control node.
-	 */
-	protected long getControlSpace(int iNorm) {
-		if(!GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE)) {
-			return 0;
-		}
-		else {
-			return (long)(iNorm * 0.05);
-		}
 	}
 	
 	/**
@@ -1728,18 +1659,6 @@ public class CDasherModel extends CDasherComponent {
 	 */
 	public void clearScheduledSteps() {
 		m_deGotoQueue.clear();
-	}
-	
-	/* CSFS: This class used to return a context; these have
-	 * been converted to a class as detailed in the notes found
-	 * in CLanguageModel.
-	 */
-	
-	/**
-	 * Deferred to m_LanguageModel
-	 */
-	protected CContextBase CreateEmptyContext() {
-		return m_LanguageModel.CreateEmptyContext();
 	}
 	
 	/**
