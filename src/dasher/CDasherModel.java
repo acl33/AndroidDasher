@@ -1606,46 +1606,6 @@ public class CDasherModel extends CDasherComponent {
 	}
 	
 	/**
-	 * Gets our current alphabet's Space symbol
-	 * 
-	 * @return Requested symbol number
-	 */
-	public int GetSpaceSymbol() {
-		return m_cAlphabet.GetSpaceSymbol();
-	}
-	
-	/**
-	 * Gets our current alphabet's Control symbol
-	 * 
-	 * @return Requested symbol number
-	 */
-	public int GetControlSymbol() {
-		return m_cAlphabet.GetControlSymbol();
-	}
-	
-	/**
-	 * Gets our current alphabet's Start-conversion symbol
-	 * 
-	 * @return Requested symbol number
-	 */
-	public int GetStartConversionSymbol() {
-		return m_cAlphabet.GetStartConversionSymbol();
-	}
-	
-	// Potentially redundant function.
-	/**
-	 * Deferred to m_cAlphabet
-	 */
-	public String GetDisplayText(int iSymbol) {
-		return m_cAlphabet.GetDisplayText(iSymbol);
-	}
-	
-	/* CSFS: Potential trouble here, as it seems one of these may be intended
-	 * to produce a copy of the alphabet, and the other to return a reference
-	 * to the live one.
-	 */
-	
-	/**
 	 * Retrieves our current alphabet.
 	 */
 	public CAlphabet GetAlphabet() {

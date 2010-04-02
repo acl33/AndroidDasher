@@ -83,13 +83,15 @@ public class CAlphabetManager {
     	
     	this.m_LanguageModel = LanguageModel;
     	this.m_Model = Model;
-    	SPSymbol = Model.GetSpaceSymbol();
-    	ConvertSymbol = Model.GetStartConversionSymbol();
-    	ContSymbol = Model.GetControlSymbol();
     	
-    	m_Alphabet = Model.GetAlphabet();
-    	m_Colours = Model.GetColours();
+    	m_Alphabet = LanguageModel.getAlphabet();
+    	m_Colours = m_Alphabet.GetColours();
     	m_DisplayText = m_Alphabet.GetDisplayTexts();
+    	
+    	SPSymbol = m_Alphabet.GetSpaceSymbol();
+    	ConvertSymbol = m_Alphabet.GetStartConversionSymbol();
+    	ContSymbol = m_Alphabet.GetControlSymbol();
+    	
     	
     	/* Caching these as the repeated requests which were twice deferred were
     	 * actually taking 5% of our runtime
@@ -111,7 +113,7 @@ public class CAlphabetManager {
     	  m_LanguageModel.EnterText(ctx, string);
     	  
     	  CAlphNode NewNode = new CAlphNode(Parent, iSymbol, 0,
-    			  (iSymbol== m_Model.GetSpaceSymbol()) ? EColorSchemes.Special1 : EColorSchemes.Nodes1,
+    			  (iSymbol== SPSymbol) ? EColorSchemes.Special1 : EColorSchemes.Nodes1,
     					  iLower, iUpper, iColour, ctx);
     	  
     	  NewNode.m_bShove = true;
@@ -264,7 +266,7 @@ public class CAlphabetManager {
 				}
 				
 				EColorSchemes ChildScheme;
-				if(vSymbols.get(vSymbols.size() - 1) == m_Model.GetSpaceSymbol())
+				if(vSymbols.get(vSymbols.size() - 1) == SPSymbol)
 					ChildScheme = SpecialScheme;
 				else
 					ChildScheme = NormalScheme;
