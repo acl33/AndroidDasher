@@ -55,7 +55,7 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 	class CPPMnode {
 		public CPPMnode child;
 		public CPPMnode next;
-		public CPPMnode vine;
+		public final CPPMnode vine;
 		public short count;
 		public final int symbol;
 
@@ -67,13 +67,15 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 		 * is relied upon.
 		 */
 
-		public CPPMnode(int sym) {
+		public CPPMnode(int symbol, CPPMnode vine) {
 			count = 1;
-			symbol = sym;
+			this.symbol = symbol;
+			this.vine = vine;
 		}
 
-		public CPPMnode(int sym, CPPMnode parent) {
-			this(sym);
+		public CPPMnode(int sym, CPPMnode parent, CPPMnode vine) {
+			this(sym,vine);
+			if (vine == null) throw new IllegalArgumentException("Non-root node must have non-null vine");
 			next = parent.child;
 			parent.child = this;
 			++NodesAllocated;
@@ -93,14 +95,14 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 
 		super(EventHandler, SettingsStore, alph); // Constructor of CLanguageModel
 
-		m_Root = new CPPMnode(-1); // m_NodeAlloc.Alloc();
+		m_Root = new CPPMnode(-1,null); // m_NodeAlloc.Alloc();
 		
 		// FIXME - this should be a boolean parameter
 		bUpdateExclusion = ( GetLongParameter(Elp_parameters.LP_LM_UPDATE_EXCLUSION) !=0 );
 
 		lpAlpha = GetLongParameter(Elp_parameters.LP_LM_ALPHA);
 		lpBeta = GetLongParameter(Elp_parameters.LP_LM_BETA);
-
+		m_iMaxOrder = (int)GetLongParameter(Elp_parameters.LP_LM_MAX_ORDER);
 	}
 
 	public void HandleEvent(CEvent Event) {
@@ -197,44 +199,32 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 		if(sym==0) return ctx;
 
 		assert(sym >= 0 && sym < GetSize());
+		CPPMnode r = AddSymbol(ctx,sym);
+		while(!orderOk(r))
+			r = r.vine;		
+		return r;
+	}
+	
+	protected CPPMnode AddSymbol(CPPMnode ctx, int sym) {
+		CPPMnode child = ctx.find_symbol(sym);
 
-		CPPMnode vineptr=null, Result=null;
-		int updatecnt = 1;
-
-		do {
-			///// inline what used to be AddSymbolToNode /////
-			// so we can get out both CPPMNode Return, and also modify updatecnt...
-			CPPMnode child = ctx.find_symbol(sym);
-
-			if(child != null) {
-
-				if(updatecnt != 0 || !bUpdateExclusion) {  // perform update exclusions
-
-					/* CSFS: BUGFIX: This used to read 'bUpdateExclusion' without the !
-					 * This led to the language model generating probabilities which were
-					 * just ever so slightly off. FIXED.
-					 */
-
-					child.count++;
-					updatecnt = 0;
+		if(child != null) {
+			child.count++;
+			if(!bUpdateExclusion) {
+				//update lower-order contexts - which are guaranteed to exist if the higher one does
+				for (CPPMnode v = child.vine; v != null; v = v.vine) {
+					assert (v==m_Root || v.symbol == sym);
+					v.count++;
 				}
-			} else {
-				child = new CPPMnode(sym, ctx); //m_NodeAlloc.Alloc();        // count is initialized to 1
 			}
-			/////// end AddSymbolToNode ///////
-			if (vineptr==null) {
-				Result = child;
-			} else vineptr.vine = child;
-			vineptr = child;
-			ctx=ctx.vine;
-		} while (ctx != null);
-
-		vineptr.vine = m_Root;
-		m_iMaxOrder = (int)GetLongParameter( Elp_parameters.LP_LM_MAX_ORDER );
-
-		while(!orderOk(Result))
-			Result = Result.vine;
-		return Result;
+		} else {
+			//symbol does not exist at this order. Record it, and recurse at lower order
+			// (recursion will continue until it is found, and further if not doing update exclusion)
+			child = new CPPMnode(sym, ctx, // count is initialized to 1
+							(ctx==m_Root) ? m_Root : AddSymbol(ctx.vine, sym));
+		}
+		
+		return child;
 	}
 	
 	boolean orderOk(CPPMnode node) {
