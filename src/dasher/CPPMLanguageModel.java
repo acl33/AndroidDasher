@@ -34,78 +34,18 @@ package dasher;
  * For the general contract obeyed by LanguageModel methods, see
  * the documentation of CLanguageModel.
  */
-public class CPPMLanguageModel extends CLanguageModel {
+public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode> {
 
-	public CPPMContext m_RootContext;
 	public CPPMnode m_Root;
 
 	public int m_iMaxOrder;
-	public double m_dBackOffConstat;
-
+	
 	public int NodesAllocated;
 
 	public boolean bUpdateExclusion;
 
 	private long lpAlpha;
 	private long lpBeta;
-
-	// public CSimplePooledAlloc < CPPMnode > m_NodeAlloc;
-	// public CPooledAlloc < CPPMContext > m_ContextAlloc;
-
-	/* CSFS: I have modified this to use GC for allocation for the time being; the memory
-	 * pools are next to useless in a garbage-collected language anyway since you can't
-	 * return a pointer to a free location. I will modify this later to use something
-	 * which works in a GC language AND is efficient.
-	 */
-
-	/* class BinaryRecord {
-    	  public int m_iIndex;
-    	  public int m_iChild;
-    	  public int m_iNext;
-    	  public int m_iVine;
-    	  public int m_iCount;
-    	  public short m_iSymbol;
-    	  } */ // This is part of the LMIO framework and so is not needed at present.
-
-	/**
-	 * Class representing a context which contains information
-	 * relevant to the PPM model.
-	 */
-	class CPPMContext extends CContextBase {
-
-		private CPPMnode head;
-		private int order;
-
-		public CPPMContext(CPPMnode _head, int _order) {
-			this.head = _head;
-			this.order = _order;
-		};
-
-		/* CSFS: Because bah, Java provides no possibility of
-		 * default values in the constructor,
-		 * necessitating lots of constructors.
-		 */
-
-		public CPPMContext(int _order) {
-			this.head = null;
-			this.order = _order;
-		};
-
-		public CPPMContext(CPPMnode _head)  {
-			this.head = _head;
-			this.order = 0;
-		};
-
-		public CPPMContext() {
-			this.head = null;
-			this.order = 0;
-		};
-
-		public CPPMContext(CPPMContext input) {
-			this.head = input.head;
-			this.order = input.order;
-		}
-	}
 
 	/**
 	 * Node in PPM's prediction trie.
@@ -141,40 +81,21 @@ public class CPPMLanguageModel extends CLanguageModel {
 
 		public CPPMnode find_symbol(int sym) // see if symbol is a child of node
 		{
-			CPPMnode found = child;
-
-			/* CSFS: I *think* this is supposed to be a pointer-copy but
-			 * I'm not perfectly sure. If the find_symbol method fails,
-			 * this may need to become a .clone()
-			 */
-
-			while(found != null) {
-				if(found.symbol == sym) {
+			for (CPPMnode found = child; found!=null; found=found.next) {
+				if(found.symbol == sym)
 					return found;
-				}
-				found = found.next;
 			}
 			return null;
 		}
 	}
 
-	public CPPMLanguageModel(CEventHandler EventHandler, CSettingsStore SettingsStore, CAlphabet SymbolAlphabet) {
+	public CPPMLanguageModel(CEventHandler EventHandler, CSettingsStore SettingsStore, CAlphabet alph) {
 
-		super(EventHandler, SettingsStore, SymbolAlphabet); // Constructor of CLanguageModel
-		m_iMaxOrder = 4;
-		NodesAllocated = 0;
-		// m_NodeAlloc = new CSimplePooledAlloc<CPPMnode>(8192);
-		// m_ContextAlloc = new CPooledAlloc<CPPMContext>(1024);
+		super(EventHandler, SettingsStore, alph); // Constructor of CLanguageModel
+
 		m_Root = new CPPMnode(-1); // m_NodeAlloc.Alloc();
 		
-		m_RootContext = new CPPMContext();// m_ContextAlloc.Alloc();
-		m_RootContext.head = m_Root;
-		m_RootContext.order = 0;
-
-		// Cache the result of update exclusion - otherwise we have to look up a lot when training, which is slow
-
 		// FIXME - this should be a boolean parameter
-
 		bUpdateExclusion = ( GetLongParameter(Elp_parameters.LP_LM_UPDATE_EXCLUSION) !=0 );
 
 		lpAlpha = GetLongParameter(Elp_parameters.LP_LM_ALPHA);
@@ -200,78 +121,41 @@ public class CPPMLanguageModel extends CLanguageModel {
 		return NodesAllocated;
 	}
 
-	public long[] GetProbs(CContextBase context, long norm) {
+	public long[] GetProbs(CPPMnode ppmcontext, long norm) {
 
 		/* CSFS: In the original C++ the norm value was an
 		 * unsigned int. Since Java will only provide a signed
 		 * int with half the capacity, I've converted it to a long.
 		 */
 
-		/* CSFS: All exclusion-related code commented out as it was wasting
-		 * time, and was disabled by boolean doExclusion = false; anyway.
-		 */
-
-		// System.out.printf("Sending probs for context %s%n", context);
-
-		final CPPMContext ppmcontext = (CPPMContext)(context);
-
+		//exclusions[] array etc. was removed by CSFS.
+		// this was CountExclusion, not UpdateExclusion - a (minor) speed
+		// improvement at the cost of worse compression/prediction, hence leaving it out. 
 		int iNumSymbols = GetSize();
 
 		long[] probs = new long[iNumSymbols + 1];
-		//boolean[] exclusions = new boolean[iNumSymbols];
-
-		// probs.setSize(iNumSymbols);
-
-		//ArrayList<Boolean> exclusions = new ArrayList<Boolean>(iNumSymbols);
-		//exclusions.setSize(iNumSymbols);
 
 		int i;
-		//for(i = 0; i < iNumSymbols; i++) {
-		//  probs.setElementAt(0L, i);
-		//  exclusions.setElementAt(false, i);
-		//} 
-
-		//  bool doExclusion = GetLongParameter( LP_LM_ALPHA );
-//		boolean doExclusion = false; //FIXME
 
 		long iToSpend = norm;
 
-		CPPMnode pTemp = ppmcontext.head;
-
-		while(pTemp != null) {
+		for (;ppmcontext!=null; ppmcontext=ppmcontext.vine) {
 			int iTotal = 0;
 
-			/* CSFS: Various changes in what follows to convert
-			 * from libc-type ArrayLists to Java ArrayLists. Also a variety
-			 * of small alterations like changing if(pSymbol) to
-			 * if(pSymbol != null) since Java doesn't know about
-			 * null pointers.
-			 */
-
-			CPPMnode pSymbol = pTemp.child;
-			while(pSymbol != null) {
-				// if(!(exclusions.elementAt(sym) && doExclusion))
+			for (CPPMnode pSymbol = ppmcontext.child; pSymbol != null; pSymbol=pSymbol.next) {
 				iTotal += pSymbol.count;
-				pSymbol = pSymbol.next;
 			}
 
 			if(iTotal != 0) {
 				long size_of_slice = iToSpend;
 				/* Changed type to long so that we don't run into trouble with overflows. */
-				pSymbol = pTemp.child;
-				while(pSymbol != null) {
-					//if(!(exclusions[pSymbol.symbol] && doExclusion)) {
-					//  exclusions[pSymbol.symbol] = true;
-
+				for(CPPMnode pSymbol = ppmcontext.child; pSymbol!=null;pSymbol = pSymbol.next) {
 					long p = (size_of_slice) * (100 * pSymbol.count - lpBeta) / (100 * iTotal + lpAlpha);
 
 					probs[pSymbol.symbol] += p;
 					iToSpend -= p;
-					//}
-					pSymbol = pSymbol.next;
 				}
 			}
-			pTemp = pTemp.vine;
 		}
 
 		long size_of_slice = iToSpend;
@@ -303,27 +187,26 @@ public class CPPMLanguageModel extends CLanguageModel {
 		return probs;
 	}
 
-	private void AddSymbol(CPPMContext context, int sym)
+	public CPPMnode ContextLearningSymbol(CPPMnode ctx, int sym)
 	// add symbol to the context
 	// creates new nodes, updates counts
 	// and leaves 'context' at the new context
 	{
 		// Ignore attempts to add the root symbol
 
-
-		if(sym==0) return;
+		if(sym==0) return ctx;
 
 		assert(sym >= 0 && sym < GetSize());
 
-		CPPMnode vineptr=null, temp=context.head;
+		CPPMnode vineptr=null, Result=null;
 		int updatecnt = 1;
 
 		do {
 			///// inline what used to be AddSymbolToNode /////
 			// so we can get out both CPPMNode Return, and also modify updatecnt...
-			CPPMnode Return = temp.find_symbol(sym);
+			CPPMnode child = ctx.find_symbol(sym);
 
-			if(Return != null) {
+			if(child != null) {
 
 				if(updatecnt != 0 || !bUpdateExclusion) {  // perform update exclusions
 
@@ -332,73 +215,52 @@ public class CPPMLanguageModel extends CLanguageModel {
 					 * just ever so slightly off. FIXED.
 					 */
 
-					Return.count++;
+					child.count++;
 					updatecnt = 0;
 				}
 			} else {
-				Return = new CPPMnode(sym, temp); //m_NodeAlloc.Alloc();        // count is initialized to 1
+				child = new CPPMnode(sym, ctx); //m_NodeAlloc.Alloc();        // count is initialized to 1
 			}
 			/////// end AddSymbolToNode ///////
 			if (vineptr==null) {
-				context.head = Return;
-				context.order++;
-			} else vineptr.vine = Return;
-			vineptr = Return;
-			temp=temp.vine;
-		} while (temp != null);
+				Result = child;
+			} else vineptr.vine = child;
+			vineptr = child;
+			ctx=ctx.vine;
+		} while (ctx != null);
 
 		vineptr.vine = m_Root;
 		m_iMaxOrder = (int)GetLongParameter( Elp_parameters.LP_LM_MAX_ORDER );
 
-		while(context.order > m_iMaxOrder) {
-			context.head = context.head.vine;
-			context.order--;
-		}
+		while(!orderOk(Result))
+			Result = Result.vine;
+		return Result;
+	}
+	
+	boolean orderOk(CPPMnode node) {
+		int order=-1;
+        for (; node!=null; node=node.vine) order++;
+        return order<=m_iMaxOrder;
 	}
 
-	public void EnterSymbol(CContextBase c, int Symbol) {
-		if(Symbol==0) return;
+	public CPPMnode ContextWithSymbol(CPPMnode ctx, int Symbol) {
+		if(Symbol==0) return ctx;
 
 		assert(Symbol >= 0 && Symbol < GetSize());
 
-		CPPMContext context = (CPPMContext) (c);
-
-		CPPMnode find;
-
-		while(context.head != null) {
-
-			if(context.order < m_iMaxOrder) {   // Only try to extend the context if it's not going to make it too long
-				find = context.head.find_symbol(Symbol);
-				if(find != null) {
-					context.order++;
-					context.head = find;
-					return;
-				}
+		while(ctx != null) {
+			CPPMnode find = ctx.find_symbol(Symbol);
+			// Only try to extend the context if it's not going to make it too long
+			if(find!=null && orderOk(find)) {   
+				return find;
 			}
 
 			// If we can't extend the current context, follow vine pointer to shorten it and try again
-
-			context.order--;
-			context.head = context.head.vine;
+			ctx = ctx.vine;
 		}
-
-		if(context.head == null) {
-			context.head = m_Root;
-			context.order = 0;
-		}
-
+		//failed to find anything...
+		return m_Root;
 	}	
-
-	public void LearnSymbol(CContextBase c, int Symbol) {
-		if(Symbol==0)
-			return;
-
-		assert(Symbol >= 0 && Symbol < GetSize());
-		CPPMContext context = (CPPMContext) (c);
-		AddSymbol(context, Symbol);
-
-		// System.out.printf("Learn symbol %d with context %s%n", Symbol, c);
-	}
 
 	/**
 	 * Diagnostic method; prints a given symbol.
@@ -439,165 +301,7 @@ public class CPPMLanguageModel extends CLanguageModel {
 		}
 	}
 
-	/* Excluded methods: it appears the DumpTrie methods are still
-	 * being written as they are festooned with TODO tags. It looks
-	 * as if nobody ever uses them, so I've excluded them for now.
-	 */
-
-	/*boolean WriteToFile(String strFilename) {
-
-
-		std::map<CPPMnode *, int> mapIdx;
-		int iNextIdx(1); // Index of 0 means NULL;
-
-		std::ofstream oOutputFile(strFilename.c_str());
-
-		RecursiveWrite(m_pRoot, &mapIdx, &iNextIdx, &oOutputFile);
-
-		oOutputFile.close();
-
-		return false; 
-
-		}*/
-
-	/* CSFS: This and following methods commented out where it appears
-	 * they do not currently get used. Would be good to get Java IO
-	 * going in the future, but for now it's pointless until the
-	 * authors of the original C++ version actually use the functions.
-	 */
-
-	/* TODO: Rewrite this I/O framework and find out how
-	 * it ought to be plumbed into Dasher at large.
-	 */
-
-	/* boolean RecursiveWrite(CPPMnode *pNode, std::map<CPPMnode *, int> *pmapIdx, int *pNextIdx, std::ofstream *pOutputFile) {
-
-		  // Dump node here
-
-		  BinaryRecord sBR;
-
-		  sBR.m_iIndex = GetIndex(pNode, pmapIdx, pNextIdx); 
-		  sBR.m_iChild = GetIndex(pNode->child, pmapIdx, pNextIdx); 
-		  sBR.m_iNext = GetIndex(pNode->next, pmapIdx, pNextIdx); 
-		  sBR.m_iVine = GetIndex(pNode->vine, pmapIdx, pNextIdx);
-		  sBR.m_iCount = pNode->count;
-		  sBR.m_iSymbol = pNode->symbol;
-
-		  pOutputFile->write(reinterpret_cast<char*>(&sBR), sizeof(BinaryRecord));
-
-		  CPPMnode *pCurrentChild(pNode->child);
-
-		  while(pCurrentChild != NULL) {
-		    RecursiveWrite(pCurrentChild, pmapIdx, pNextIdx, pOutputFile);
-		    pCurrentChild = pCurrentChild->next;
-		  }
-
-		  return true;
-		}; */
-
-	/* int CPPMLanguageModel::GetIndex(CPPMnode *pAddr, std::map<CPPMnode *, int> *pmapIdx, int *pNextIdx) {
-
-		  int iIndex;
-		  if(pAddr == NULL)
-		    iIndex = 0;
-		  else {
-		    std::map<CPPMnode *, int>::iterator it(pmapIdx->find(pAddr));
-
-		    if(it == pmapIdx->end()) {
-		      iIndex = *pNextIdx;
-		      pmapIdx->insert(std::pair<CPPMnode *, int>(pAddr, iIndex));
-		      ++(*pNextIdx);
-		    }
-		    else {
-		      iIndex = it->second;
-		    }
-		  }
-		  return iIndex;
-		}; */
-
-	/* boolean ReadFromFile(std::string strFilename) {
-
-		  std::ifstream oInputFile(strFilename.c_str());
-		  std::map<int, CPPMnode*> oMap;
-		  BinaryRecord sBR;
-		  bool bStarted(false);
-
-		  while(!oInputFile.eof()) {
-		    oInputFile.read(reinterpret_cast<char *>(&sBR), sizeof(BinaryRecord));
-
-		    CPPMnode *pCurrent(GetAddress(sBR.m_iIndex, &oMap));
-
-		    pCurrent->child = GetAddress(sBR.m_iChild, &oMap);
-		    pCurrent->next = GetAddress(sBR.m_iNext, &oMap);
-		    pCurrent->vine = GetAddress(sBR.m_iVine, &oMap);
-		    pCurrent->count = sBR.m_iCount;
-		    pCurrent->symbol = sBR.m_iSymbol;
-
-		    if(!bStarted) {
-		      m_pRoot = pCurrent;
-		      bStarted = true;
-		    }
-		  }
-
-		  oInputFile.close();
-
-		  return false;
-		} */
-
-	/* CPPMLanguageModel::CPPMnode *CPPMLanguageModel::GetAddress(int iIndex, std::map<int, CPPMnode*> *pMap) {
-		  std::map<int, CPPMnode*>::iterator it(pMap->find(iIndex));
-
-		  if(it == pMap->end()) {
-		    CPPMnode *pNewNode;
-		    pNewNode = m_NodeAlloc.Alloc();
-		    pMap->insert(std::pair<int, CPPMnode*>(iIndex, pNewNode));
-		    return pNewNode;
-		  }
-		  else {
-		    return it->second;
-		  }
-		} */
-
-	/* CPPMLanguageModel and others: These were using a 
-	 * horrible hack wherein an integer (really a CPPMContext * ) 
-	 * was being used to represent the context of a given node when 
-	 * outside the generating class, in order that it could be
-	 * swapped out for some other CLanguageModel derivation and retain 
-	 * type-compatibility at the expense of being entirely type-unsafe. 
-	 * Since Java doesn't like to be type unsafe, I've replaced this by 
-	 * all Context-representing classes being a child of CContextBase, which 
-	 * has no members or methods, thus retaining type-safety. */
-
-	public CContextBase CreateEmptyContext() {
-		CPPMContext Cont = new CPPMContext(); // m_ContextAlloc.Alloc();
-		Cont.head = m_RootContext.head;
-		Cont.order = m_RootContext.order;
-
-		// System.out.printf("Creating new context: %s%n", Cont);
-
-		return Cont;
-
-
+	public CPPMnode EmptyContext() {
+		return m_Root;
 	}
-
-	public CContextBase CloneContext(CContextBase Input) {
-		CPPMContext Cont = new CPPMContext(); // m_ContextAlloc.Alloc();
-		CPPMContext Copy = (CPPMContext) Input;
-		Cont.head = Copy.head;
-		Cont.order = Copy.order;
-
-		// System.out.printf("Cloning context %s to %s%n", Input, Cont);
-
-		return Cont;
-	}
-
-	public void ReleaseContext(CContextBase release) {
-
-		// System.out.printf("Releasing context %s%n", release);
-
-		release = null; //m_ContextAlloc.Free((CPPMContext) release);
-
-
-	}
-
 }

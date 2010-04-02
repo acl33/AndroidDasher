@@ -25,13 +25,8 @@
 
 package dasher;
 
-import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.ListIterator;
@@ -142,7 +137,7 @@ public class CDasherModel extends CDasherComponent {
 	 * Our alphabet manager, for functions which require knowledge
 	 * of an Alphabet.
 	 */
-	protected CAlphabetManager m_AlphabetManager;
+	protected final CAlphabetManager<?> m_AlphabetManager;
 	// protected CControlManagerFactory m_ControlManagerFactory;
 
 	/* CSFS: Converted a struct in the original C into this class */
@@ -246,14 +241,17 @@ public class CDasherModel extends CDasherComponent {
 		SetLongParameter(Elp_parameters.LP_REAL_ORIENTATION, m_cAlphabet.GetOrientation());
 	
 	// Create an appropriate language model;
-	CLanguageModel langMod;
 	
 	switch ((int)GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)) {
 	default:
 		// If there is a bogus value for the language model ID, we'll default
 		// to our trusty old PPM language model.
 	case 0:
-		langMod = new CPPMLanguageModel(m_EventHandler, m_SettingsStore, alphabet);
+		
+		m_AlphabetManager = /*ACL (langMod.isRemote())
+            ? new CRemoteAlphabetManager( this, langMod)
+            :*/ new CAlphabetManager<CPPMLanguageModel.CPPMnode>( this, new CPPMLanguageModel(m_EventHandler, m_SettingsStore, alphabet));
+
 		SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, false);
 		break;
 	/* case 2:
@@ -269,14 +267,19 @@ public class CDasherModel extends CDasherComponent {
 		#endif */
 		
 	case 5:
-		langMod = new CRemotePPM(m_EventHandler, m_SettingsStore, alphabet);
-		SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, true);
+		throw new UnsupportedOperationException("(ACL) Remote LM currently unimplemented");
+		//langMod = new CRemotePPM(m_EventHandler, m_SettingsStore, alphabet);
+		//SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, true);
 	
-		break;
+		//break;
 	/* CSFS: Commented out the other language models for the time being as they are not
 	 * implemented yet.
 	 */
 	}
+	
+	// m_ControlManagerFactory = new CControlManagerFactory(this, m_LanguageModel);
+	
+	m_bContextSensitive = true;
 	
 	int iNormalization = (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
 	
@@ -287,13 +290,6 @@ public class CDasherModel extends CDasherComponent {
 	
 	m_Rootmin_min = Long.MIN_VALUE / iNormalization / 2;
 	m_Rootmax_max = Long.MAX_VALUE / iNormalization / 2;
-	
-	m_AlphabetManager = (langMod.isRemote())
-	                    ? new CRemoteAlphabetManager( this, langMod)
-			            : new CAlphabetManager( this, langMod);
-	// m_ControlManagerFactory = new CControlManagerFactory(this, m_LanguageModel);
-	
-	m_bContextSensitive = true;
 	
 	computeNormFactor();
 	

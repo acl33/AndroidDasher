@@ -55,17 +55,12 @@ import java.util.ArrayList;
  * without altering the model.
  * 
  */
-public abstract class CLanguageModel extends CDasherComponent {
+public abstract class CLanguageModel<C> extends CDasherComponent {
 
-	/**
-	 * Value to be returned when we need a null context.
-	 */
-	public static final CContextBase nullContext = null;
-	
 	/**
 	 * Alphabet in which we make predictions
 	 */
-	protected CAlphabet m_Alphabet;
+	protected final CAlphabet m_Alphabet;
 	
 	/**
 	 * Creates a LanguageModel working in a given alphabet.
@@ -111,32 +106,13 @@ public abstract class CLanguageModel extends CDasherComponent {
 	 * all Context-representing classes being a child of CContextBase, which 
 	 * has no members or methods, thus retaining type-safety. */
 	
-	// Create a context (empty)
 	/**
-	 * Creates an empty context
+	 * Gets an empty context
 	 * 
-	 * @return Child of CContextBase representing the empty context
+	 * @return Context object representing the empty context (no preceding characters)
 	 */
-	public abstract CContextBase CreateEmptyContext();
+	public abstract C EmptyContext();
 	
-	/**
-	 * Clones a given context; changes to one clone must not
-	 * effect the state of the other.
-	 * 
-	 * @param Context Context to clone
-	 * @return Clone of said context.
-	 */
-	public abstract CContextBase CloneContext(CContextBase Context);
-	
-	/**
-	 * Releases a given context; if the LanguageModel is keeping
-	 * track of them internally or doing allocation work, it should
-	 * release their storage.
-	 * 
-	 * @param Context Context to release 
-	 */
-	public abstract void ReleaseContext(CContextBase Context);
-
 	/////////////////////////////////////////////////////////////////////////////
 	// Context modifiers
 	////////////////////////////////////////////////////////////////////////////
@@ -149,7 +125,7 @@ public abstract class CLanguageModel extends CDasherComponent {
 	 * @param context Context to modify
 	 * @param Symbol Symbol to enter
 	 */
-	public abstract void EnterSymbol(CContextBase context, int Symbol);
+	public abstract C ContextWithSymbol(C ctxIn, int Symbol);
 
 	/**
 	 * Modifies the supplied context, appending a given symbol.
@@ -163,7 +139,7 @@ public abstract class CLanguageModel extends CDasherComponent {
 	 * @param context Context to modify
 	 * @param Symbol Symbol to enter
 	 */
-	public abstract void LearnSymbol(CContextBase context, int Symbol);
+	public abstract C ContextLearningSymbol(C ctxIn, int Symbol);
 
 	/////////////////////////////////////////////////////////////////////////////
 	// Prediction
@@ -181,7 +157,7 @@ public abstract class CLanguageModel extends CDasherComponent {
 	 * The size of the array returned should be equal to the number of
 	 * symbols in our current alphabet. 
 	 */
-	public abstract long[] GetProbs(CContextBase Context , long iNorm);
+	public abstract long[] GetProbs(C ctx, long iNorm);
 
 	/** Get some measure of the memory usage for diagnostic
 	 * purposes. No need to implement this if you're not comparing
@@ -222,11 +198,12 @@ public abstract class CLanguageModel extends CDasherComponent {
 	 * @param context Context to extend
 	 * @param TheText Text to add
 	 */
-	public void EnterText(CContextBase context, String TheText) {
+	public C ContextWithText(C ctx, String TheText) {
 		ArrayList <Integer> Symbols = new ArrayList<Integer>();
 		m_Alphabet.GetSymbols(Symbols, TheText); // UTF8 bytes become Unicode Integers
 		for(int i = 0; i < Symbols.size(); i++)
-			EnterSymbol(context, Symbols.get(i)); // FIXME - conversion to symbol alphabet
+			ctx=ContextWithSymbol(ctx, Symbols.get(i)); // FIXME - conversion to symbol alphabet
+		return ctx;
 	}
 
 	/**
@@ -269,13 +246,13 @@ public abstract class CLanguageModel extends CDasherComponent {
 		};
 		CountStream count = new CountStream(FileIn, iOffset);
 		Reader chars = new BufferedReader(new InputStreamReader(count));
-		CContextBase trainContext = CreateEmptyContext();
+		C trainContext = EmptyContext();
 		CAlphabetMap alphSyms = m_Alphabet.GetAlphabetMap();
 		
 		try {
 			while (true) {
 				int sym = alphSyms.GetNext(chars);
-				LearnSymbol(trainContext, sym);
+				trainContext = ContextLearningSymbol(trainContext, sym);
 				if (evt!=null) {
 					int iNPercent = (count.iTotalRead *100)/iTotalBytes;
 					if (iNPercent != evt.m_iPercent) {
@@ -286,10 +263,7 @@ public abstract class CLanguageModel extends CDasherComponent {
 			}
 		} catch (EOFException e) {
 			//that's fine!
-		} finally {
-			ReleaseContext(trainContext);
 		}
-		
 		return count.iTotalRead;
 		
 	}

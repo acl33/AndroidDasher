@@ -42,13 +42,13 @@ import java.util.ListIterator;
  *
  */
 
-public class CAlphabetManager {
+public class CAlphabetManager<C> {
 
 	/**
 	 * Pointer to the LanguageModel used in determining the
 	 * relative probability assigned to new Nodes. 
 	 */
-	public final CLanguageModel m_LanguageModel;
+	public final CLanguageModel<C> m_LanguageModel;
 	
 	/**
 	 * Pointer to the DasherModel which performs some of the
@@ -80,7 +80,7 @@ public class CAlphabetManager {
      * @param LanguageModel Linked LanguageModel
      */
     
-    public CAlphabetManager( CDasherModel Model, CLanguageModel LanguageModel) {
+    public CAlphabetManager( CDasherModel Model, CLanguageModel<C> LanguageModel) {
     	
     	this.m_LanguageModel = LanguageModel;
     	this.m_Model = Model;
@@ -113,8 +113,7 @@ public class CAlphabetManager {
     		  }
     	  }
     	  
-    	  CContextBase ctx = m_LanguageModel.CreateEmptyContext();
-    	  m_LanguageModel.EnterText(ctx, string);
+    	  C ctx = m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), string);
     	  
     	  CAlphNode NewNode = new CAlphNode(Parent, iSymbol, 0,
     			  (iSymbol== SPSymbol) ? EColorSchemes.Special1 : EColorSchemes.Nodes1,
@@ -129,14 +128,16 @@ public class CAlphabetManager {
     }
     //ACL TODO had to make this package-visible as a hack to extract SGroupInfo...
     class CAlphNode extends CDasherNode {
-    
+    	
+    	private final CAlphabetManager<C> mgr() {return CAlphabetManager.this;}
+    	
     	private boolean bCommitted;
     	
     	/**
     	 * Language model context corresponding to this node's
     	 * position in the tree.
     	 */
-    	protected final CContextBase m_Context;
+    	protected final C m_Context;
     	
     	/**
     	 * Symbol number represented by this node
@@ -151,7 +152,7 @@ public class CAlphabetManager {
     	
         public CAlphNode(CDasherNode Parent, int Symbol, int iphase,
 				EColorSchemes ColorScheme, long ilbnd, long ihbnd,
-				int Colour, CContextBase context) {
+				int Colour, C context) {
 			super(Parent, iphase, ColorScheme, ilbnd, ihbnd, Colour);
 			this.m_Symbol = Symbol; 
 			this.m_Context = context;
@@ -252,10 +253,9 @@ public class CAlphabetManager {
 				/* In the case that there isn't enough context to rebuild the tree,
 				 * we magically reappear at the root node.
 				 */
-				CContextBase oContext = m_LanguageModel.CreateEmptyContext();
-				m_LanguageModel.EnterText(oContext, ". ");
+				C context = m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), ". ");
 				
-				NewNode = new CAlphNode(null, 0, 0,  EColorSchemes.Nodes1, 0, 0, 7, oContext);
+				NewNode = new CAlphNode(null, 0, 0,  EColorSchemes.Nodes1, 0, 0, 7, context);
 			}
 			else {
 				
@@ -281,10 +281,10 @@ public class CAlphabetManager {
 					NodeColour += 130;
 				}
 				
-				CContextBase oContext = (m_LanguageModel.CreateEmptyContext());
+				C oContext = m_LanguageModel.EmptyContext();
 				
 				for(int i = (0); i < vSymbols.size() - 1; ++i)
-					m_LanguageModel.EnterSymbol(oContext, vSymbols.get(i));
+					oContext = m_LanguageModel.ContextWithSymbol(oContext, vSymbols.get(i));
 				
 				NewNode = new CAlphNode(null, vSymbols.get(vSymbols.size() - 2), 0, ChildScheme, 0, 0, NodeColour, oContext);
 			}
@@ -312,10 +312,14 @@ public class CAlphabetManager {
 			//...before performing the following. But I can't see why it should ever fail?!
 			
 			if (m_Model.GetBoolParameter(Ebp_parameters.BP_LM_ADAPTIVE)) {
-				if (Parent() instanceof CAlphNode) {
-					CContextBase learnCtx = m_LanguageModel.CloneContext(((CAlphNode)Parent()).m_Context);
-					m_LanguageModel.LearnSymbol(learnCtx, m_Symbol);
-					m_LanguageModel.ReleaseContext(learnCtx);
+				if (Parent() instanceof CAlphabetManager<?>.CAlphNode) {
+					//type erasure means can't check parent has _same_ context type.
+					CAlphabetManager<?>.CAlphNode other = (CAlphabetManager<?>.CAlphNode)Parent();
+					//however, we _can_ check that it's from the same AlphMgr, in which case we know we're safe...
+					if (other.mgr() == mgr()) {
+						C otherContext = (C)other.m_Context; //yes, warning of unsafe cast - safe because of above
+						m_LanguageModel.ContextLearningSymbol(otherContext, m_Symbol);
+					}
 				}
 				//else - do we do anything? should mean root nodes ok...
 			}
@@ -429,15 +433,14 @@ public class CAlphabetManager {
 
     			//ACL make the new node's context ( - this used to be done only in PushNode(),
     			// before calling populate...)
-    			CContextBase cont;
+    			C cont;
     			if (j < m_Alphabet.GetNumberTextSymbols() && j > 0) {
 					// Normal symbol - derive context from parent
-					cont = m_LanguageModel.CloneContext(Node.m_Context);
-					m_LanguageModel.EnterSymbol(cont, j);
+					cont = m_LanguageModel.ContextWithSymbol(Node.m_Context,j);
 				} else {
 					// For new "root" nodes (such as under control mode), we want to 
 					// mimic the root context
-					cont = m_LanguageModel.CreateEmptyContext();
+					cont = m_LanguageModel.EmptyContext();
 					//      EnterText(cont, "");
 				}
     			CAlphNode n = new CAlphNode(Node, j, j, ChildScheme, iLbnd, cum[j], iColour, cont);
