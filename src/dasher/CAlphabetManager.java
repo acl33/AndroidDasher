@@ -26,6 +26,7 @@
 package dasher;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.ListIterator;
 
 /**
@@ -101,14 +102,17 @@ public class CAlphabetManager {
     /**
      * Creates a new root CDasherNode with the supplied parameters.
      */
-    public CDasherNode GetRoot(CDasherNode Parent, long iLower, long iUpper, int iSymbol, String string) {
-    	  int iColour;
+    public CDasherNode GetRoot(CDasherNode Parent, long iLower, long iUpper, boolean useLastSym, String string) {
+    	  int iSymbol = 0, iColour = 7; //default if we can't get anything else...
+    	  if (useLastSym) {
+    		  List<Integer> syms = new ArrayList<Integer>();
+    		  m_Alphabet.GetSymbols(syms,string);
+    		  if (syms.size()>0) {
+    			  iSymbol = syms.get(syms.size()-1);
+    			  iColour = m_Colours.get(iSymbol);
+    		  }
+    	  }
     	  
-    	  if(iSymbol == 0)
-    	    iColour = 7;
-    	  else
-    	    iColour = m_Colours.get(iSymbol);
-
     	  CContextBase ctx = m_LanguageModel.CreateEmptyContext();
     	  m_LanguageModel.EnterText(ctx, string);
     	  
@@ -393,9 +397,9 @@ public class CAlphabetManager {
     		CDasherNode NewNode;
     		
     		if(j == ContSymbol)
-    			NewNode = m_Model.GetRoot(1, Node, iLbnd, cum[j], 0);
+    			NewNode = m_Model.GetCtrlRoot(Node, iLbnd, cum[j]);
     		else if(j == ConvertSymbol) {
-    					NewNode = m_Model.GetRoot(0, Node, iLbnd, cum[j], 0);
+    					NewNode = m_Model.GetConvRoot(Node, iLbnd, cum[j], 0);
     					NewNode.Seen(false);
     		}
     		else if( j == iExistingSymbol) {

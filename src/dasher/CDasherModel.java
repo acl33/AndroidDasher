@@ -625,20 +625,11 @@ public class CDasherModel extends CDasherComponent {
 		if(m_Root != null) {
 			m_Root.DeleteNode();
 		}
-		m_Root = null;
-			
-		int iRootSymbol;
-		if(sNewContext.length() == 0) {
-			iRootSymbol = 0;
-			sNewContext = ". ";
-		} else {
-			ArrayList<Integer> vSymbols = new ArrayList<Integer>();
-			m_LanguageModel.getAlphabet().GetSymbols(vSymbols, sNewContext);
-
-			iRootSymbol = (vSymbols.get(vSymbols.size()-1));
-		}
 		
-		m_Root = m_AlphabetManager.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), iRootSymbol, sNewContext);
+		boolean bUseLastSym = sNewContext.length()!=0;
+		if (!bUseLastSym) sNewContext = ". ";
+		
+		m_Root = m_AlphabetManager.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), bUseLastSym, sNewContext);
 		
 		Recursive_Push_Node(m_Root, 0);
 		
@@ -1597,13 +1588,23 @@ public class CDasherModel extends CDasherComponent {
 	 * @param iUpper Desired Hbnd of the new Node
 	 * @return Newly created DasherNode
 	 */
-	public CDasherNode GetRoot( int iType, CDasherNode Parent, long iLower, long iUpper, int UserData ) {
+	public CDasherNode GetAlphRoot( CDasherNode Parent, long iLower, long iUpper ) {
 		
 		//ACL fake out empty context here. This method seems a bit meaningless/pointless right now...
-			return m_AlphabetManager.GetRoot(Parent, iLower, iUpper, UserData, ". ");
-		// case 1:
-			// return m_ControlManagerFactory.GetRoot(Parent, iLower, iUpper, UserData);
-		//case 2:
+			return m_AlphabetManager.GetRoot(Parent, iLower, iUpper, false, ". ");
+	}
+	
+	public CDasherNode GetCtrlRoot(CDasherNode parent, long iLower, long iUpper) {
+		if (iLower==iUpper) {
+			//control mode off - node has zero size allocated, so will never be displayed.
+			// however, we need a non-null CDasherNode object!
+			return GetAlphRoot(parent, iLower, iUpper);
+		}
+		throw new UnsupportedOperationException("No Control Mode yet");
+	}
+	
+	public CDasherNode GetConvRoot(CDasherNode parent, long iLower, long iUpper, int iUserData) {
+		throw new UnsupportedOperationException("No Conversion yet either");
 		//	return m_ConversionManagerFactory.GetRoot(pParent, iLower, iUpper, UserData);
 		
 		
