@@ -4,7 +4,6 @@ import dasher.CCustomColours;
 import dasher.CDasherInput;
 import dasher.CDasherScreen;
 import dasher.CInputFilter;
-import dasher.EColorSchemes;
 import dasher.CDasherView.Point;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -151,7 +150,7 @@ public class DasherCanvas extends SurfaceView implements Callback {
 			canvas.drawCircle(iCX, iCY, iR, p);
 		}
 		public void DrawRectangle(int x1, int y1, int x2, int y2,
-				int iFillColour, int iOutlineColour, EColorSchemes ColorScheme,
+				int iFillColour, int iOutlineColour,
 				int iThickness) {
 			r.left = x1; r.right = x2;
 			r.top = y1; r.bottom = y2;

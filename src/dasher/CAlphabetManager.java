@@ -116,8 +116,7 @@ public class CAlphabetManager<C> {
     	  C ctx = m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), string);
     	  
     	  CAlphNode NewNode = new CAlphNode(Parent, iSymbol, 0,
-    			  (iSymbol== SPSymbol) ? EColorSchemes.Special1 : EColorSchemes.Nodes1,
-    					  iLower, iUpper, iColour, ctx);
+    			  	  iLower, iUpper, iColour, ctx);
     	  
     	  NewNode.m_bShove = true;
     	  NewNode.m_BaseGroup = m_Alphabet.m_BaseGroup;
@@ -151,9 +150,9 @@ public class CAlphabetManager<C> {
     	public SGroupInfo m_BaseGroup;
     	
         public CAlphNode(CDasherNode Parent, int Symbol, int iphase,
-				EColorSchemes ColorScheme, long ilbnd, long ihbnd,
+				long ilbnd, long ihbnd,
 				int Colour, C context) {
-			super(Parent, iphase, ColorScheme, ilbnd, ihbnd, Colour);
+			super(Parent, iphase, ilbnd, ihbnd, Colour);
 			this.m_Symbol = Symbol; 
 			this.m_Context = context;
 			// TODO Auto-generated constructor stub
@@ -255,38 +254,20 @@ public class CAlphabetManager<C> {
 				 */
 				C context = m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), ". ");
 				
-				NewNode = new CAlphNode(null, 0, 0,  EColorSchemes.Nodes1, 0, 0, 7, context);
+				NewNode = new CAlphNode(null, 0, 0, 0, 0, 7, context);
 			}
 			else {
-				
-				EColorSchemes NormalScheme, SpecialScheme;
-				if((ColorScheme() == EColorSchemes.Nodes1) || (ColorScheme() == EColorSchemes.Special1)) {
-					NormalScheme = EColorSchemes.Nodes2;
-					SpecialScheme = EColorSchemes.Special2;
-				}
-				else {
-					NormalScheme = EColorSchemes.Nodes1;
-					SpecialScheme = EColorSchemes.Special1;
-				}
-				
-				EColorSchemes ChildScheme;
-				if(vSymbols.get(vSymbols.size() - 1) == SPSymbol)
-					ChildScheme = SpecialScheme;
-				else
-					ChildScheme = NormalScheme;
-				
 				int NodeColour = m_Colours.get(vSymbols.get(vSymbols.size() - 2));
 				
-				if(NormalScheme == EColorSchemes.Nodes2) {
+				if(m_iPhase==0) // => parent iPhase=1
 					NodeColour += 130;
-				}
 				
 				C oContext = m_LanguageModel.EmptyContext();
 				
 				for(int i = (0); i < vSymbols.size() - 1; ++i)
 					oContext = m_LanguageModel.ContextWithSymbol(oContext, vSymbols.get(i));
 				
-				NewNode = new CAlphNode(null, vSymbols.get(vSymbols.size() - 2), 0, ChildScheme, 0, 0, NodeColour, oContext);
+				NewNode = new CAlphNode(null, vSymbols.get(vSymbols.size() - 2), (m_iPhase+1)%2, 0, 0, NodeColour, oContext);
 			}
 			
 			NewNode.m_bShove = true;
@@ -379,25 +360,9 @@ public class CAlphabetManager<C> {
     		cum[i] += cum[i-1];
     	
     	// create the children
-    	EColorSchemes NormalScheme, SpecialScheme;
-    	if((Node.ColorScheme() == EColorSchemes.Nodes1) || (Node.ColorScheme() == EColorSchemes.Special1)) {
-    		NormalScheme = EColorSchemes.Nodes2;
-    		SpecialScheme = EColorSchemes.Special2;
-    	}
-    	else {
-    		NormalScheme = EColorSchemes.Nodes1;
-    		SpecialScheme = EColorSchemes.Special1;
-    	}
-    	
-    	EColorSchemes ChildScheme;
-    	
     	long iLbnd = 0;
     	
     	for(int j = 0; j < iChildCount; j++) {
-    		if(j == SPSymbol)
-    			ChildScheme = SpecialScheme;
-    		else
-    			ChildScheme = NormalScheme;
     		CDasherNode NewNode;
     		
     		if(j == ContSymbol)
@@ -427,7 +392,7 @@ public class CAlphabetManager<C> {
     			}
 
     			// Loop colours if necessary for the colour scheme
-    			if((ChildScheme.ordinal() % 2) == 1 && iColour < 130) {    // We don't loop on high
+    			if((Node.m_iPhase % 2) == 0 && iColour < 130) {    // We don't loop on high
     				iColour += 130;
     			}
 
@@ -443,7 +408,7 @@ public class CAlphabetManager<C> {
 					cont = m_LanguageModel.EmptyContext();
 					//      EnterText(cont, "");
 				}
-    			CAlphNode n = new CAlphNode(Node, j, j, ChildScheme, iLbnd, cum[j], iColour, cont);
+    			CAlphNode n = new CAlphNode(Node, j, (Node.m_iPhase+1)%2, iLbnd, cum[j], iColour, cont);
     			n.m_bShove = true;
     			n.m_BaseGroup = m_Alphabet.m_BaseGroup;
     			NewNode = n;

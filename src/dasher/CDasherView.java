@@ -377,13 +377,13 @@ public abstract class CDasherView extends CDasherComponent {
 	 * @param ColorScheme Colour scheme to use (usually ignored in favour of colour indices now)
 	 * @param iThickness Outline thickness (<1 => don't outline)
 	 */	
-	public void DasherDrawRectangle(long iLeft, long iTop, long iRight, long iBottom, int Color, int iOutlineColour, EColorSchemes ColorScheme, int iThickness) {
+	public void DasherDrawRectangle(long iLeft, long iTop, long iRight, long iBottom, int Color, int iOutlineColour, int iThickness) {
 		
 		
 		CDasherView.Point topleft = Dasher2Screen(iLeft, iTop);
 		CDasherView.Point bottomright = Dasher2Screen(iRight, iBottom);
 		
-		Screen().DrawRectangle(topleft.x, topleft.y, bottomright.x, bottomright.y, Color, iOutlineColour, ColorScheme, iThickness);
+		Screen().DrawRectangle(topleft.x, topleft.y, bottomright.x, bottomright.y, Color, iOutlineColour, iThickness);
 	}
 	
 //	/ Draw a rectangle centred on a given dasher co-ordinate, but with a size specified in screen co-ordinates (used for drawing the mouse blob)
@@ -399,11 +399,11 @@ public abstract class CDasherView extends CDasherComponent {
 	 * @param ColorScheme Colour scheme (usually ignored now in favour of colour index)
 	 * @param bDrawOutline Whether to draw a hairline black outline
 	 */
-	public void DasherDrawCentredRectangle(long iDasherX, long iDasherY, int iSize, int Color, EColorSchemes ColorScheme, boolean bDrawOutline) {
+	public void DasherDrawCentredRectangle(long iDasherX, long iDasherY, int iSize, int Color, boolean bDrawOutline) {
 		
 		CDasherView.Point centre = Dasher2Screen(iDasherX, iDasherY);
 		
-		Screen().DrawRectangle(centre.x - iSize, centre.y - iSize, centre.x + iSize, centre.y + iSize, Color, bDrawOutline ? 3 : -1, ColorScheme, 1);
+		Screen().DrawRectangle(centre.x - iSize, centre.y - iSize, centre.x + iSize, centre.y + iSize, Color, bDrawOutline ? 3 : -1, 1);
 	}
 	
 	/**

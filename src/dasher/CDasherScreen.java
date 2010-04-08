@@ -84,7 +84,7 @@ public interface CDasherScreen {
 	* @param ColorScheme Which colourscheme is to be used
 	* @param iThickness Line thickness for outline (<1 => don't outline)
 	*/
-	public abstract void DrawRectangle(int x1, int y1, int x2, int y2, int iFillColour, int iOutlineColour, EColorSchemes ColorScheme, int iThickness);
+	public abstract void DrawRectangle(int x1, int y1, int x2, int y2, int iFillColour, int iOutlineColour,int iThickness);
 	
 	/**
 	 * Draw a circle

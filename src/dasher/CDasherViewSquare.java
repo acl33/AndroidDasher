@@ -318,7 +318,7 @@ public class CDasherViewSquare extends CDasherView {
 		/* Step 1: Render *this* node */
 		try {
 		
-		mostleft = RenderNode(Render.Colour(), Render.ColorScheme(), y1, y2, mostleft, Render.m_strDisplayText, Render.m_bShove);
+		mostleft = RenderNode(Render.Colour(), y1, y2, mostleft, Render.m_strDisplayText, Render.m_bShove);
 			
 		}
 		/* If this node was not drawable, mark it for deletion */
@@ -415,7 +415,7 @@ public class CDasherViewSquare extends CDasherView {
 			long newy1 = y1 + (range * lbnd) / lpNormalisation;
 			long newy2 = y1 + (range * hbnd) / lpNormalisation;
 			try {
-				mostleft = RenderNode(CurrentGroup.iColour, EColorSchemes.Groups, newy1, newy2, mostleft, CurrentGroup.strLabel, true);
+				mostleft = RenderNode(CurrentGroup.iColour, newy1, newy2, mostleft, CurrentGroup.strLabel, true);
 			}
 			catch(NodeCannotBeDrawnException e) {
 				// Do nothing
@@ -467,7 +467,7 @@ public class CDasherViewSquare extends CDasherView {
 	 * do not) 
 	 * @throws NodeCannotBeDrawnException if this Node cannot be drawn!
 	 */
-	public int RenderNode(int Color, EColorSchemes ColorScheme, long y1, long y2, int mostleft, String sDisplayText, boolean bShove) throws NodeCannotBeDrawnException {
+	public int RenderNode(int Color, long y1, long y2, int mostleft, String sDisplayText, boolean bShove) throws NodeCannotBeDrawnException {
 		
 		/*
 		 * IMPORTANT: This method takes mostleft by REFERENCE in the original
@@ -500,7 +500,7 @@ public class CDasherViewSquare extends CDasherView {
 		// FIXME - get rid of pointless assignment below
 		
 		if(lpTruncation == 0) {        // Regular squares
-			DasherDrawRectangle(Math.min(iDasherSize,visreg.maxX), Math.min(y2,visreg.maxY), 0, Math.max(y1,visreg.minY), Color, -1, ColorScheme, GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) ? 1 : 0);
+			DasherDrawRectangle(Math.min(iDasherSize,visreg.maxX), Math.min(y2,visreg.maxY), 0, Math.max(y1,visreg.minY), Color, -1, GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) ? 1 : 0);
 		}
 		else {
 			DasherTruncRect(y1, y2, iSize, Color);

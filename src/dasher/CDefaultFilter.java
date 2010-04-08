@@ -248,10 +248,10 @@ public class CDefaultFilter extends CInputFilter {
 		/* CSFS: These lines didn't appear to do anything */
 		
 		if(GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) == true) {
-			View.DasherDrawCentredRectangle(dashXY.x, dashXY.y, 5, 2, EColorSchemes.Objects, false);
+			View.DasherDrawCentredRectangle(dashXY.x, dashXY.y, 5, 2, false);
 		}
 		else {
-			View.DasherDrawCentredRectangle(dashXY.x, dashXY.y, 5, 1, EColorSchemes.Objects, false);
+			View.DasherDrawCentredRectangle(dashXY.x, dashXY.y, 5, 1, false);
 		}
 		
 	}

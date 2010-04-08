@@ -43,15 +43,10 @@ public abstract class CDasherNode {
 
 	//	Information required to display the node
 	/**
-	 * Colour scheme associated with this node
-	 */
-	protected EColorSchemes m_ColorScheme;
-	
-	/**
 	 * Phase; this is related to colour cycling from one generation
 	 * to the next.
 	 */
-	protected int m_iPhase;
+	protected final int m_iPhase;
 	
 	/**
 	 * Colour number if this node is using a colour scheme defined
@@ -120,13 +115,12 @@ public abstract class CDasherNode {
 	 * @param lm LanguageModel
 	 * @param Colour Colour number
 	 */
-    public CDasherNode(CDasherNode Parent, int iphase, EColorSchemes ColorScheme, long ilbnd, long ihbnd, int Colour) {
+    public CDasherNode(CDasherNode Parent, int iphase, long ilbnd, long ihbnd, int Colour) {
 		m_iLbnd = ilbnd;
 		m_iHbnd = ihbnd;
 		// m_bHasAllChildren = false; (default)
 		m_bAlive = true;
 		// m_bSeen = false; (default)
-		m_ColorScheme = ColorScheme;
 		m_iPhase = iphase;
 		m_iColour = Colour;
 		m_Parent = Parent;
@@ -377,13 +371,6 @@ public abstract class CDasherNode {
 	    return m_iPhase;
 	}
 	// DJW Sort out the colour scheme / phase confusion
-	
-	/**
-	 * Gets this Node's colour scheme
-	 */
-	public EColorSchemes ColorScheme() {
-	    return m_ColorScheme;
-	} 
 	  
 	/**
 	 * Gets this Node's colour index
