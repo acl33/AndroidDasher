@@ -42,92 +42,48 @@ import java.util.Collection;
 public class CDasherViewSquare extends CDasherView {
 
 	/**
-	 * Helper class which applies and unapplies the y-axis
-	 * non-linearity.
+	 * Compression factor
 	 */
-	protected class Cymap {
+	protected long m_Y1;
+	
+	/**
+	 * Y co-ordinate above which to apply compression
+	 */
+	protected long m_Y2;
+	
+	/**
+	 * Y co-ordinate below which to apply compression
+	 */
+	protected long m_Y3;
 		
-		/**
-		 * Compression factor
-		 */
-		protected long m_Y1;
-		
-		/**
-		 * Y co-ordinate above which to apply compression
-		 */
-		protected long m_Y2;
-		
-		/**
-		 * Y co-ordinate below which to apply compression
-		 */
-		protected long m_Y3;
-		
-		/**
-		 * Calculates m_Y1, 2 and 3 based on the total length
-		 * of the y axis and hard coded scaling factors which
-		 * state that objects should be scaled down a factor
-		 * of 4 when within 5% of the outer edges.
-		 * 
-		 * @param iScale Total y-axis length
-		 */
-		public Cymap(long iScale) {
-			double dY1 = 0.25;
-			double dY2 = 0.95;
-			double dY3 = 0.05;
-			
-			m_Y2 = (long)(dY2 * iScale);
-			m_Y3 = (long)(dY3 * iScale);
-			m_Y1 = (long)(1.0 / dY1);
-		}
-		
-		/**
-		 * Converts a y co-ordinate according to this schema
-		 * 
-		 * @param y Raw y co-ordinate
-		 * @return Converted y co-ordinate
-		 */
-		public long map(long y) {
-			if(y > m_Y2)
-				return m_Y2 + (y - m_Y2) / m_Y1;
-			else if(y < m_Y3)
-				return m_Y3 + (y - m_Y3) / m_Y1;
-			else
-				return y;
-		}
-		
-		/**
-		 * Restores a y co-ordinate by unapplying non-linearity
-		 * 
-		 * @param ydash Converted y co-ordinate
-		 * @return Original, raw y co-ordinate
-		 */
-		public long unmap(long ydash) {
-			if(ydash > m_Y2)
-				return (ydash - m_Y2) * m_Y1 + m_Y2;
-			else if(ydash < m_Y3)
-				return (ydash - m_Y3) * m_Y1 + m_Y3;
-			else
-				return ydash;
-		}
+	/**
+	 * Converts a y co-ordinate according to this schema
+	 * 
+	 * @param y Raw y co-ordinate
+	 * @return Converted y co-ordinate
+	 */
+	@Override public long ymap(long y) {
+		if(y > m_Y2)
+			return m_Y2 + (y - m_Y2) / m_Y1;
+		else if(y < m_Y3)
+			return m_Y3 + (y - m_Y3) / m_Y1;
+		else
+			return y;
 	}
 	
 	/**
-	 * Small class for returning dashery2screen values, which
-	 * compute two new y co-ordinates and a size attribute.
+	 * Restores a y co-ordinate by unapplying non-linearity
+	 * 
+	 * @param ydash Converted y co-ordinate
+	 * @return Original, raw y co-ordinate
 	 */
-	class D2Yret {
-		/**
-		 * y co-ordinate 1
-		 */
-		int s1;
-		/**
-		 * y co-ordinate 2
-		 */
-		int s2;
-		/**
-		 * Size
-		 */
-		int size;
+	public long yunmap(long ydash) {
+		if(ydash > m_Y2)
+			return (ydash - m_Y2) * m_Y1 + m_Y2;
+		else if(ydash < m_Y3)
+			return (ydash - m_Y3) * m_Y1 + m_Y3;
+		else
+			return ydash;
 	}
 	
 	/**
@@ -152,12 +108,6 @@ public class CDasherViewSquare extends CDasherView {
 	 * Height of our current screen in pixels
 	 */
 	protected int CanvasY;
-		
-	/**
-	 * Helper for y mapping.
-	 */
-	protected Cymap m_ymap;
-	
 	
 	// Cached values for scaling
 	/**
@@ -241,8 +191,14 @@ public class CDasherViewSquare extends CDasherView {
 		m_dXMappingLogLinearBoundary = 0.5;
 		m_dXMappingLinearScaleFactor = 0.9;
 				
-		m_ymap = new Cymap(lpMaxY);
+		double dY1 = 0.25;
+		double dY2 = 0.95;
+		double dY3 = 0.05;
 		
+		m_Y2 = (long)(dY2 * lpMaxY);
+		m_Y3 = (long)(dY3 * lpMaxY);
+		m_Y1 = (long)(1.0 / dY1);
+	
 		m_bVisibleRegionValid = false;
 		
 		lpTruncation = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_TRUNCATION);
@@ -527,7 +483,7 @@ public class CDasherViewSquare extends CDasherView {
 		
 		//int top = Dasher2Screen(0, y1).y;
 		//int bottom = Dasher2Screen(0, y2).y; 
-		long iSize = m_ymap.map(y2) - m_ymap.map(y1);
+		long iSize = ymap(y2) - ymap(y1);
 		
 		// Actual height in pixels
 		int iHeight = (int)((iSize * CanvasY) / (int) lpMaxY);
@@ -743,8 +699,8 @@ public class CDasherViewSquare extends CDasherView {
 		
 		// FIXME - disabled to avoid floating point
 		if( bNonlinearity ) {
-			rx = (long)(unapplyXMapping(rx / (double)lpMaxY) * lpMaxY);
-			ry = (long)m_ymap.unmap(ry);
+			rx = unapplyXMapping(rx);
+			ry = (long)yunmap(ry);
 		}
 		
 		return new CDasherView.DPoint(rx, ry);
@@ -813,7 +769,7 @@ public class CDasherViewSquare extends CDasherView {
 	 * indicating the same location.
 	 * <p>
 	 * Applies non-linearities to the Dasher co-ordinates using
-	 * applyXMapping and m_ymap.map, before scaling appropriate
+	 * applyXMapping and ymap, before scaling appropriate
 	 * to our current screen orientation.
 	 * 
 	 * @param iDasherX Dasher x co-ordinate
@@ -826,8 +782,8 @@ public class CDasherViewSquare extends CDasherView {
 		
 		
 		// FIXME
-		iDasherX = (long)(applyXMapping(iDasherX / (double)(lpMaxY)) * lpMaxY);
-		iDasherY = m_ymap.map(iDasherY);
+		iDasherX = applyXMapping(iDasherX);
+		iDasherY = ymap(iDasherY);
 		
 		
 		// Things we're likely to need:
@@ -1131,58 +1087,8 @@ public class CDasherViewSquare extends CDasherView {
 		SetScaleFactor();
 	}
 	
-	/**
-	 * Defers to m_ymap.map
-	 * 
-	 * @see Cymap
-	 */
-	public double ymap(double x) {
-		return m_ymap.map((long)x);
-	}
-	
-	
 	// INLINE FUNCTIONS (CDasherViewSquare.inl)
 	
-	// Redundant function; taken over by Dasher2Screen.
-	
-	/*public D2Yret dashery2screen(long y1, long y2, int s1, int s2) {
-
-		D2Yret retval = new D2Yret();
-
-		retval.s1 = s1;
-		retval.s2 = s2;
-
-		y1 = m_ymap.map(y1);
-		y2 = m_ymap.map(y2);
-
-		if(y1 > lpMaxY) {
-			retval.size = 0; return retval;
-		} if(y2 < 0) {
-			retval.size = 0; return retval;
-		}
-
-		if(y1 < 0)                  // "highest" legal coordinate to draw is 0.
-		{
-			y1 = 0;
-		}
-
-		// Is this square actually on the screen? Check bottom
-		if(y2 > lpMaxY)
-			y2 = lpMaxY;
-
-		retval.size = (int)(y2 - y1);
-
-		retval.s1 = (int)(y1 * CanvasY / lpMaxY);
-		retval.s2 = (int)(y2 * CanvasY / lpMaxY);
-
-		return retval;
-
-	}*/
-
-	/* CSFS: There used to be another version of dashery2screen accepting only one
-	 * long as an argument; however it seemed to be dead code and so I have removed
-	 * it.
-	 */
 
 	/// Draw the crosshair
 
@@ -1249,13 +1155,13 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param x Value to which the mapping should be unapplied
 	 * @return Raw value
 	 */
-	public double unapplyXMapping(double x) // invert x non-linearity
-	{
+	public long unapplyXMapping(long lx) {
+		double x = lx/(double)lpMaxY;
 		if(x < m_dXMappingLogLinearBoundary * m_dXMappingLinearScaleFactor)
-			return x / m_dXMappingLinearScaleFactor;
+			x = x / m_dXMappingLinearScaleFactor;
 		else
-			return m_dXMappingLogLinearBoundary - m_dXMappingLogarithmicScaleFactor + m_dXMappingLogarithmicScaleFactor * Math.exp((x / m_dXMappingLinearScaleFactor - m_dXMappingLogLinearBoundary) / m_dXMappingLogarithmicScaleFactor);
-
+			x = m_dXMappingLogLinearBoundary - m_dXMappingLogarithmicScaleFactor + m_dXMappingLogarithmicScaleFactor * Math.exp((x / m_dXMappingLinearScaleFactor - m_dXMappingLogLinearBoundary) / m_dXMappingLogarithmicScaleFactor);
+		return (long)(x * lpMaxY);
 	}
 
 	/**
@@ -1266,15 +1172,14 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param x Value to which the mapping should be applied
 	 * @return Mapped value
 	 */
-	public double applyXMapping(double x) 
-	// x non-linearity
-	{
+	@Override public long applyXMapping(long lx) {
+		double x = lx / (double)lpMaxY;
 		if(x < m_dXMappingLogLinearBoundary)
-			return m_dXMappingLinearScaleFactor * x;
+			x = m_dXMappingLinearScaleFactor * x;
 		else
-			return m_dXMappingLinearScaleFactor * (m_dXMappingLogarithmicScaleFactor * Math.log((x + m_dXMappingLogarithmicScaleFactor - m_dXMappingLogLinearBoundary) / m_dXMappingLogarithmicScaleFactor) + m_dXMappingLogLinearBoundary);
+			x = m_dXMappingLinearScaleFactor * (m_dXMappingLogarithmicScaleFactor * Math.log((x + m_dXMappingLogarithmicScaleFactor - m_dXMappingLogLinearBoundary) / m_dXMappingLogarithmicScaleFactor) + m_dXMappingLogLinearBoundary);
+		return (long)(x * lpMaxY);
 	}
-
 }
 
 

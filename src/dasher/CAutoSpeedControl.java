@@ -280,11 +280,11 @@ public class CAutoSpeedControl extends CDasherComponent {
 	  if(GetBoolParameter(Ebp_parameters.BP_AUTO_SPEEDCONTROL) && !GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
 	    
 //	  Coordinate transforms:    
-	    iDasherX = (long)(View.applyXMapping(iDasherX / (double)(GetLongParameter(Elp_parameters.LP_MAX_Y))) * GetLongParameter(Elp_parameters.LP_MAX_Y));
-	    iDasherY = (long)(View.ymap(iDasherY));
+	    iDasherX = View.applyXMapping(iDasherX);
+	    iDasherY = View.ymap(iDasherY);
 
-	    long iDasherOX = (long)(View.applyXMapping(GetLongParameter(Elp_parameters.LP_OX) / (double)(GetLongParameter(Elp_parameters.LP_MAX_Y))) * GetLongParameter(Elp_parameters.LP_MAX_Y));
-	    long iDasherOY = (long)(View.ymap(GetLongParameter(Elp_parameters.LP_OY)));
+	    long iDasherOX = View.applyXMapping(GetLongParameter(Elp_parameters.LP_OX));
+	    long iDasherOY = View.ymap(GetLongParameter(Elp_parameters.LP_OY));
 
 	    double x = -(iDasherX - iDasherOX) / (double)iDasherOX; //Use normalised coords so min r works 
 	    double y = -(iDasherY - iDasherOY) / (double)iDasherOY; 

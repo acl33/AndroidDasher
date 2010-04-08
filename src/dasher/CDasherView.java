@@ -695,25 +695,22 @@ public abstract class CDasherView extends CDasherComponent {
 	 * Applies any desired co-ordinate nonlinearity in the X direction.
 	 * <p>
 	 * Both input and output are co-ordinates in Dasher space.
-	 * <p>
-	 * Returns 0 in this base class; must be overridden if used.
 	 * 
 	 * @param x raw X co-ordinate
 	 * @return New x co-ordinate
 	 */
-	public double applyXMapping(double x) {return 0.0;};   
+	public abstract long applyXMapping(long x);   
 	
 	/**
 	 * Applies any desired co-ordinate nonlinearity in the Y direction.
 	 * <p>
 	 * Both input and output are co-ordinates in Dasher space.
 	 * <p>
-	 * Returns 0 in this base class; must be overridden if used.
 	 * 
 	 * @param x raw Y co-ordinate
 	 * @return New y co-ordinate
 	 */
-	public double ymap(double x) {return 0.0;}; 
+	public abstract long ymap(long y); 
 	
 	/**
 	 * Returns a rectangle indicating the area in Dasher space
