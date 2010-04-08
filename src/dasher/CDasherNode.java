@@ -42,11 +42,6 @@ import java.util.ListIterator;
 public abstract class CDasherNode {
 
 	//	Information required to display the node
-	/**
-	 * Phase; this is related to colour cycling from one generation
-	 * to the next.
-	 */
-	protected final int m_iPhase;
 	
 	/**
 	 * Colour number if this node is using a colour scheme defined
@@ -94,14 +89,22 @@ public abstract class CDasherNode {
     /**
 	 * This Node's display text
 	 */
-    public String m_strDisplayText;
+    public final String m_strDisplayText;
 
     /**
      * Whether this Node shoves or not (ie. whether the symbols
      * of its children should be displaced to the right so as
-     * not to obscure this one)
+     * not to obscure this one). Default is to return true, as that's
+     * what we want for almost all nodes (exception being control nodes,
+     * which aren't implemented yet anyway!)
      */
-    public boolean m_bShove;
+    public boolean shove() {return true;}
+    
+    /** Whether to draw an outline for this node (assuming the renderer
+     * draws outlines!). Default is true; returning false would merge
+     * the node into it's parent (_if_ it has the same colour!)
+     */
+    public boolean outline() {return true;}
 	
     /**
 	 * Creates a Node and sets its describing variables.
@@ -115,38 +118,22 @@ public abstract class CDasherNode {
 	 * @param lm LanguageModel
 	 * @param Colour Colour number
 	 */
-    public CDasherNode(CDasherNode Parent, int iphase, long ilbnd, long ihbnd, int Colour) {
+    public CDasherNode(CDasherNode Parent, long ilbnd, long ihbnd, int Colour, String strDisplayText) {
 		m_iLbnd = ilbnd;
 		m_iHbnd = ihbnd;
 		// m_bHasAllChildren = false; (default)
 		m_bAlive = true;
 		// m_bSeen = false; (default)
-		m_iPhase = iphase;
 		m_iColour = Colour;
 		m_Parent = Parent;
 		if (Parent!=null) Parent.m_mChildren.add(this);
-		// m_strDisplayText = new String();
-		// WARNING: Whilst I think this is redundant it MAY get used uninitialised.
-		
-		/* CSFS: BUGFIX: There used to be a chance this was used uninitialised.
-		 * Fixed.
-		 */
-		
+		this.m_strDisplayText = strDisplayText;
 	}
 
     /**
 	 * Fills this Node's child list.
 	 */
 	public abstract void PopulateChildren();
-	
-	/**
-	 * Removes all references to this node and deallocates storage
-	 * if appropriate. Essentially we should do whatever is necessary
-	 * to make this Node available for garbage collection.
-	 * 
-	 * @param Node Node to free
-	 */
-	//ACL??? public abstract void ClearNode(CDasherNode Node);
 	
 	/**
 	 * Performs output appropriate to the Node, if any.
@@ -214,16 +201,7 @@ public abstract class CDasherNode {
 	   * are garbage collected.
 	   */
 		
-		// ClearNode and ReleaseContext both do nothing, so I'm experimenting with this method doing nothing.
-		
-      // Release any storage that the node manager has allocated,
-	  // unreference ref counted stuff etc.
-
-	  //m_NodeManager.ClearNode(this);
-
 	  //Delete_children();
-	  //if(m_Context != null)
-	  //  m_LanguageModel.ReleaseContext(m_Context);
 	}
 
 
@@ -362,16 +340,6 @@ public abstract class CDasherNode {
 	 */
 	public void commit() {}
 
-	/**
-	 * Gets this node's colour-cycling phase
-	 * 
-	 * @return Phase
-	 */
-	public int Phase() {
-	    return m_iPhase;
-	}
-	// DJW Sort out the colour scheme / phase confusion
-	  
 	/**
 	 * Gets this Node's colour index
 	 * 
@@ -520,6 +488,14 @@ public abstract class CDasherNode {
 	 */
 	public double GetProb(int iNormalization) {    
 		  return (double) (m_iHbnd - m_iLbnd) / (double) iNormalization;
+	}
+
+	/** "Have to" make colour mutable because of a case in CAlphabetManager.CGroupNode,
+	 * where a group node has to override the colour of a unique child to match the parent.
+	 * @param colour new colour for this node
+	 */
+	/*package*/ void setColour(int colour) {
+		this.m_iColour = colour;
 	}
 
 }

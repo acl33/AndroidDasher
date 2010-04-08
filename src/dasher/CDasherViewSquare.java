@@ -318,7 +318,7 @@ public class CDasherViewSquare extends CDasherView {
 		/* Step 1: Render *this* node */
 		try {
 		
-		mostleft = RenderNode(Render.Colour(), y1, y2, mostleft, Render.m_strDisplayText, Render.m_bShove);
+		mostleft = RenderNode(Render.Colour(), y1, y2, mostleft, Render.m_strDisplayText, Render.shove(), Render.outline());
 			
 		}
 		/* If this node was not drawable, mark it for deletion */
@@ -333,13 +333,6 @@ public class CDasherViewSquare extends CDasherView {
 			vNodeList.add(Render);
 			return;
 		}
-		
-		// Render groups
-		/* Step 2: Render the large grouping boxes to which this node's
-		 * children belong. For example, draw the yellow box for the
-		 * capitals.
-		 */
-		RenderGroups(Render, y1, y2, mostleft);
 		
 		/* Step 3: Draw our child nodes */
 		int norm = lpNormalisation;
@@ -359,80 +352,6 @@ public class CDasherViewSquare extends CDasherView {
 			}
 		}
 	}
-	
-	/* CSFS: Modified to return mostleft. */
-	
-	/**
-	 * Draws a given Node's grouping boxes, into which its Children
-	 * are arranged. The simply calls RecursiveRenderGroups on each top-level
-	 * group in turn, which does the actual drawing.
-	 * 
-	 * @param Render Node whose grouping boxes we wish to draw
-	 * @param y1 Top y co-ordinate of this Node
-	 * @param y2 Bottom y co-ordinate of this Node
-	 * @param mostleft Shoving parameter; indicates how far group labels should be displaced
-	 * to the right in order to avoid overlapping parents' text.
-	 */
-	public void RenderGroups(CDasherNode Render, long y1, long y2, int mostleft) {
-		
-		// This method takes mostleft by VALUE.
-		//ACL TODO HACK we need group info here, so this'll only have ever worked for alph nodes...
-		SGroupInfo CurrentGroup = ((CAlphabetManager.CAlphNode)Render).m_BaseGroup;
-		
-		while(CurrentGroup != null) {
-			RecursiveRenderGroups(CurrentGroup, Render, y1, y2, mostleft);
-			CurrentGroup = CurrentGroup.Next;
-		}
-	}
-	
-	/**
-	 * Renders a given Group and all of its child groups by recursion.
-	 * <p>
-	 * RenderNode is used to do the actual work of drawing the group
-	 * boxes, and their sizes are determined by consulting the
-	 * child list which this group delimits. 
-	 * 
-	 * @param CurrentGroup Group at which to start drawing
-	 * @param Node Node of which this group is a child
-	 * @param y1 Top Dasher co-ordinate of this group
-	 * @param y2 Bottom Dasher co-ordinate of this group
-	 * @param mostleft Shoving parameter; indicates how far group labels should be displaced
-	 * to the right in order to avoid overlapping parents' text.
-	 */	
-	public void RecursiveRenderGroups(SGroupInfo CurrentGroup, CDasherNode Node, long y1, long y2, int mostleft) {
-		
-		// This method takes mostleft by VALUE.
-		
-		if(CurrentGroup.bVisible) {
-			long range = y2 - y1;
-			
-			int lower = (CurrentGroup.iStart);
-			int upper = (CurrentGroup.iEnd);
-			
-			long lbnd = Node.Children().get(lower).Lbnd();
-			long hbnd = Node.Children().get(upper - 1).Hbnd();
-			
-			long newy1 = y1 + (range * lbnd) / lpNormalisation;
-			long newy2 = y1 + (range * hbnd) / lpNormalisation;
-			try {
-				mostleft = RenderNode(CurrentGroup.iColour, newy1, newy2, mostleft, CurrentGroup.strLabel, true);
-			}
-			catch(NodeCannotBeDrawnException e) {
-				// Do nothing
-			}
-			
-		}
-		
-		// Iterate through child groups
-		SGroupInfo CurrentChild = (CurrentGroup.Child);
-		
-		while(CurrentChild != null) {
-			RecursiveRenderGroups(CurrentChild, Node, y1, y2, mostleft);
-			CurrentChild = CurrentChild.Next;
-		}
-	}
-	
-	
 	
 	/**
 	 * Determines whether a given Node can be drawn, and if so, draws it.
@@ -467,7 +386,7 @@ public class CDasherViewSquare extends CDasherView {
 	 * do not) 
 	 * @throws NodeCannotBeDrawnException if this Node cannot be drawn!
 	 */
-	public int RenderNode(int Color, long y1, long y2, int mostleft, String sDisplayText, boolean bShove) throws NodeCannotBeDrawnException {
+	public int RenderNode(int Color, long y1, long y2, int mostleft, String sDisplayText, boolean bShove, boolean bOutline) throws NodeCannotBeDrawnException {
 		
 		/*
 		 * IMPORTANT: This method takes mostleft by REFERENCE in the original
@@ -500,7 +419,7 @@ public class CDasherViewSquare extends CDasherView {
 		// FIXME - get rid of pointless assignment below
 		
 		if(lpTruncation == 0) {        // Regular squares
-			DasherDrawRectangle(Math.min(iDasherSize,visreg.maxX), Math.min(y2,visreg.maxY), 0, Math.max(y1,visreg.minY), Color, -1, GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) ? 1 : 0);
+			DasherDrawRectangle(Math.min(iDasherSize,visreg.maxX), Math.min(y2,visreg.maxY), 0, Math.max(y1,visreg.minY), Color, -1, bOutline ? 1 : 0);
 		}
 		else {
 			DasherTruncRect(y1, y2, iSize, Color);

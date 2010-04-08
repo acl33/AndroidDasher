@@ -43,8 +43,8 @@ import java.util.ListIterator;
  */
 
 public class CAlphabetManager<C> {
-
-	/**
+	
+		/**
 	 * Pointer to the LanguageModel used in determining the
 	 * relative probability assigned to new Nodes. 
 	 */
@@ -67,6 +67,26 @@ public class CAlphabetManager<C> {
     protected final CAlphabet m_Alphabet;
     
     protected final ArrayList<Integer> m_Colours;
+    private int getColour(int sym, int phase) {
+    	int iColour = m_Colours.get(sym);
+    	//ACL if sym==0, use colour 7???
+		// This is provided for backwards compatibility. 
+		// Colours should always be provided by the alphabet file
+		if(iColour == -1) {
+			if(sym == SPSymbol) {
+				iColour = 9;
+			} else if(sym == ContSymbol) {
+				iColour = 8;
+			} else if (sym==0){ 
+				iColour = 7;
+			} else {
+				iColour = (sym % 3) + 10;
+			}
+		}
+
+    	if (iColour<130 && (phase%2)==1) iColour+=130;
+    	return iColour;
+    }
     protected final ArrayList<String> m_DisplayText;
     // Both undocumented (caches)
         
@@ -102,67 +122,114 @@ public class CAlphabetManager<C> {
     /**
      * Creates a new root CDasherNode with the supplied parameters.
      */
-    public CDasherNode GetRoot(CDasherNode Parent, long iLower, long iUpper, boolean useLastSym, String string) {
-    	  int iSymbol = 0, iColour = 7; //default if we can't get anything else...
+    public CAlphNode GetRoot(CDasherNode Parent, long iLower, long iUpper, boolean useLastSym, String string) {
+    	  int iSymbol = 0;
     	  if (useLastSym) {
     		  List<Integer> syms = new ArrayList<Integer>();
     		  m_Alphabet.GetSymbols(syms,string);
     		  if (syms.size()>0) {
     			  iSymbol = syms.get(syms.size()-1);
-    			  iColour = m_Colours.get(iSymbol);
     		  }
     	  }
     	  
     	  C ctx = m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), string);
     	  
-    	  CAlphNode NewNode = new CAlphNode(Parent, iSymbol, 0,
-    			  	  iLower, iUpper, iColour, ctx);
+    	  CAlphNode NewNode = (iSymbol==0) ? new CGroupNode(Parent, null, 0, iLower, iUpper, ctx) : new CSymbolNode(Parent, iSymbol, 0, iLower, iUpper, ctx);
     	  
-    	  NewNode.m_bShove = true;
-    	  NewNode.m_BaseGroup = m_Alphabet.m_BaseGroup;
-    	  NewNode.m_strDisplayText = m_DisplayText.get(iSymbol);
     	  NewNode.Seen(true);
 
     	  return NewNode;
     }
-    //ACL TODO had to make this package-visible as a hack to extract SGroupInfo...
-    class CAlphNode extends CDasherNode {
+    
+    abstract class CAlphNode extends CDasherNode {
     	
-    	private final CAlphabetManager<C> mgr() {return CAlphabetManager.this;}
-    	
-    	private boolean bCommitted;
+    	protected final CAlphabetManager<C> mgr() {return CAlphabetManager.this;}
+    	/*package*/ final int m_iPhase;
+    	protected boolean bCommitted;
+    	private long[] probInfo;
     	
     	/**
     	 * Language model context corresponding to this node's
     	 * position in the tree.
     	 */
-    	protected final C m_Context;
+    	private final C context;
     	
+        /*package*/ CAlphNode(CDasherNode Parent, int iphase,
+				long ilbnd, long ihbnd, int Colour, C context,
+				String label) {
+			super(Parent, ilbnd, ihbnd, Colour, label);
+			this.context = context;
+			this.m_iPhase = iphase;
+		}
+
+        protected long[] GetProbInfo() {
+        	if (probInfo == null) {
+	        	probInfo = m_LanguageModel.GetProbs(context, m_Model.getNonUniformNorm());
+	        	m_Model.adjustProbs(probInfo);
+	        	for (int i=1; i<probInfo.length; i++)
+	        		probInfo[i]+=probInfo[i-1];
+        	}
+        	return probInfo;
+        }
+     	
+        /**
+		 * Reconstructs the parent of a given node, in the case that
+		 * it had been deleted but the user has now backed off far
+		 * enough that we need to restore.
+		 * <p>
+		 * In the event that context is not available, the root symbol is created and returned.
+		 * 
+		 * @param charsBefore the context - i.e. characters preceding this node
+		 * @return The newly created parent, which may be the root node.
+		 */
+		public CDasherNode RebuildParent(ListIterator<Character> charsBefore) {
+			if (Parent()==null) {
+			
+				/* This used to clear m_Model.strContextBuffer. Removed as per notes
+				 * at the top of CDasherInterfaceBase.
+				 */
+				
+				/* This reconstitutes the parent of the current root in the case
+				 * that we've backed off far enough to need to do so.
+				 */
+				
+				StringBuilder ctx = new StringBuilder();
+				while (charsBefore.hasPrevious() && ctx.length()<5) //ACL TODO, don't fix on 5 chars!
+					ctx.append(charsBefore.previous());
+				String strContext = ctx.reverse().toString();
+				
+				CAlphNode newNode = GetRoot(null, 0, 0, strContext.length()>0, strContext);
+				newNode.Seen(true);
+				
+				IterateChildGroups(newNode, null, this);
+			}
+			return Parent();
+		}
+    
+		protected abstract CGroupNode rebuildGroup(CAlphNode parent, SGroupInfo group, long iLbnd, long iHbnd);
+
+		protected abstract CDasherNode rebuildSymbol(CAlphNode parent, int sym, long iLbnd, long iHbnd);
+
+    }
+    
+    protected class CSymbolNode extends CAlphNode {
+    	CSymbolNode(CDasherNode Parent, int symbol,
+				int iphase, long ilbnd, long ihbnd, C context) {
+			super(Parent, iphase, ilbnd, ihbnd, getColour(symbol, iphase), context, m_DisplayText.get(symbol));
+			this.m_Symbol = symbol;
+		}
+
+    	@Override
+    	public void PopulateChildren() {
+    		IterateChildGroups(this, null, null);
+    	}
+		
     	/**
     	 * Symbol number represented by this node
     	 */
     	protected final int m_Symbol;	// the character to display
-    	
+    
     	/**
-    	 * Root of the tree of groups into which this Node's
-    	 * children are arranged.
-    	 */
-    	public SGroupInfo m_BaseGroup;
-    	
-        public CAlphNode(CDasherNode Parent, int Symbol, int iphase,
-				long ilbnd, long ihbnd,
-				int Colour, C context) {
-			super(Parent, iphase, ilbnd, ihbnd, Colour);
-			this.m_Symbol = Symbol; 
-			this.m_Context = context;
-			// TODO Auto-generated constructor stub
-		}
-
-		public void PopulateChildren( ) {
-        	PopulateChildrenWithSymbol( this, -2, null );
-        }
-        
-        /**
          * Generates an EditEvent announcing a new character has been
          * entered, inferring the character from the Node supplied.
          * <p>
@@ -207,84 +274,8 @@ public class CAlphabetManager<C> {
         		bCommitted = false;
         	}
         }
-
-		/**
-		 * Reconstructs the parent of a given node, in the case that
-		 * it had been deleted but the user has now backed off far
-		 * enough that we need to restore.
-		 * <p>
-		 * This will generate an EditContextEvent to try to extend
-		 * its knowledge of the current context; this is necessary
-		 * because Dasher only buffers a small amount of context
-		 * internally. Typically a UI component is expected to reply
-		 * with the appropriate context.
-		 * <p>
-		 * In the event that context is not available internally
-		 * and the dispatched EditContextEvent is not passed a new
-		 * context, the root symbol is created and returned.
-		 * 
-		 * @param iGeneration The depth in the tree of this node.
-		 * @param charsBefore TODO
-		 * @return The newly created parent, which may be the root node.
-		 */
-		public CDasherNode RebuildParent(ListIterator<Character> charsBefore) {
-			
-			/* This used to clear m_Model.strContextBuffer. Removed as per notes
-			 * at the top of CDasherInterfaceBase.
-			 */
-			
-			/* This reconstitutes the parent of the current root in the case
-			 * that we've backed off far enough to need to do so.
-			 */
-			
-			StringBuilder ctx = new StringBuilder();
-			while (charsBefore.hasPrevious() && ctx.length()<5) //ACL TODO, don't fix on 5 chars!
-				ctx.append(charsBefore.previous());
-			String strContext = ctx.reverse().toString();
-			
-			ArrayList<Integer> vSymbols = new ArrayList<Integer>();
-			m_LanguageModel.getAlphabet().GetSymbols(vSymbols, strContext);
-			
-			CAlphNode NewNode;
-			
-			if(vSymbols.isEmpty()) {
-				
-				/* In the case that there isn't enough context to rebuild the tree,
-				 * we magically reappear at the root node.
-				 */
-				C context = m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), ". ");
-				
-				NewNode = new CAlphNode(null, 0, 0, 0, 0, 7, context);
-			}
-			else {
-				int NodeColour = m_Colours.get(vSymbols.get(vSymbols.size() - 2));
-				
-				if(m_iPhase==0) // => parent iPhase=1
-					NodeColour += 130;
-				
-				C oContext = m_LanguageModel.EmptyContext();
-				
-				for(int i = (0); i < vSymbols.size() - 1; ++i)
-					oContext = m_LanguageModel.ContextWithSymbol(oContext, vSymbols.get(i));
-				
-				NewNode = new CAlphNode(null, vSymbols.get(vSymbols.size() - 2), (m_iPhase+1)%2, 0, 0, NodeColour, oContext);
-			}
-			
-			NewNode.m_bShove = true;
-			NewNode.Seen(true);
-			NewNode.m_BaseGroup = m_Alphabet.m_BaseGroup;
-			
-			PopulateChildrenWithSymbol( NewNode, m_Symbol, this );
-			if(m_Model.GetBoolParameter(Ebp_parameters.BP_LM_REMOTE)) {
-				WaitForChildren(NewNode);
-			}
-			
-			SetParent(NewNode);
-			
-			return NewNode;
-		}
         
-		@Override
+        @Override
 		public void commit() {
 			if (bCommitted) return;
 			bCommitted=true;
@@ -298,36 +289,104 @@ public class CAlphabetManager<C> {
 					CAlphabetManager<?>.CAlphNode other = (CAlphabetManager<?>.CAlphNode)Parent();
 					//however, we _can_ check that it's from the same AlphMgr, in which case we know we're safe...
 					if (other.mgr() == mgr()) {
-						C otherContext = (C)other.m_Context; //yes, warning of unsafe cast - safe because of above
+						C otherContext = (C)other.context; //yes, warning of unsafe cast - safe because of above
 						m_LanguageModel.ContextLearningSymbol(otherContext, m_Symbol);
 					}
 				}
 				//else - do we do anything? should mean root nodes ok...
 			}
-			//ACL ...and using that (mutable!) context makes no sense if we ever reverse & rewrite!
 		}
-    }
-        
-    /**
-     * Populates the children of a given Node. This function
-     * calls CLanguageModel.getProbs on the Context associated
-     * with this Node; its function is identical to the four-arg
-     * version of the function called upon the same probabilities.
-     * 
-     * @param Node Node whose children we wish to populate.
-     * @param iExistingSymbol Symbol of child node which already exists, if any; -2 if none.
-     * @param ExistingChild Reference to the pre-existing child, if one exists.  
-     */
 
-    public void PopulateChildrenWithSymbol(CAlphNode Node, int iExistingSymbol, CDasherNode ExistingChild) {
-    	long[] cum = m_LanguageModel.GetProbs(Node.m_Context, m_Model.getNonUniformNorm());
-    	m_Model.adjustProbs(cum);
-    	
-    	PopulateChildrenWithSymbol(Node, iExistingSymbol, ExistingChild, cum);
+		public CGroupNode rebuildGroup(CAlphNode parent, SGroupInfo group, long iLbnd, long iHbnd) {
+			CGroupNode ret = CAlphabetManager.this.mkGroup(parent, group, iLbnd, iHbnd);
+			if (group.iStart <= m_Symbol && group.iEnd > m_Symbol) {
+				//created group node should contain this symbol
+				IterateChildGroups(ret, group, this);
+			}
+			return ret;
+		}
+
+		public CDasherNode rebuildSymbol(CAlphNode parent, int sym, long iLbnd, long iHbnd) {
+			if (sym==m_Symbol) {
+				SetRange(iLbnd, iHbnd);
+				SetParent(parent);
+				return this;
+			}
+			return CAlphabetManager.this.mkSymbol(parent, sym, iLbnd, iHbnd);
+		}
+
     }
     
+    protected class CGroupNode extends CAlphNode {
+    	CGroupNode(CDasherNode Parent, SGroupInfo group,
+				int iphase, long ilbnd, long ihbnd, C context) {
+			super(Parent, iphase, ilbnd, ihbnd, group==null ? 7 : group.bVisible ? group.iColour : Parent==null ? 7 : Parent.m_iColour, context, (group==null || !group.bVisible) ? "" : group.strLabel);
+			this.m_Group = group;
+		}
+
+    	@Override
+    	public boolean outline() {
+    		return (m_Group==null || m_Group.bVisible);
+    	}
+    	
+    	@Override
+    	public void PopulateChildren() {
+    		IterateChildGroups(this, m_Group, null);
+    		if (ChildCount()==1) {
+    			//avoid colours blinking as the child entirely covers over this...
+    			CDasherNode child = Children().get(0);
+    			assert (child.Lbnd() == 0 && child.Hbnd() == m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION));
+    			child.setColour(Colour());
+    		}
+    	}
+    	
+    	@Override
+    	public CDasherNode RebuildParent(ListIterator<Character> charsBefore) {
+    		//a "root node" which did not insert a symbol, has/had no parent
+    		// (an alph node with no preceding characters should - namely, a root!)
+    		if (m_Group==null && !charsBefore.hasPrevious()) return null;
+    		return super.RebuildParent(charsBefore);
+    	}
+    	
+    	@Override
+    	protected long[] GetProbInfo() {
+    		if (m_Group!=null && (Parent() instanceof CAlphabetManager<?>.CAlphNode)) {
+    			CAlphabetManager<?>.CAlphNode p = (CAlphabetManager<?>.CAlphNode)Parent();
+    			assert p.mgr() == mgr();
+    			return p.GetProbInfo();
+    		}
+    		return super.GetProbInfo();
+    	}
+
+    	protected final SGroupInfo m_Group;
+
+		@Override
+		public void Output(ArrayList<CSymbolProb> Added, int iNormalization) {
+			// Do nothing.
+		}
+
+		public CGroupNode rebuildGroup(CAlphNode parent, SGroupInfo group, long iLbnd, long iHbnd) {
+			if (group==this.m_Group) {
+				SetRange(iLbnd, iHbnd);
+				SetParent(parent);
+				return this;
+			}
+			CGroupNode ret=CAlphabetManager.this.mkGroup(parent, group, iLbnd, iHbnd);
+			if (group.iStart <= m_Group.iStart && group.iEnd >= m_Group.iEnd) {
+			    //created group node should contain this one
+			    IterateChildGroups(ret,group,this);
+			  }
+			return ret;
+		}
+
+		public CDasherNode rebuildSymbol(CAlphNode parent, int sym, long iLbnd, long iHbnd) {
+			return CAlphabetManager.this.mkSymbol(parent, sym, iLbnd, iHbnd);
+		}
+    	
+    }
+
     /**
-     * Creates the children of a given Node given a set of probabilities
+     * Creates the children of a given Node, from which probabilities are extracted.
      * associated with said children and, perhaps, one child which already exists.
      * <p>
      * The probabilties supplied should not be cumulative, but should be normalised
@@ -339,99 +398,77 @@ public class CAlphabetManager<C> {
      * @param cum Probabilities to be associated with the children,
      *            supplied in alphabet symbol order.
      */    
-    public void PopulateChildrenWithSymbol( CAlphNode Node, int iExistingSymbol, CDasherNode ExistingChild, long[] cum) {
+    public void IterateChildGroups( CAlphNode Node, SGroupInfo parentGroup, CAlphNode buildAround) {
     	
-    	// CSFS: In the name of efficiency have removed ArrayLists from all of this.
-    	// It now uses a raw array and runs much faster.
+    	long[] probInfo = Node.GetProbInfo();
+    	assert (probInfo.length == m_Alphabet.GetNumberSymbols());
     	
-    	// Actually create the children here
-    	
-    	// FIXME: this has to change for history stuff and Japanese dasher
-    	//ArrayList<Integer> newchars = new ArrayList<Integer>(); // place to put this list of characters
-    	    	
-    	// CSFS: At the moment, newchars(j) = j as that's all the model puts in there.
-    	// To save time I've put this in for now.
-    	
-    	int iChildCount = m_Alphabet.GetNumberSymbols();    //newchars.size();
-    	
-//  	DASHER_TRACEOUTPUT("ChildCount %d\n", iChildCount);
-    	// work out cumulative probs in place
-    	for(int i = 1; i < iChildCount; i++)
-    		cum[i] += cum[i-1];
-    	
-    	// create the children
-    	long iLbnd = 0;
-    	
-    	for(int j = 0; j < iChildCount; j++) {
-    		CDasherNode NewNode;
-    		
-    		if(j == ContSymbol)
-    			NewNode = m_Model.GetCtrlRoot(Node, iLbnd, cum[j]);
-    		else if(j == ConvertSymbol) {
-    					NewNode = m_Model.GetConvRoot(Node, iLbnd, cum[j], 0);
-    					NewNode.Seen(false);
-    		}
-    		else if( j == iExistingSymbol) {
-    				NewNode = ExistingChild;
-    				NewNode.SetRange(iLbnd, cum[j]);
-    		}
-    		else {
-    			int iColour = (m_Colours.get(j));
-    			// This is provided for backwards compatibility. 
-    			// Colours should always be provided by the alphabet file
-    			if(iColour == -1) {
-    				if(j == SPSymbol) {
-    					iColour = 9;
-    				}
-    				else if(j == ContSymbol) {
-    					iColour = 8;
-    				}
-    				else {
-    					iColour = (j % 3) + 10;
-    				}
-    			}
+    	final int iMin,iMax;
+    	if (parentGroup!=null) {iMin = parentGroup.iStart; iMax = parentGroup.iEnd;}
+    	else {iMin = 1; iMax = probInfo.length;}
+    	  
+    	  // Create child nodes and add them
+    	  
+    	  int i=iMin; //lowest index of child which we haven't yet added
+    	  SGroupInfo group = (parentGroup==null) ? m_Alphabet.m_BaseGroup : parentGroup.Child;
+    	  // The SGroupInfo structure has something like linked list behaviour
+    	  // Each SGroupInfo contains a pNext, a pointer to a sibling group info
+    	  while (i < iMax) {
+    	    CDasherNode pNewChild;
+    	    boolean bSymbol = group==null //gone past last subgroup
+    	                  || i < group.iStart; //not reached next subgroup
+    	    final int iStart=i, iEnd = (bSymbol) ? i+1 : group.iEnd;
 
-    			// Loop colours if necessary for the colour scheme
-    			if((Node.m_iPhase % 2) == 0 && iColour < 130) {    // We don't loop on high
-    				iColour += 130;
-    			}
+    	    long iLbnd = ((probInfo[iStart-1] - probInfo[iMin-1]) *
+    	                          (m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION))) /
+    	                         (probInfo[iMax-1] - probInfo[iMin-1]);
+    	    long iHbnd = ((probInfo[iEnd-1] - probInfo[iMin-1]) *
+    	                          (m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION))) /
+    	                         (probInfo[iMax-1] - probInfo[iMin-1]);
+    	    
+    	    if (bSymbol) {
+    	      pNewChild = (buildAround==null) ? mkSymbol(Node, i, iLbnd, iHbnd) : buildAround.rebuildSymbol(Node, i, iLbnd, iHbnd);
+    	      i++; //make one symbol at a time - move onto next in next iteration
+    	    } else { //in/reached subgroup - do entire group in one go:
+    	      pNewChild= (buildAround==null) ? mkGroup(Node, group, iLbnd, iHbnd) : buildAround.rebuildGroup(Node, group, iLbnd, iHbnd);
+    	      i = group.iEnd; //make one group at a time - so move past entire group...
+    	      group = group.Next;
+    	    }
+    	    assert Node.Children().get(Node.ChildCount()-1)==pNewChild;
+    	  }
 
-    			//ACL make the new node's context ( - this used to be done only in PushNode(),
-    			// before calling populate...)
-    			C cont;
-    			if (j < m_Alphabet.GetNumberTextSymbols() && j > 0) {
-					// Normal symbol - derive context from parent
-					cont = m_LanguageModel.ContextWithSymbol(Node.m_Context,j);
-				} else {
-					// For new "root" nodes (such as under control mode), we want to 
-					// mimic the root context
-					cont = m_LanguageModel.EmptyContext();
-					//      EnterText(cont, "");
-				}
-    			CAlphNode n = new CAlphNode(Node, j, (Node.m_iPhase+1)%2, iLbnd, cum[j], iColour, cont);
-    			n.m_bShove = true;
-    			n.m_BaseGroup = m_Alphabet.m_BaseGroup;
-    			NewNode = n;
-    		}
-
-    		NewNode.m_strDisplayText = m_DisplayText.get(j);
-    		iLbnd = cum[j];
-    	}
+    	  Node.SetHasAllChildren(true);
     }
+    
+    CDasherNode mkSymbol(CAlphNode parent, int sym, long iLbnd, long iHbnd) {
+    	CDasherNode NewNode;
+    	if(sym == ContSymbol)
+			NewNode = m_Model.GetCtrlRoot(parent, iLbnd, iHbnd);
+		else if(sym == ConvertSymbol) {
+			NewNode = m_Model.GetConvRoot(parent, iLbnd, iHbnd, 0);
+			NewNode.Seen(false);
+		}
+		else {
+			//ACL make the new node's context ( - this used to be done only in PushNode(),
+			// before calling populate...)
+			C cont;
+			if (sym < m_Alphabet.GetNumberTextSymbols() && sym > 0) {
+				// Normal symbol - derive context from parent
+				cont = m_LanguageModel.ContextWithSymbol(parent.context,sym);
+			} else {
+				// For new "root" nodes (such as under control mode), we want to 
+				// mimic the root context
+				cont = m_LanguageModel.EmptyContext();
+				//      EnterText(cont, "");
+			}
+			NewNode = new CSymbolNode(parent, sym, (parent.m_iPhase+1)%2, iLbnd, iHbnd, cont);
+		}
 
-    /**
-     * Stub; to be used if in future there is work to be done
-     * upon deleting a node.
-     * <p>
-     * Note that this method should NOT actually destroy
-     * the node, but should remove the Manager's references
-     * to it, if any exist.
-     * 
-     * @param Node Node to be deleted
-     */
-    public void ClearNode( CDasherNode Node ) {
-    	// Should this be responsible for actually doing the deletion
-
+		return NewNode;
+    }
+    
+    CGroupNode mkGroup(CAlphNode parent, SGroupInfo group, long iLbnd, long iHbnd) {
+    	return new CGroupNode(parent, group, parent.m_iPhase, iLbnd, iHbnd, parent.context);
     }
 
     /**

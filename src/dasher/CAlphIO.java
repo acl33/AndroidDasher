@@ -557,6 +557,7 @@ public class CAlphIO implements XMLFileParser {
 				String tagName = (simpleName.equals("") ? qualName : simpleName);
 				
 				if(tagName == "alphabet") {
+					currentAlph.m_BaseGroup = Reverse(currentAlph.m_BaseGroup);
 					Alphabets.put(currentAlph.AlphID, currentAlph);
 				}
 				
@@ -745,6 +746,17 @@ public class CAlphIO implements XMLFileParser {
 		}
 		
 		Alphabets.put("Default", Default);
+	}
+	
+	private static SGroupInfo Reverse(SGroupInfo s) {
+		SGroupInfo prev=null;
+		while (s!=null) {
+			SGroupInfo next = s.Next;
+			s.Next=prev;
+			prev = s;
+			s=next;
+		}
+		return prev;
 	}
 	
 }
