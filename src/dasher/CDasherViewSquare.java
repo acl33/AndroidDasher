@@ -503,108 +503,7 @@ public class CDasherViewSquare extends CDasherView {
 			DasherDrawRectangle(Math.min(iDasherSize,visreg.maxX), Math.min(y2,visreg.maxY), 0, Math.max(y1,visreg.minY), Color, -1, ColorScheme, GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) ? 1 : 0);
 		}
 		else {
-			int iDasherY = (int)lpMaxY;
-			
-			int iSpacing = iDasherY / 128;       // FIXME - assuming that this is an integer below
-			
-			int iXStart = 0;
-			
-			switch (lpTruncationType) {
-			case 1:
-				iXStart = (int)(iSize - iSize * lpTruncation / 200);
-				break;
-			case 2:
-				iXStart = (int)(iSize - iSize * lpTruncation / 100);
-				break;
-			}
-			
-			int iTipMin = (int)((y2 - y1) * lpTruncation / (200) + y1);
-			int iTipMax = (int)(y2 - (y2 - y1) * lpTruncation / (200));
-			
-			int iLowerMin = (int)(((y1 + 1) / iSpacing) * iSpacing);
-			int iLowerMax = (((iTipMin - 1) / iSpacing) * iSpacing);
-			
-			int iUpperMin = (((iTipMax + 1) / iSpacing) * iSpacing);
-			int iUpperMax = (int)(((y2 - 1) / iSpacing) * iSpacing);
-			
-			if(iLowerMin < 0)
-				iLowerMin = 0;
-			
-			if(iLowerMax < 0)
-				iLowerMax = 0;
-			
-			if(iUpperMin < 0)
-				iUpperMin = 0;
-			
-			if(iUpperMax < 0)
-				iUpperMax = 0;
-			
-			if(iLowerMin > iDasherY)
-				iLowerMin = iDasherY;
-			
-			if(iLowerMax > iDasherY)
-				iLowerMax = iDasherY;
-			
-			if(iUpperMin > iDasherY)
-				iUpperMin = iDasherY;
-			
-			if(iUpperMax > iDasherY)
-				iUpperMax = iDasherY;
-			
-			while(iLowerMin < y1)
-				iLowerMin += iSpacing;
-			
-			while(iLowerMax > iTipMin)
-				iLowerMax -= iSpacing;
-			
-			while(iUpperMin < iTipMax)
-				iUpperMin += iSpacing;
-			
-			while(iUpperMax > y2)
-				iUpperMax -= iSpacing;
-			
-			int iLowerCount = ((iLowerMax - iLowerMin) / iSpacing + 1);
-			int iUpperCount = ((iUpperMax - iUpperMin) / iSpacing + 1);
-			
-			if(iLowerCount < 0)
-				iLowerCount = 0;
-			
-			if(iUpperCount < 0)
-				iUpperCount = 0;
-			
-			int iTotalCount = (int)(iLowerCount + iUpperCount + 6);
-			
-			long[] x = new long[iTotalCount];
-			long[] y = new long[iTotalCount];
-			
-			// Weird duplication here is to make truncated squares possible too
-			
-			x[0] = 0;
-			y[0] = y1;
-			x[1] = iXStart;
-			y[1] = y1;
-			
-			x[iLowerCount + 2] = iDasherSize;
-			y[iLowerCount + 2] = iTipMin;
-			x[iLowerCount + 3] = iDasherSize;
-			y[iLowerCount + 3] = iTipMax;
-			
-			x[iTotalCount - 2] = iXStart;
-			y[iTotalCount - 2] = y2;
-			x[iTotalCount - 1] = 0;
-			y[iTotalCount - 1] = y2;
-			
-			for(int i = (0); i < iLowerCount; ++i) {
-				x[i + 2] = (iLowerMin + i * iSpacing - y1) * (iDasherSize - iXStart) / (iTipMin - y1) + iXStart;
-				y[i + 2] = iLowerMin + i * iSpacing;
-			}
-			
-			for(int j = (0); j < iUpperCount; ++j) {
-				x[j + iLowerCount + 4] = (y2 - (iUpperMin + j * iSpacing)) * (iDasherSize - iXStart) / (y2 - iTipMax) + iXStart;
-				y[j + iLowerCount + 4] = iUpperMin + j * iSpacing;
-			}
-			
-			DasherPolygon(x, y, iTotalCount, Color);
+			DasherTruncRect(y1, y2, iSize, Color);
 			
 		}
 		
@@ -618,6 +517,110 @@ public class CDasherViewSquare extends CDasherView {
 		{ return mostleft; }
 	}
 
+	private void DasherTruncRect(long y1, long y2, long iSize, int Color) {
+		int iDasherY = (int)lpMaxY;
+		long iDasherSize = y2-y1;
+		int iSpacing = iDasherY / 128;       // FIXME - assuming that this is an integer below
+		
+		int iXStart = 0;
+		
+		switch (lpTruncationType) {
+		case 1:
+			iXStart = (int)(iSize - iSize * lpTruncation / 200);
+			break;
+		case 2:
+			iXStart = (int)(iSize - iSize * lpTruncation / 100);
+			break;
+		}
+		
+		int iTipMin = (int)((y2 - y1) * lpTruncation / (200) + y1);
+		int iTipMax = (int)(y2 - (y2 - y1) * lpTruncation / (200));
+		
+		int iLowerMin = (int)(((y1 + 1) / iSpacing) * iSpacing);
+		int iLowerMax = (((iTipMin - 1) / iSpacing) * iSpacing);
+		
+		int iUpperMin = (((iTipMax + 1) / iSpacing) * iSpacing);
+		int iUpperMax = (int)(((y2 - 1) / iSpacing) * iSpacing);
+		
+		if(iLowerMin < 0)
+			iLowerMin = 0;
+		
+		if(iLowerMax < 0)
+			iLowerMax = 0;
+		
+		if(iUpperMin < 0)
+			iUpperMin = 0;
+		
+		if(iUpperMax < 0)
+			iUpperMax = 0;
+		
+		if(iLowerMin > iDasherY)
+			iLowerMin = iDasherY;
+		
+		if(iLowerMax > iDasherY)
+			iLowerMax = iDasherY;
+		
+		if(iUpperMin > iDasherY)
+			iUpperMin = iDasherY;
+		
+		if(iUpperMax > iDasherY)
+			iUpperMax = iDasherY;
+		
+		while(iLowerMin < y1)
+			iLowerMin += iSpacing;
+		
+		while(iLowerMax > iTipMin)
+			iLowerMax -= iSpacing;
+		
+		while(iUpperMin < iTipMax)
+			iUpperMin += iSpacing;
+		
+		while(iUpperMax > y2)
+			iUpperMax -= iSpacing;
+		
+		int iLowerCount = ((iLowerMax - iLowerMin) / iSpacing + 1);
+		int iUpperCount = ((iUpperMax - iUpperMin) / iSpacing + 1);
+		
+		if(iLowerCount < 0)
+			iLowerCount = 0;
+		
+		if(iUpperCount < 0)
+			iUpperCount = 0;
+		
+		int iTotalCount = (int)(iLowerCount + iUpperCount + 6);
+		
+		long[] x = new long[iTotalCount];
+		long[] y = new long[iTotalCount];
+		
+		// Weird duplication here is to make truncated squares possible too
+		
+		x[0] = 0;
+		y[0] = y1;
+		x[1] = iXStart;
+		y[1] = y1;
+		
+		x[iLowerCount + 2] = iDasherSize;
+		y[iLowerCount + 2] = iTipMin;
+		x[iLowerCount + 3] = iDasherSize;
+		y[iLowerCount + 3] = iTipMax;
+		
+		x[iTotalCount - 2] = iXStart;
+		y[iTotalCount - 2] = y2;
+		x[iTotalCount - 1] = 0;
+		y[iTotalCount - 1] = y2;
+		
+		for(int i = (0); i < iLowerCount; ++i) {
+			x[i + 2] = (iLowerMin + i * iSpacing - y1) * (iDasherSize - iXStart) / (iTipMin - y1) + iXStart;
+			y[i + 2] = iLowerMin + i * iSpacing;
+		}
+		
+		for(int j = (0); j < iUpperCount; ++j) {
+			x[j + iLowerCount + 4] = (y2 - (iUpperMin + j * iSpacing)) * (iDasherSize - iXStart) / (y2 - iTipMax) + iXStart;
+			y[j + iLowerCount + 4] = iUpperMin + j * iSpacing;
+		}
+		
+		DasherPolygon(x, y, iTotalCount, Color);
+	}
 	
 	/**
 	 * Determines whether a node falls within our current visible
