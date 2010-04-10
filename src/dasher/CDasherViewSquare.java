@@ -267,12 +267,7 @@ public class CDasherViewSquare extends CDasherView {
 		
 		CDasherView.DRect visreg = VisibleRegion();
 		
-		try  {
-			RecursiveRender(Root, iRootMin, iRootMax, (int)visreg.maxX, vNodeList, vDeleteList);
-		}
-		catch(NodeCannotBeDrawnException e) {
-			// Do nothing
-		}
+		RecursiveRender(Root, iRootMin, iRootMax, (int)visreg.maxX, vNodeList, vDeleteList);
 		
 		// DelayDraw the text nodes
 		m_DelayDraw.Draw(Screen());
@@ -311,89 +306,12 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param vNodeList Collection to fill with drawn, childless Nodes
 	 * @param vDeleteList Collection to fill with undrawable Nodes
 	 */
-	public void RecursiveRender(CDasherNode Render, long y1, long y2, int mostleft, Collection<CDasherNode> vNodeList, Collection<CDasherNode> vDeleteList) throws NodeCannotBeDrawnException {
+	public void RecursiveRender(CDasherNode Render, long y1, long y2, int mostleft, Collection<CDasherNode> vNodeList, Collection<CDasherNode> vDeleteList) {
 		
 		// This method takes mostleft by VALUE.
 		
 		/* Step 1: Render *this* node */
-		try {
-		
-		mostleft = RenderNode(Render.Colour(), y1, y2, mostleft, Render.m_strDisplayText, Render.shove(), Render.outline());
-			
-		}
-		/* If this node was not drawable, mark it for deletion */
-		catch(NodeCannotBeDrawnException e) {
-			vDeleteList.add(Render);
-			Render.Kill();
-			return;
-		}
-						
-		/* If this node hasn't any children (yet), we're done */
-		if(Render.ChildCount() == 0) {
-			vNodeList.add(Render);
-			return;
-		}
-		
-		/* Step 3: Draw our child nodes */
-		int norm = lpNormalisation;
-		
-		for(CDasherNode i : Render.Children()) {
-			
-			long Range = y2 - y1;
-			long newy1 = y1 + (Range * i.Lbnd()) / norm;
-			long newy2 = y1 + (Range * i.Hbnd()) / norm;
-			
-			// FIXME - make the threshold a parameter
-			
-			if((newy2 - newy1 > 50) || (i.Alive())) {
-				i.Alive(true);
-				RecursiveRender(i, newy1, newy2, mostleft, vNodeList, vDeleteList);
-				
-			}
-		}
-	}
-	
-	/**
-	 * Determines whether a given Node can be drawn, and if so, draws it.
-	 * <p>
-	 * If the Node is undrawable because it's off the screen
-	 * or is too small to sensibly draw, a NodeCannotBeDrawnException
-	 * is thrown.
-	 * <p>
-	 * The drawing instruction is clipped to the visible region first,
-	 * so the Screen should not be ordered to draw anything outside
-	 * its bounds.
-	 * <p>
-	 * If truncation is enabled, it is applied here; if not, we
-	 * simply call DasherDrawRectangle to form the Node box.
-	 * <p>
-	 * Lastly, the Node's text is added to m_DelayDraw to be
-	 * drawn to the screen at the end of the drawing sequence.
-	 * <p>
-	 * This also generates a new mostleft value for shoving purposes,
-	 * which is returned to our caller.
-	 * 
-	 * @param Color Colour index to use for the node's background
-	 * @param ColorScheme ColourScheme to use; usually ignored in favour of a colour index
-	 * @param y1 Top y co-ordinate of this Node (Dasher space)
-	 * @param y2 Bottom y co-ordinate of this Node (Dasher space)
-	 * @param mostleft Shoving parameter; indicates how far node labels should be displaced
-	 * to the right in order to avoid overlapping parents' text.
-	 * @param sDisplayText Text to draw in this Node
-	 * @param bShove Should we shove (report how far our text juts out, 
-	 * to help our caller avoid overlapping it)
-	 * @return New value of mostleft (or that which was passed in, if we
-	 * do not) 
-	 * @throws NodeCannotBeDrawnException if this Node cannot be drawn!
-	 */
-	public int RenderNode(int Color, long y1, long y2, int mostleft, String sDisplayText, boolean bShove, boolean bOutline) throws NodeCannotBeDrawnException {
-		
-		/*
-		 * IMPORTANT: This method takes mostleft by REFERENCE in the original
-		 * C++; as such it returns its new value here.
-		 */
-		
-		if (!(y2 >= y1)) { return mostleft; }
+		assert y2 >= y1;
 		
 		// TODO - Get sensible limits here (to allow for non-linearities)
 		CDasherView.DRect visreg = VisibleRegion();
@@ -405,37 +323,49 @@ public class CDasherViewSquare extends CDasherView {
 		long iSize = ymap(y2) - ymap(y1);
 		
 		// Actual height in pixels
-		int iHeight = (int)((iSize * CanvasY) / (int) lpMaxY);
+		int iHeight = (int)((iSize * CanvasY) / lpMaxY);
 		
-		if(iHeight <= 1)
-			{ throw new NodeCannotBeDrawnException(); }                  // We're too small to render
-		
-		if((y1 > visreg.maxY) || (y2 < visreg.minY)){
-			{ throw new NodeCannotBeDrawnException(); }                // We're entirely off screen, so don't render.
+		if(iHeight <= 1 //too small to render
+		   || (y1 > visreg.maxY) || (y2 < visreg.minY)) { //entirely offscreen
+			// Node is not drawable, so mark it for deletion
+			vDeleteList.add(Render);
+			Render.Kill();
+			return;
 		}
-		
 		long iDasherSize = (y2 - y1);
-		
-		// FIXME - get rid of pointless assignment below
-		
+				
 		if(lpTruncation == 0) {        // Regular squares
-			DasherDrawRectangle(Math.min(iDasherSize,visreg.maxX), Math.min(y2,visreg.maxY), 0, Math.max(y1,visreg.minY), Color, -1, bOutline ? 1 : 0);
+			DasherDrawRectangle(Math.min(iDasherSize,visreg.maxX), Math.min(y2,visreg.maxY), 0, Math.max(y1,visreg.minY), Render.m_iColour, -1, Render.outline() ? 1 : 0);
+		} else {
+			DasherTruncRect(y1, y2, iSize, Render.m_iColour);
 		}
-		else {
-			DasherTruncRect(y1, y2, iSize, Color);
+		
+		//long iDasherAnchorX = (iDasherSize);
+		
+		if( Render.m_strDisplayText != null && Render.m_strDisplayText.length() > 0 )
+			mostleft = (int)DasherDrawText(iDasherSize, y1, iDasherSize, y2, Render.m_strDisplayText, mostleft, Render.shove());
+					
+		/* If this node hasn't any children (yet), we're done */
+		if(Render.ChildCount() == 0) {
+			vNodeList.add(Render);
+			return;
+		}
+		
+		/* Step 3: Draw our child nodes */
+		for(CDasherNode i : Render.Children()) {
 			
+			long newy1 = y1 + (iDasherSize * i.Lbnd()) / lpNormalisation;
+			long newy2 = y1 + (iDasherSize * i.Hbnd()) / lpNormalisation;
+			
+			// FIXME - make the threshold a parameter
+			
+			if((newy2 - newy1 > 50) || (i.Alive())) {
+				i.Alive(true);
+				RecursiveRender(i, newy1, newy2, mostleft, vNodeList, vDeleteList);
+			}
 		}
-		
-		long iDasherAnchorX = (iDasherSize);
-		
-		if( sDisplayText != null && sDisplayText.length() > 0 )
-			mostleft = (int)DasherDrawText(iDasherAnchorX, y1, iDasherAnchorX, y2, sDisplayText, mostleft, bShove);
-		
-		/* CSFS: Method altered to use a Byte ArrayList for UTF-8 characters instead of a String. */
-		
-		{ return mostleft; }
 	}
-
+	
 	private void DasherTruncRect(long y1, long y2, long iSize, int Color) {
 		int iDasherY = (int)lpMaxY;
 		long iDasherSize = y2-y1;
@@ -1101,45 +1031,5 @@ public class CDasherViewSquare extends CDasherView {
 		else
 			x = m_dXMappingLinearScaleFactor * (m_dXMappingLogarithmicScaleFactor * Math.log((x + m_dXMappingLogarithmicScaleFactor - m_dXMappingLogLinearBoundary) / m_dXMappingLogarithmicScaleFactor) + m_dXMappingLogLinearBoundary);
 		return (long)(x * lpMaxY);
-	}
-}
-
-
-/**
- * Exception to be raised to signal that a given Node was not
- * drawable.
- */
-class NodeCannotBeDrawnException extends Exception {
-	/**
-	 * The Node which could not be drawn
-	 */
-	protected CDasherNode WhichNode;
-
-	/**
-	 * Default constructor; creates the exception but does not
-	 * store a Node.
-	 *
-	 */
-	public NodeCannotBeDrawnException() {
-		WhichNode = null;
-	}
-
-	/**
-	 * Creates a new exception with a reference to the Node
-	 * which could not be drawn.
-	 * 
-	 * @param thenode Problem Node.
-	 */
-	public NodeCannotBeDrawnException(CDasherNode thenode) {
-		WhichNode = thenode;
-	}
-
-	/**
-	 * Retrieves the Node which couldn't be drawn.
-	 * 
-	 * @return Reference to undrawable Node.
-	 */
-	public CDasherNode GetNode() {
-		return WhichNode;
 	}
 }
