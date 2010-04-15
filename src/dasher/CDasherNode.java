@@ -211,12 +211,8 @@ public abstract class CDasherNode {
 	 *
 	 */
     public void DeleteNode() {
-
-	  /* CSFS: Lifted from C++ destructor function. Must be called for all nodes before they
-	   * are garbage collected.
-	   */
-		
-	  //Delete_children();
+	  Delete_children();
+	  numNodes--;
 	}
 
 
@@ -417,23 +413,16 @@ public abstract class CDasherNode {
      */
     public void OrphanChild(CDasherNode pChild) {
 		  assert(ChildCount() > 0);
+		  assert (pChild.Parent()==this);
 		  
-		  /* CSFS: Iteration through children changed as per previous
-		   * and also the new DeleteNode() routines used.
-		   * Finally delete replaced with orphaning the object,
-		   * leaving it ready for GC.
-		   */
-	  
 		  for(CDasherNode i : this.Children()) {
-			  if(i != pChild) {
-				  i.Delete_children();
+			  if(i != pChild)
 				  i.DeleteNode();
-			  }
-			  
+			  i.m_Parent = null;
 		  }
-		  //"Delete"ing anything is a misnomer, of course, due to GC. So same as:
-		  pChild.m_Parent=null;
-		  Delete_children();
+		  m_mChildren.clear();
+		  SetHasAllChildren(false);
+		  DeleteNode();
 	}
 
 
@@ -447,10 +436,7 @@ public abstract class CDasherNode {
 		  assert(ChildCount() > 0);
 		  
 		  for(CDasherNode i : this.Children()) {
-		    if(i != pChild) {
-		      i.Delete_children();
-		    }
-
+			  if(i != pChild) i.Delete_children();
 		  }
 	}
 
@@ -462,10 +448,9 @@ public abstract class CDasherNode {
 	 */
 	public void Delete_children() {
 		
-		//for(CDasherNode i : this.GetChildren()) {
-			// i.DeleteNode(); (stub method)
-		//	i = null;
-		//}
+		for(CDasherNode i : this.Children()) {
+			 i.DeleteNode();
+		}
 		m_mChildren.clear(); // This should be enough to render them GC-able.
 		SetHasAllChildren(false);
 	}

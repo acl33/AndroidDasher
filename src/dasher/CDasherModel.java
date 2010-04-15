@@ -394,8 +394,7 @@ public class CDasherModel extends CDasherComponent {
 			 * to come get it.
 			 */
 			
-			oldroots.get(0).OrphanChild(oldroots.get(1));
-			oldroots.get(0).DeleteNode();
+			oldroots.get(0).OrphanChild(oldroots.get(1)); //deletes itself too.
 			// oldroots.set(0, null);
 			oldroots.removeFirst();
 		}
@@ -425,10 +424,9 @@ public class CDasherModel extends CDasherComponent {
 			
 			/* CSFS: Again, this originally would delete oldroots[0] before
 			 * pop_front'ing the deque.
+			 * ACL However, OrphanChild() here includes calling DeleteNode().
 			 */
 			
-			oldroots.get(0).DeleteNode();
-			oldroots.set(0, null);
 			oldroots.removeFirst();
 		}
 	}
