@@ -215,28 +215,6 @@ public abstract class CDasherView extends CDasherComponent {
 	}
 	
 	/**
-	 * Renders the entire model, starting at a given Node and given
-	 * specific bounds in Dasher space.
-	 * <p>
-	 * At present this just passes all of its parameters to RenderNodes
-	 * with the exception of bRedrawDisplay, which is ignored (the
-	 * display is always redrawn).
-	 * 
-	 * @param Root Node at which to start the drawing process
-	 * @param iRootMin Minimum bounding co-ordinate in Dasher space
-	 * @param iRootMax Maximum bounding co-ordinate in Dasher space
-	 * @param vNodeList Collection which will be filled with Nodes which were drawn
-	 * @param vDeleteList Collection which will be filled with Nodes which were not drawn
-	 * @param bRedrawDisplay Flag indicating whether we wish for a redraw (ignored; always redraws)
-	 * @return True if a redraw took place (always the case at the moment) 
-	 */
-	public boolean Render(CDasherNode Root, long iRootMin, long iRootMax, Collection<CDasherNode> vNodeList, Collection<CDasherNode> vDeleteList, boolean bRedrawDisplay) {
-		
-		RenderNodes(Root, iRootMin, iRootMax, vNodeList, vDeleteList);
-		return true;
-	}
-	
-	/**
 	 * Deferred to m_Input.
 	 * 
 	 * @see CDasherInput
@@ -581,21 +559,18 @@ public abstract class CDasherView extends CDasherComponent {
 	}
 	
 	/**
-	 * Render our nodes, beginning at a given node with given upper
-	 * and lower y co-ordinates.
-	 * <p>
-	 * Will also fill vNodeList with a list of nodes which were
-	 * successfully drawn, and vDeleteList with a list of those
-	 * whom we abandoned drawing because they were off screen,
-	 * too small, etc.
+	 * Renders the entire model, starting at a given Node and given
+	 * specific bounds in Dasher space. Push all on-screen nodes onto the
+	 * ExpansionPolicy along with their computed dasher min/max-y co-ords
+	 * (note, these are passed _after_ conversion for nonlinearity...?).
+	 * Off-screen nodes, or those too small to render, are collapsed immediately.
 	 * 
 	 * @param Root Node at which to start drawing
 	 * @param iRootMin Lower y co-ordinate of this node
 	 * @param iRootMax Upper y co-ordinate of this node
-	 * @param vNodeList Collection to be filled with drawn nodes
-	 * @param vDeleteList Collection to be filled with undrawn nodes
+	 * @param pol ExpansionPalicy to push all nodes onto (expandable or collapsible)
 	 */
-	public abstract void RenderNodes(CDasherNode Root, long iRootMin, long iRootMax, Collection<CDasherNode> vNodeList, Collection<CDasherNode> vDeleteList);
+	public abstract void Render(CDasherNode Root, long iRootMin, long iRootMax, ExpansionPolicy pol);
 	
 	/**
 	 * Converts a pair of input co-ordinates to dasher co-ordinates.

@@ -1262,35 +1262,23 @@ public class CDasherModel extends CDasherComponent {
 	
 	/**
 	 * Calls the View's Render method on our current Root; the View
-	 * will take care of all drawing from here on in.
-	 * <p>
-	 * If BP_OLD_STYLE_PUSH is not enabled, all Nodes which the
-	 * View reports it has drawn will be pushed here, and all which
-	 * the View reported as undrawable due to being too small,
-	 * off the screen, etc, will have their children deleted.
+	 * will take care of all drawing from here on in. However,
+	 * the model will take care of using an ExpansionPolicy to expand
+	 * and/or contract nodes. 
 	 * 
 	 * @param View View to which we wish to draw
-	 * @param bRedrawDisplay Whether to force a complete redraw
-	 * @return True if the View changed anything, false otherwise
+	 * @return whether anything was changed (i.e. nodes were expanded or contracted)
 	 */	
-	public boolean RenderToView(CDasherView View, boolean bRedrawDisplay) {
-		ArrayList<CDasherNode> vNodeList = new ArrayList<CDasherNode>();
-		ArrayList<CDasherNode> vDeleteList = new ArrayList<CDasherNode>();
-		
-		boolean bReturnValue = View.Render(m_Root, m_Rootmin + m_iDisplayOffset, m_Rootmax + m_iDisplayOffset, vNodeList, vDeleteList, bRedrawDisplay);
+	public boolean RenderToView(CDasherView View) {
+		View.Render(m_Root, m_Rootmin + m_iDisplayOffset, m_Rootmax + m_iDisplayOffset, pol);
 
-		if(!GetBoolParameter(Ebp_parameters.BP_OLD_STYLE_PUSH)) {
-			for(CDasherNode it : vNodeList) {
-				Push_Node(it);
-			}
-		}
-		
-		for(CDasherNode it : vDeleteList) {
-			it.Delete_children();
-		}	
-		return bReturnValue;
+		return pol.apply(this);	
 	}
-	
+	/**
+	 * ExpansionPolicy to determine which CDasherNodes to expand or collapse in each frame.
+	 * Reused between frames to save on allocation.
+	 */
+	private ExpansionPolicy pol = new BudgettingPolicy(1000);
 	/**
 	 * If the view reports that our current root node isn't
 	 * visible, calls Reparent_root; if only one child of the

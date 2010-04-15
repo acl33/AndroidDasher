@@ -91,6 +91,10 @@ public abstract class CDasherNode {
 	 */
     public final String m_strDisplayText;
 
+    /** Cost for expanding or collapsing the node. Set and read
+     *  by ExpansionPolicy - but easiest to store here... */
+    public double m_dCost;
+    
     /**
      * Whether this Node shoves or not (ie. whether the symbols
      * of its children should be displaced to the right so as
@@ -128,7 +132,16 @@ public abstract class CDasherNode {
 		m_Parent = Parent;
 		if (Parent!=null) Parent.m_mChildren.add(this);
 		this.m_strDisplayText = strDisplayText;
+		numNodes++;
 	}
+    
+    /** The number of node objects currently accessible in the tree.
+     * (There may be more than this iff including further objects
+     * awaiting GC)
+     */
+    private static int numNodes=0;
+    
+    public static int currentNumNodeObjects() {return numNodes;}
 
     /**
 	 * Fills this Node's child list.
@@ -277,7 +290,9 @@ public abstract class CDasherNode {
 	 * @param NewParent Our new parent
 	 */
 	public void SetParent(CDasherNode NewParent) {
+		assert m_Parent==null;
 	    m_Parent = NewParent;
+	    m_Parent.m_mChildren.add(this);
 	}
 	
 	/**
@@ -306,15 +321,9 @@ public abstract class CDasherNode {
 	 * @param b new value
 	 */
 	public void Alive(boolean b) {
+		assert m_bAlive;
 	    m_bAlive = b;
-	}
-
-	/**
-	 * Sets this node's Alive flag to false
-	 *
-	 */
-	public void Kill() {
-	    m_bAlive = false;
+	    if (!m_bAlive) numNodes--;
 	}
 
 	/**
@@ -442,6 +451,7 @@ public abstract class CDasherNode {
 			  
 		  }
 		  //"Delete"ing anything is a misnomer, of course, due to GC. So same as:
+		  pChild.m_Parent=null;
 		  Delete_children();
 	}
 

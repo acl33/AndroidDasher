@@ -261,13 +261,13 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param vNodeList Collection which will be filled with drawn Nodes
 	 * @param vDeleteList Collection which will be filled with undrawable Nodes
 	 */
-	public void RenderNodes(CDasherNode Root, long iRootMin, long iRootMax, Collection<CDasherNode> vNodeList, Collection<CDasherNode> vDeleteList) {
+	public void Render(CDasherNode Root, long iRootMin, long iRootMax, ExpansionPolicy pol) {
 		
 		Screen().Blank();
 		
 		CDasherView.DRect visreg = VisibleRegion();
 		
-		RecursiveRender(Root, iRootMin, iRootMax, (int)visreg.maxX, vNodeList, vDeleteList);
+		RecursiveRender(Root, iRootMin, iRootMax, (int)visreg.maxX, pol);
 		
 		// DelayDraw the text nodes
 		m_DelayDraw.Draw(Screen());
@@ -306,7 +306,7 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param vNodeList Collection to fill with drawn, childless Nodes
 	 * @param vDeleteList Collection to fill with undrawable Nodes
 	 */
-	public void RecursiveRender(CDasherNode Render, long y1, long y2, int mostleft, Collection<CDasherNode> vNodeList, Collection<CDasherNode> vDeleteList) {
+	public void RecursiveRender(CDasherNode Render, long y1, long y2, int mostleft, ExpansionPolicy pol) {
 		
 		// This method takes mostleft by VALUE.
 		
@@ -327,11 +327,13 @@ public class CDasherViewSquare extends CDasherView {
 		
 		if(iHeight <= 1 //too small to render
 		   || (y1 > visreg.maxY) || (y2 < visreg.minY)) { //entirely offscreen
-			// Node is not drawable, so mark it for deletion
-			vDeleteList.add(Render);
-			Render.Kill();
+			// Node is not drawable - can be deleted straightaway...
+			Render.Delete_children();
+			Render.Alive(false);
 			return;
 		}
+		
+		//ok, render the node...
 		long iDasherSize = (y2 - y1);
 				
 		if(lpTruncation == 0) {        // Regular squares
@@ -347,9 +349,11 @@ public class CDasherViewSquare extends CDasherView {
 					
 		/* If this node hasn't any children (yet), we're done */
 		if(Render.ChildCount() == 0) {
-			vNodeList.add(Render);
+			pol.pushNode(Render, (int)y1, (int)y2, true);
 			return;
 		}
+		//else, it has children, so can be collapsed...
+		pol.pushNode(Render, (int)y1, (int)y2, false);
 		
 		/* Step 3: Draw our child nodes */
 		for(CDasherNode i : Render.Children()) {
@@ -361,7 +365,7 @@ public class CDasherViewSquare extends CDasherView {
 			
 			if((newy2 - newy1 > 50) || (i.Alive())) {
 				i.Alive(true);
-				RecursiveRender(i, newy1, newy2, mostleft, vNodeList, vDeleteList);
+				RecursiveRender(i, newy1, newy2, mostleft, pol);
 			}
 		}
 	}
