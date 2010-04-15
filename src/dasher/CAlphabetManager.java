@@ -134,7 +134,7 @@ public class CAlphabetManager<C> {
     	  
     	  C ctx = m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), string);
     	  
-    	  CAlphNode NewNode = (iSymbol==0) ? new CGroupNode(Parent, null, 0, iLower, iUpper, ctx) : new CSymbolNode(Parent, iSymbol, 0, iLower, iUpper, ctx);
+    	  CAlphNode NewNode = (iSymbol==0) ? allocGroup(Parent, null, 0, iLower, iUpper, ctx) : allocSymbol(Parent, iSymbol, 0, iLower, iUpper, ctx);
     	  
     	  NewNode.Seen(true);
 
@@ -144,7 +144,7 @@ public class CAlphabetManager<C> {
     abstract class CAlphNode extends CDasherNode {
     	
     	protected final CAlphabetManager<C> mgr() {return CAlphabetManager.this;}
-    	/*package*/ final int m_iPhase;
+    	/*package*/ int m_iPhase;
     	protected boolean bCommitted;
     	private long[] probInfo;
     	
@@ -152,15 +152,26 @@ public class CAlphabetManager<C> {
     	 * Language model context corresponding to this node's
     	 * position in the tree.
     	 */
-    	private final C context;
+    	private C context;
     	
-        /*package*/ CAlphNode(CDasherNode Parent, int iphase,
+    	private CAlphNode() {}
+    	@Override
+    	protected void initNode(CDasherNode Parent, long iLbnd, long iHbnd, int colour, String label) {
+    		throw new RuntimeException("Call the 7-arg version with iphase & context instead");
+    	}
+        void initNode(CDasherNode Parent, int iphase,
 				long ilbnd, long ihbnd, int Colour, C context,
 				String label) {
-			super(Parent, ilbnd, ihbnd, Colour, label);
+			super.initNode(Parent, ilbnd, ihbnd, Colour, label);
 			this.context = context;
 			this.m_iPhase = iphase;
 		}
+        @Override
+		public void DeleteNode() {
+        	bCommitted=false;
+        	probInfo=null;
+        	super.DeleteNode();
+        }
 
         protected long[] GetProbInfo() {
         	if (probInfo == null) {
@@ -213,9 +224,14 @@ public class CAlphabetManager<C> {
     }
     
     protected class CSymbolNode extends CAlphNode {
-    	CSymbolNode(CDasherNode Parent, int symbol,
-				int iphase, long ilbnd, long ihbnd, C context) {
-			super(Parent, iphase, ilbnd, ihbnd, getColour(symbol, iphase), context, m_DisplayText.get(symbol));
+    	private CSymbolNode() {}
+    	
+    	@Override
+    	void initNode(CDasherNode Parent, int iphase, long ilbnd, long ihbnd, int Colour, C context, String label) {
+    		throw new RuntimeException("Use (CDasherNode, int, int, long, long, C) instead");
+    	}
+    	void initNode(CDasherNode Parent, int symbol, int iphase, long ilbnd, long ihbnd, C context) {
+			super.initNode(Parent, iphase, ilbnd, ihbnd, getColour(symbol, iphase), context, m_DisplayText.get(symbol));
 			this.m_Symbol = symbol;
 		}
 
@@ -227,7 +243,7 @@ public class CAlphabetManager<C> {
     	/**
     	 * Symbol number represented by this node
     	 */
-    	protected final int m_Symbol;	// the character to display
+    	protected int m_Symbol;	// the character to display
     
     	/**
          * Generates an EditEvent announcing a new character has been
@@ -314,13 +330,25 @@ public class CAlphabetManager<C> {
 			}
 			return CAlphabetManager.this.mkSymbol(parent, sym, iLbnd, iHbnd);
 		}
+		
+		@Override
+		public void DeleteNode() {
+			super.DeleteNode();
+			freeSymbolList.add(this);
+		}
 
     }
     
     protected class CGroupNode extends CAlphNode {
-    	CGroupNode(CDasherNode Parent, SGroupInfo group,
+    	private CGroupNode() {}
+    	@Override
+    	void initNode(CDasherNode Parent, int iphase, long ilbnd, long ihbnd, int Colour, C context, String label) {
+    		throw new RuntimeException("Use (CDasherNode, int, int, long, long, C) instead");
+    	}
+    	
+    	void initNode(CDasherNode Parent, SGroupInfo group,
 				int iphase, long ilbnd, long ihbnd, C context) {
-			super(Parent, iphase, ilbnd, ihbnd, group==null ? 7 : group.bVisible ? group.iColour : Parent==null ? 7 : Parent.m_iColour, context, (group==null || !group.bVisible) ? "" : group.strLabel);
+			super.initNode(Parent, iphase, ilbnd, ihbnd, group==null ? 7 : group.bVisible ? group.iColour : Parent==null ? 7 : Parent.m_iColour, context, (group==null || !group.bVisible) ? "" : group.strLabel);
 			this.m_Group = group;
 		}
 
@@ -358,7 +386,7 @@ public class CAlphabetManager<C> {
     		return super.GetProbInfo();
     	}
 
-    	protected final SGroupInfo m_Group;
+    	protected SGroupInfo m_Group;
 
 		@Override
 		public void Output(ArrayList<CSymbolProb> Added, int iNormalization) {
@@ -383,6 +411,11 @@ public class CAlphabetManager<C> {
 			return CAlphabetManager.this.mkSymbol(parent, sym, iLbnd, iHbnd);
 		}
     	
+		@Override
+		public void DeleteNode() {
+			super.DeleteNode();
+			freeGroupList.add(this);
+		}
     }
 
     /**
@@ -461,16 +494,31 @@ public class CAlphabetManager<C> {
 				cont = m_LanguageModel.EmptyContext();
 				//      EnterText(cont, "");
 			}
-			NewNode = new CSymbolNode(parent, sym, (parent.m_iPhase+1)%2, iLbnd, iHbnd, cont);
+			NewNode = allocSymbol(parent, sym, (parent.m_iPhase+1)%2, iLbnd, iHbnd, cont);
 		}
 
 		return NewNode;
     }
     
     CGroupNode mkGroup(CAlphNode parent, SGroupInfo group, long iLbnd, long iHbnd) {
-    	return new CGroupNode(parent, group, parent.m_iPhase, iLbnd, iHbnd, parent.context);
+    	return allocGroup(parent, group, parent.m_iPhase, iLbnd, iHbnd, parent.context);
+    }
+    
+    private final List<CGroupNode> freeGroupList = new ArrayList<CGroupNode>();
+    
+    private CGroupNode allocGroup(CDasherNode parent, SGroupInfo group, int phase, long iLbnd, long iHbnd, C ctx) {
+    	CGroupNode node = (freeGroupList.isEmpty()) ? new CGroupNode() : freeGroupList.remove(freeGroupList.size()-1);
+    	node.initNode(parent, group, phase, iLbnd, iHbnd, ctx);
+    	return node;
     }
 
+    private final List<CSymbolNode> freeSymbolList = new ArrayList<CSymbolNode>();
+    
+    private CSymbolNode allocSymbol(CDasherNode parent, int sym, int phase, long iLbnd, long iHbnd, C ctx) {
+    	CSymbolNode node = (freeSymbolList.isEmpty()) ? new CSymbolNode() : freeSymbolList.remove(freeSymbolList.size()-1);
+    	node.initNode(parent, sym, phase, iLbnd, iHbnd, ctx);
+    	return node;
+    }
     /**
      * Suspends the current thread until a given Node's children
      * have been created. This is for use with specialised

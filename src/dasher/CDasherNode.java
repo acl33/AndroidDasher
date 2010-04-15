@@ -27,6 +27,7 @@ package dasher;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 
@@ -92,7 +93,7 @@ public abstract class CDasherNode {
     /**
 	 * This Node's display text
 	 */
-    public final String m_strDisplayText;
+    public String m_strDisplayText;
 
     /** Cost for expanding or collapsing the node. Set and read
      *  by ExpansionPolicy - but easiest to store here... */
@@ -113,8 +114,11 @@ public abstract class CDasherNode {
      */
     public boolean outline() {return true;}
 	
+    protected CDasherNode() {
+    	
+    }
     /**
-	 * Creates a Node and sets its describing variables.
+	 * Initializes a Node and sets its describing variables.
 	 * 
 	 * @param Parent Parent Node
 	 * @param Symbol Symbol number
@@ -125,11 +129,11 @@ public abstract class CDasherNode {
 	 * @param lm LanguageModel
 	 * @param Colour Colour number
 	 */
-    public CDasherNode(CDasherNode Parent, long ilbnd, long ihbnd, int Colour, String strDisplayText) {
+    protected void initNode(CDasherNode Parent, long ilbnd, long ihbnd, int Colour, String strDisplayText) {
 		m_iLbnd = ilbnd;
 		m_iHbnd = ihbnd;
-		// m_bHasAllChildren = false; (default)
-		// m_bSeen = false; (default)
+		//m_bHasAllChildren = false; //default at construction time, and cleared by DeleteNode()
+		m_bSeen = false; //default
 		m_iColour = Colour;
 		m_Parent = Parent;
 		if (Parent!=null) Parent.m_mChildren.add(this);
@@ -214,7 +218,6 @@ public abstract class CDasherNode {
 	  Delete_children();
 	  numNodes--;
 	}
-
 
     /**
      * Gets m_iLbnd
