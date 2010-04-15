@@ -337,7 +337,7 @@ public class CDasherViewSquare extends CDasherView {
 		long iDasherSize = (y2 - y1);
 				
 		if(lpTruncation == 0) {        // Regular squares
-			DasherDrawRectangle(Math.min(iDasherSize,visreg.maxX), Math.min(y2,visreg.maxY), 0, Math.max(y1,visreg.minY), Render.m_iColour, -1, Render.outline() ? 1 : 0);
+			DasherDrawRectangle(Math.min(iDasherSize,visreg.maxX), Math.min(y2,visreg.maxY), 0, Math.max(y1,visreg.minY), Render.m_iColour, -1, 0);
 		} else {
 			DasherTruncRect(y1, y2, iSize, Render.m_iColour);
 		}
@@ -367,6 +367,12 @@ public class CDasherViewSquare extends CDasherView {
 				i.Alive(true);
 				RecursiveRender(i, newy1, newy2, mostleft, pol);
 			}
+		}
+		
+		if (GetBoolParameter(Ebp_parameters.BP_OUTLINE_MODE)
+				&& Render.outline()
+				&& lpTruncation==0) {
+			DasherDrawRectangle(Math.min(iDasherSize,visreg.maxX), Math.min(y2,visreg.maxY), 0, Math.max(y1,visreg.minY), -1, -1, 1);
 		}
 	}
 	
