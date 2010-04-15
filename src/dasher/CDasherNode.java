@@ -30,6 +30,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 
+import android.util.Log;
+
 /**
  * A DasherNode represents a node in the DasherModel's tree; it
  * is has a probability, children and one parent, and is typically
@@ -41,6 +43,12 @@ import java.util.ListIterator;
  */
 public abstract class CDasherNode {
 
+	/** Cache whether only a single child of this node actually fitted on the screen
+	 * (i.e. all others were off-screen - if any were onscreen but too small to render,
+	 * they count as fitting on the screen!). Read & written by DasherModel & DasherViewSquare...
+	 */
+	public CDasherNode m_OnlyChildRendered;
+	
 	//	Information required to display the node
 	
 	/**
@@ -59,11 +67,6 @@ public abstract class CDasherNode {
 	 */
 	protected long m_iHbnd; 
 
-	/**
-	 * Indicates whether this node is currently drawable
-	 */	
-	protected boolean m_bAlive;
-	
 	/**
 	 * Indicates whether this node's symbol has been output already
 	 */
@@ -126,7 +129,6 @@ public abstract class CDasherNode {
 		m_iLbnd = ilbnd;
 		m_iHbnd = ihbnd;
 		// m_bHasAllChildren = false; (default)
-		m_bAlive = true;
 		// m_bSeen = false; (default)
 		m_iColour = Colour;
 		m_Parent = Parent;
@@ -306,27 +308,7 @@ public abstract class CDasherNode {
 	    m_iHbnd = iUpper;
 	}
 
-	/**
-	 * Determines if this node is currently drawable.
-	 * 
-	 * @return m_bAlive
-	 */
-	public boolean Alive() {
-	    return m_bAlive;
-	}
-	 
-	/**
-	 * Sets this node's Alive flag
-	 * 
-	 * @param b new value
-	 */
-	public void Alive(boolean b) {
-		assert m_bAlive;
-	    m_bAlive = b;
-	    if (!m_bAlive) numNodes--;
-	}
-
-	/**
+		/**
 	 * Gets this node's Seen flag
 	 * 
 	 * @return Seen
@@ -414,7 +396,6 @@ public abstract class CDasherNode {
     public CDasherNode Get_node_under(long iNormalization, long miY1, long miY2, long miMousex, long miMousey) {
 		
 		long miRange = miY2 - miY1;
-        m_bAlive = true;
         
         for(CDasherNode i : this.Children()) {
         	long miNewy1 = miY1 + (miRange * i.m_iLbnd) / iNormalization;

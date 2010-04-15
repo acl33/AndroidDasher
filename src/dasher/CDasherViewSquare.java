@@ -329,7 +329,6 @@ public class CDasherViewSquare extends CDasherView {
 		   || (y1 > visreg.maxY) || (y2 < visreg.minY)) { //entirely offscreen
 			// Node is not drawable - can be deleted straightaway...
 			Render.Delete_children();
-			Render.Alive(false);
 			return;
 		}
 		
@@ -350,25 +349,36 @@ public class CDasherViewSquare extends CDasherView {
 		/* If this node hasn't any children (yet), we're done */
 		if(Render.ChildCount() == 0) {
 			pol.pushNode(Render, (int)y1, (int)y2, true);
-			return;
-		}
-		//else, it has children, so can be collapsed...
-		pol.pushNode(Render, (int)y1, (int)y2, false);
-		
-		/* Step 3: Draw our child nodes */
-		for(CDasherNode i : Render.Children()) {
+		} else renderChildren: {
+			//it has children, so can be collapsed...
+			pol.pushNode(Render, (int)y1, (int)y2, false);
 			
-			long newy1 = y1 + (iDasherSize * i.Lbnd()) / lpNormalisation;
-			long newy2 = y1 + (iDasherSize * i.Hbnd()) / lpNormalisation;
-			
-			// FIXME - make the threshold a parameter
-			
-			if((newy2 - newy1 > 50) || (i.Alive())) {
-				i.Alive(true);
-				RecursiveRender(i, newy1, newy2, mostleft, pol);
+			if (Render.m_OnlyChildRendered != null) {
+				CDasherNode child=Render.m_OnlyChildRendered;
+				long newy1 = y1 + (iDasherSize * child.Lbnd()) / lpNormalisation;
+				long newy2 = y1 + (iDasherSize * child.Hbnd()) / lpNormalisation;
+				if (NodeFillsScreen(newy1,newy2)) {
+					RecursiveRender(child, newy1, newy2, mostleft, pol);
+					break renderChildren;
+				}
+				else Render.m_OnlyChildRendered = null;
+			}
+			/* Step 3: Draw our child nodes */
+			for(CDasherNode i : Render.Children()) {
+				
+				long newy1 = y1 + (iDasherSize * i.Lbnd()) / lpNormalisation;
+				long newy2 = y1 + (iDasherSize * i.Hbnd()) / lpNormalisation;
+				// FIXME - make the threshold a parameter
+				
+				if((newy2 - newy1 > 50)) {
+					RecursiveRender(i, newy1, newy2, mostleft, pol);
+					if (NodeFillsScreen(newy1, newy2)) {
+						Render.m_OnlyChildRendered = i;
+						break;
+					}
+				}
 			}
 		}
-		
 		if (GetBoolParameter(Ebp_parameters.BP_OUTLINE_MODE)
 				&& Render.outline()
 				&& lpTruncation==0) {

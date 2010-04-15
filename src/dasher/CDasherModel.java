@@ -1213,17 +1213,10 @@ public class CDasherModel extends CDasherComponent {
 		
 		if(Node.HasAllChildren()) {
 			assert(Node.ChildCount() > 0);
-			// if there are children just give them a poke
-			
-			for(CDasherNode i : Node.Children()) {
-				i.Alive(true);
-			}
 			return;
 		}
 		
 		Node.Delete_children();
-		
-		Node.Alive(true);
 		
 		Node.PopulateChildren();
 		Node.SetHasAllChildren(true);
@@ -1301,40 +1294,23 @@ public class CDasherModel extends CDasherComponent {
 			return;
 		}
 		
-		while (true) {
-			int alive = 0;
-			CDasherNode theone = null;
-			
-			// Find whether there is exactly one alive child; if more, we don't care.
+		while (m_Root.m_OnlyChildRendered!=null) {
+			// We must have zoomed sufficiently that only one child of the root node 
+			// is still alive.  Let's make it the root.
 				
-			for(CDasherNode i : m_Root.Children()) {
-				if(i.Alive()) {
-					alive++;
-					theone = i;
-					if(alive > 1)
-						break;
-				}
+			long y1 = m_Rootmin;
+			long y2 = m_Rootmax;
+			long range = y2 - y1;
+			CDasherNode c = m_Root.m_OnlyChildRendered;	
+			long newy1 = y1 + (range * c.Lbnd()) / (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
+			long newy2 = y1 + (range * c.Hbnd()) / (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
+			if(View.NodeFillsScreen(newy1, newy2)) {
+				Make_root(c);
+				//and try again, looking for a child of the new root...
+			} else {
+				//more than one child on screen
+				return;
 			}
-			
-			if(alive == 1) {
-				// We must have zoomed sufficiently that only one child of the root node 
-				// is still alive.  Let's make it the root.
-				
-				/* CSFS: All formerly myints */
-				
-				long y1 = m_Rootmin;
-				long y2 = m_Rootmax;
-				long range = y2 - y1;
-				
-				long newy1 = y1 + (range * theone.Lbnd()) / (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
-				long newy2 = y1 + (range * theone.Hbnd()) / (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
-				if(View.NodeFillsScreen(newy1, newy2)) {
-					Make_root(theone);
-					continue; //try again, looking for a child of the new root...
-				}
-			}
-			//either no child on screen (?!), or more than one
-			return;
 		}
 	}
 
