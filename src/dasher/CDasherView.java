@@ -618,35 +618,12 @@ public abstract class CDasherView extends CDasherComponent {
 	protected abstract CDasherView.DPoint Input2Dasher(int iInputX, int iInputY, int iType);
 		
 	/**
-	 * Draws a square aligned to the y axis and between given y co-ordinates
-	 * 
-	 * @param iDasherMin Bottom y co-ordinate
-	 * @param iDasherMax Top y co-ordinate
-	 * @param bActive Affects colouring
-	 */
-	public abstract void NewDrawGoTo(long iDasherMin, long iDasherMax, boolean bActive);
-	
-	/**
 	 * Gets our current screen
 	 * 
 	 * @return Current screen
 	 */
 	public CDasherScreen Screen() {
 	    return m_Screen;
-	}
-	
-	/**
-	 * Stub
-	 *
-	 */
-	public void ResetSum() {
-	}
-	
-	/**
-	 * Stub
-	 *
-	 */
-	public void ResetSumCounter() {
 	}
 	
 	/**

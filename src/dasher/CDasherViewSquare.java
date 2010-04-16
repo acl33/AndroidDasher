@@ -838,51 +838,7 @@ public class CDasherViewSquare extends CDasherView {
 		return retval;
 	}
 	
-	/**
-	 * Draws a square highlighting the area between two given y co-ordinates.
-	 * <p>
-	 * Draws the square a different colour dependent on whether the
-	 * 'active' flag is specified.
-	 * <p>
-	 * At present the colours are hard-coded: Colour 1 is used with
-	 * a width of 3 for active, and colour 2 with a width of 1 for
-	 * inactive.
-	 * 
-	 * @param iDasherMin Bottom y co-ordinate at which to align the square
-	 * @param iDasherMax Top y co-ordinate at which to align the square
-	 * @param bActive Draw this square in 'active' style?
-	 */
-	public void NewDrawGoTo(long iDasherMin, long iDasherMax, boolean bActive) {
-		long iHeight = (iDasherMax - iDasherMin);
-		
-		int iColour;
-		int iWidth;
-		
-		if(bActive) {
-			iColour = 1;
-			iWidth = 3;
-		}
-		else {
-			iColour = 2;
-			iWidth = 1;
-		}
-		
-		CDasherView.Point[] p = new CDasherView.Point[4];
-		
-		p[0] = Dasher2Screen( 0, iDasherMin);
-		p[1] = Dasher2Screen( iHeight, iDasherMin);
-		p[2] = Dasher2Screen( iHeight, iDasherMax);
-		p[3] = Dasher2Screen( 0, iDasherMax);
-		
-		Screen().Polyline(p, iWidth, iColour);
-	}
-	
 //	TODO: Autocalibration should be in the eyetracker filter class
-	
-	/* CSFS: There were two functions here called ResetSum and ResetSumCounter
-	 * I've removed them, their calls, and their relevant variables, since the
-	 * Eclipse asserted these variables were only ever set and so were useless.
-	 */
 	
 	/**
 	 * Sets a new screen, invalidates our current visible region,
