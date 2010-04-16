@@ -695,13 +695,6 @@ public abstract class CDasherView extends CDasherComponent {
 	 */
 	public abstract CDasherView.DRect VisibleRegion();
 	
-	/**
-	 * Draws the crosshair
-	 * 
-	 * @param sx X co-ordinate at which to draw the crossbeam
-	 */
-	protected abstract void Crosshair(long sx);
-	
 	// Old screen-to-dasher and vice versa mappings.
 	
 	/*public CDasherView.Point MapScreen(int DrawX, int DrawY) {

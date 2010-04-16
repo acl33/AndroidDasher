@@ -262,7 +262,7 @@ public class CDasherViewSquare extends CDasherView {
 		// DelayDraw the text nodes
 		m_DelayDraw.Draw(Screen());
 		
-		Crosshair(GetLongParameter(Elp_parameters.LP_OX));  // add crosshair
+		Crosshair();  // add crosshair
 	}
 	
 	
@@ -956,59 +956,40 @@ public class CDasherViewSquare extends CDasherView {
 	/// Draw the crosshair
 
 	/**
-	 * Draws the Crosshair, with the vertical bar at a specified
-	 * x co-ordinate and the horizontal bar halfway up the screen.
+	 * Draws the Crosshair, with the vertical bar at LP_OX and 
+	 * the horizontal bar halfway up the screen.
 	 * <p>
 	 * The horizontal bar is hard coded to run from 12/14(sx)
 	 * to 17/14(sx). This will cause trouble if sx is zero, and
 	 * there will be issues if sx is small since we're working
 	 * with integers, not floating point.
 	 * <p>
-	 * This method could do with being rewritten.
-	 * 
-	 * @param sx X co-ordinate for the vertical bar. Not zero, or
-	 * the horizontal bar will not correctly display at present.
 	 */
-	public void Crosshair(long sx) {
-		long[] x = new long[2];
-		long[] y = new long[2];
-
-		// Vertical bar of crosshair
-
-		/* CSFS: These used to use the 'old' get-visible-extent functions. Since I
-		 * had deleted these, I have converted them to use the new version.
-		 */
+	private void Crosshair() {
+				// Vertical bar of crosshair
 
 		CDasherView.DRect visreg = VisibleRegion();
+		long sx = GetLongParameter(Elp_parameters.LP_OX);
+		
+		cx[1] = cx[0] = sx;
+		cy[0] = visreg.minY;
 
-		x[0] = sx;
-		y[0] = visreg.minY;
+		//cx[1] = cx[0];
+		cy[1] = visreg.maxY;
 
-		x[1] = sx;
-		y[1] = visreg.maxY;
-
-		if(GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) == true) {
-			DasherPolyline(x, y, 2, 1, 5);
-		}
-		else {
-			DasherPolyline(x, y, 2, 1, -1);
-		}
-
+		DasherPolyline(cx, cy, 2, 1, GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 5 : -1);
+		
 		// Horizontal bar of crosshair
 
-		x[0] = 12 * sx / 14;
-		y[0] = lpMaxY / 2;
+		cx[0] = 12 * sx / 14;
+		cy[1] = cy[0] = lpMaxY / 2;
 
-		x[1] = 17 * sx / 14;
-		y[1] = lpMaxY / 2;
+		cx[1] = 17 * sx / 14;
+		//cy[1] = lpMaxY / 2;
 
-		if(GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) == true) {
-			DasherPolyline(x, y, 2, 1, 5);
-		}
-		else {
-			DasherPolyline(x, y, 2, 1, -1);
-		}
+		DasherPolyline(cx, cy, 2, 1, GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 5 : -1);
 	}
+	private final long[] cx=new long[2],cy=new long[2];
 
 	/**
 	 * Reverse the x co-ordinate nonlinearity.
