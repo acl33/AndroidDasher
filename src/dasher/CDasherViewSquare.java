@@ -135,15 +135,7 @@ public class CDasherViewSquare extends CDasherView {
 	 */  
 	protected long m_iScalingFactor;
 	
-	/**
-	 * Top-left corner of the current visible region
-	 */
-	protected CDasherView.DPoint m_iDasherMin;
-	
-	/**
-	 * Bottom-right corner of the current visible region
-	 */
-	protected CDasherView.DPoint m_iDasherMax;
+	protected DRect visibleRegion;
 	
 	/**
 	 * Cache of LP_TRUNCATION
@@ -199,8 +191,6 @@ public class CDasherViewSquare extends CDasherView {
 		m_Y3 = (long)(dY3 * lpMaxY);
 		m_Y1 = (long)(1.0 / dY1);
 	
-		m_bVisibleRegionValid = false;
-		
 		lpTruncation = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_TRUNCATION);
 		lpTruncationType = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_TRUNCATIONTYPE);
 		lpNormalisation = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_NORMALIZATION);
@@ -231,7 +221,7 @@ public class CDasherViewSquare extends CDasherView {
 			CParameterNotificationEvent Evt = (CParameterNotificationEvent)Event;
 			
 			if (Evt.m_iParameter == Elp_parameters.LP_REAL_ORIENTATION) {
-				m_bVisibleRegionValid = false;
+				visibleRegion = null;
 			}
 			else if (Evt.m_iParameter == Elp_parameters.LP_TRUNCATION) {
 				lpTruncation = (int)GetLongParameter(Elp_parameters.LP_TRUNCATION);
@@ -713,9 +703,8 @@ public class CDasherViewSquare extends CDasherView {
 	 */
 	public CDasherView.DRect VisibleRegion() {
 		
-		if(!m_bVisibleRegionValid) {
-			
-					
+		if(visibleRegion==null) {
+			DPoint m_iDasherMin,m_iDasherMax;		
 			switch( realOrientation ) {
 			case Opts.ScreenOrientations.LeftToRight:
 				m_iDasherMin = Screen2Dasher(Screen().GetWidth(),0,false,true);
@@ -733,13 +722,15 @@ public class CDasherViewSquare extends CDasherView {
 				m_iDasherMin = Screen2Dasher(0,0,false,true);
 				m_iDasherMax = Screen2Dasher(Screen().GetWidth(),Screen().GetHeight(),false,true);
 			break;
+			default:
+				throw new IllegalArgumentException("Unknown Orientation "+realOrientation);
 			}
 			
-			m_bVisibleRegionValid = true;
+			visibleRegion = new CDasherView.DRect(m_iDasherMin.x, m_iDasherMin.y,
+					m_iDasherMax.x, m_iDasherMax.y);
 		}
 		
-		return new CDasherView.DRect(m_iDasherMin.x, m_iDasherMin.y,
-				m_iDasherMax.x, m_iDasherMax.y);
+		return visibleRegion; 
 	}
 	
 
@@ -949,7 +940,7 @@ public class CDasherViewSquare extends CDasherView {
 	 */
 	public void ChangeScreen(CDasherScreen NewScreen) {
 		m_Screen = NewScreen;
-		m_bVisibleRegionValid = false;
+		visibleRegion = null;
 		//int Width = Screen().GetWidth();
 		int Height = Screen().GetHeight();
 		//CanvasX = 9 * Width / 10;
