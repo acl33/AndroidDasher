@@ -50,7 +50,13 @@ public class CDelayedDraw {
 	 * @param Size Font size to use
 	 */
 	public void DelayDrawText(String str, int x1, int y1, long Size) {
-		m_DrawTextString.add(new CTextString(str, x1, y1, Size));
+		CTextString obj;
+		if (nextFree<allTextStrings.size())
+			obj = allTextStrings.get(nextFree);
+		else
+			allTextStrings.add(obj = new CTextString());
+		nextFree++;
+		obj.init(str, x1, y1, Size);
 	}
 	
 	/**
@@ -59,30 +65,28 @@ public class CDelayedDraw {
 	 * @param screen Screen to which we should draw
 	 */
 	public void Draw(CDasherScreen screen) {
-		int iSize = m_DrawTextString.size();
-		
-		for(int i = 0; i < iSize; i++) {
-			CTextString draw = m_DrawTextString.get(i);
+		for(int i = 0; i < nextFree; i++) {
+			CTextString draw = allTextStrings.get(i);
 			screen.DrawString(draw.m_String, draw.m_x, draw.m_y, draw.m_iSize);
 		}
-		m_DrawTextString.clear();
-		
+		//put all objects into pool for reuse in later frames
+		nextFree = 0;
 	}
 			
 	/**
-	 * Internal list of objects we are waiting to draw
+	 * Internal list of both those we are waiting to draw, and unused objects (free list)
 	 */
-	protected ArrayList <CTextString> m_DrawTextString = new ArrayList<CTextString>();
-		
-	/* CSFS: The class CTextSymbol and its associated ArrayList has been removed
-	 * since it was redundant according to Eclipse.
-	 */
+	protected final ArrayList<CTextString> allTextStrings = new ArrayList<CTextString>();
+	
+	/** Next index of an unused object (all up to this index, exclusive, are
+	 * to be drawn; from this index onwards, are free) */
+	private int nextFree;
 	
 	/**
 	 * Class representing a String to be drawn plus information
 	 * needed to draw it
 	 */
-	protected class CTextString {
+	private static class CTextString {
 		
 		/**
 		 * Default constructor
@@ -92,12 +96,13 @@ public class CDelayedDraw {
 		 * @param y y co-ordinate of top-left corner of the string's bounding box
 		 * @param iSize font size
 		 */
-		public CTextString(String str, int x, int y, long iSize) {
-		
-			m_String = (str);
-			m_x = (x);
-			m_y = (y);
-			m_iSize = (iSize);
+		CTextString() {
+		}
+		void init(String str, int x, int y, long iSize) {
+			m_String = str;
+			m_x = x;
+			m_y = y;
+			m_iSize = iSize;
 						
 		} 
 		/**
