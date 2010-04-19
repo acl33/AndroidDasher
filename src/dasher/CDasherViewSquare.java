@@ -790,57 +790,6 @@ public class CDasherViewSquare extends CDasherView {
 	}
 	
 	/**
-	 * Gets the point in the Dasher world currently pointed
-	 * to by our input device.
-	 * <p>
-	 * Internally this boils down to calling GetCoordinates
-	 * with the appropriate flags and then feeding the results
-	 * through Input2Dasher.
-	 * @param Added Ignored, may be null
-	 */
-	public CDasherView.DPoint getInputDasherCoords() {
-		
-		// FIXME - rename this something more appropriate (all this really should do is convert the coordinates)
-		
-		// NOTE - we now ignore the values which are actually passed to the display
-		
-		// FIXME - Actually turn autocalibration on and off!
-		// FIXME - AutoCalibrate should use Dasher co-ordinates, not raw mouse co-ordinates?
-		// FIXME - Have I broken this by moving it before the offset is applied?
-		// FIXME - put ymap stuff back in 
-		
-		// FIXME - optimise this
-		
-		long[] Coordinates = new long[GetCoordinateCount()];
-		
-		int iType = (GetCoordinates(Coordinates));
-		
-		int mousex, mousey;
-		
-		if(Coordinates.length == 1) {
-			mousex = 0;
-			mousey = (int)Coordinates[0];
-		}
-		else {
-			mousex = (int)Coordinates[0];
-			mousey = (int)Coordinates[1];
-		}
-		
-		// Convert the input co-ordinates to dasher co-ordinates
-		
-		CDasherView.DPoint retval = Input2Dasher(mousex, mousey, iType);
-		
-		/* CSFS: As well as extensive replacement of functions which used 
-		 * primitives by reference, I've removed code which saved co-ordinates
-		 * to m_iDasherXCache as it appears it never gets referenced.
-		 */
-		
-		return retval;
-	}
-	
-//	TODO: Autocalibration should be in the eyetracker filter class
-	
-	/**
 	 * Sets a new screen, invalidates our current visible region,
 	 * and recalls SetScalingFactor, since the relationships between
 	 * Dasher and Screen co-ordinates may well have changed at this
