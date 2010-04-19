@@ -56,6 +56,8 @@ public class CDefaultFilter extends CInputFilter {
 	 */
 	protected CStartHandler m_StartHandler;
 	
+	protected final long[] lastInputCoords = new long[2];
+	
 	/**
 	 * Sole constructor. Constructs a DefaultFilter with an
 	 * AutoSpeedControl helper class and runs CreateStartHandler
@@ -90,16 +92,37 @@ public class CDefaultFilter extends CInputFilter {
 		
 		boolean bDidSomething = (false);
 		
-		if(GetBoolParameter(Ebp_parameters.BP_DRAW_MOUSE)) {
-			DrawMouse(View);
-			bDidSomething = true;
+		if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
+			if(GetBoolParameter(Ebp_parameters.BP_DRAW_MOUSE)) {
+				// Draw a small box at the current mouse position.
+				View.DasherDrawCentredRectangle(lastInputCoords[0], lastInputCoords[1], 5,
+								GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 2 : 1, false);
+				bDidSomething = true;
+			}
+			
+			if(GetBoolParameter(Ebp_parameters.BP_DRAW_MOUSE_LINE)) {
+				/**
+				 * Draws a line from the origin (LP_OX, LP_OY) to the current
+				 * mouse position.
+				 * 
+				 * @param View View to which this line should be drawn.
+				 */
+				//Start of line is the crosshair location
+				
+				mouseX[0] = GetLongParameter(Elp_parameters.LP_OX);
+				mouseY[0] = GetLongParameter(Elp_parameters.LP_OY);
+				
+				// End of line is the mouse cursor location...
+				
+				mouseX[1] = lastInputCoords[0];
+				mouseY[1] = lastInputCoords[1];
+				
+				// Actually plot the line
+				View.DasherPolyline(mouseX, mouseY, 2, (int)GetLongParameter(Elp_parameters.LP_LINE_WIDTH), GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 1 : -1);
+
+				bDidSomething = true;
+			}
 		}
-		
-		if(GetBoolParameter(Ebp_parameters.BP_DRAW_MOUSE_LINE)) {
-			DrawMouseLine(View);
-			bDidSomething = true;
-		}
-		
 		if(m_StartHandler != null) {
 			bDidSomething = m_StartHandler.DecorateView(View) || bDidSomething;
 		}
@@ -124,13 +147,17 @@ public class CDefaultFilter extends CInputFilter {
 	 * @return True if the model has been changed, false if not.
 	 */
 	public boolean Timer(long Time, CDasherView m_DasherView, CDasherModel m_DasherModel) {
-		boolean bDidSomething = !GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED);
-		if (bDidSomething) {
-			CDasherView.DPoint inputCoords = m_DasherView.getInputDasherCoords();
+		boolean bDidSomething;
+		if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
+			m_DasherView.getInputDasherCoords(lastInputCoords);
+			
+			m_DasherModel.oneStepTowards(lastInputCoords[0],lastInputCoords[1], Time, null);
 		
-			m_DasherModel.oneStepTowards(inputCoords.x,inputCoords.y, Time, null);
-		
-			m_AutoSpeedControl.SpeedControl(inputCoords.x, inputCoords.y, m_DasherModel.Framerate(), m_DasherView);
+			m_AutoSpeedControl.SpeedControl(lastInputCoords[0], lastInputCoords[1], m_DasherModel.Framerate(), m_DasherView);
+			
+			bDidSomething = true;
+		} else {
+			bDidSomething = false;
 		}
 		if(m_StartHandler != null) {
 			m_StartHandler.Timer(Time, m_DasherView, m_DasherModel);
@@ -212,68 +239,7 @@ public class CDefaultFilter extends CInputFilter {
 			// CSFS: Disabled for now, one is enough for testing purposes, if even that is necessary.
 	}
 	
-	/**
-	 * Draws a small box at the current mouse position.
-	 * 
-	 * @param View View to which we should draw
-	 */
-	public void DrawMouse(CDasherView View) {
-		
-		CDasherView.DPoint dashXY = View.getInputDasherCoords();
-		
-		// ApplyAutoCalibration(iDasherX, iDasherY, false);
-		// ApplyTransform(iDasherX, iDasherY);
-		
-		/* CSFS: These lines didn't appear to do anything */
-		
-		if(GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) == true) {
-			View.DasherDrawCentredRectangle(dashXY.x, dashXY.y, 5, 2, false);
-		}
-		else {
-			View.DasherDrawCentredRectangle(dashXY.x, dashXY.y, 5, 1, false);
-		}
-		
-	}
-	
-	/**
-	 * Draws a line from the origin (LP_OX, LP_OY) to the current
-	 * mouse position.
-	 * 
-	 * @param View View to which this line should be drawn.
-	 */
-	public void DrawMouseLine(CDasherView View) {
-		
-		CDasherView.DPoint newXY = View.getInputDasherCoords();
-		
-		long[] x = new long[2];
-		long[] y = new long[2];
-		
-		// Start of line is the crosshair location
-		
-		x[0] = GetLongParameter(Elp_parameters.LP_OX);
-		y[0] = GetLongParameter(Elp_parameters.LP_OY);
-		
-		// End of line is the mouse cursor location - note that we should
-		// probably be using a cached value rather than computing this
-		// separately to TapOn
-		
-		x[1] = newXY.x;
-		y[1] = newXY.y;
-		
-		// ApplyAutoCalibration(x[1], y[1], false);
-		// ApplyTransform(x[1], y[1]);
-
-		/* CSFS: Again, this just called stubs */
-		
-		// Actually plot the line
-		
-		if(GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE)) {
-			View.DasherPolyline(x, y, 2, (int)GetLongParameter(Elp_parameters.LP_LINE_WIDTH), 1);
-		}
-		else {
-			View.DasherPolyline(x, y, 2, (int)GetLongParameter(Elp_parameters.LP_LINE_WIDTH), -1);
-		}
-	}
+	private static final long[] mouseX=new long[2],mouseY=new long[2];
 	/*
 	public void CDefaultFilter::ApplyTransform(myint &iDasherX, myint &iDasherY) {
 	}
