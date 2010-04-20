@@ -540,8 +540,8 @@ public abstract class CDasherView extends CDasherComponent {
 			CDasherView.DPoint newTopLeft;
 			CDasherView.DPoint newBottomRight;
 			
-			newTopLeft = Screen2Dasher(newleft2, newtop2, false, true);
-			newBottomRight = Screen2Dasher(newright2, newbottom2, false, true);
+			newTopLeft = Screen2Dasher(newleft2, newtop2);
+			newBottomRight = Screen2Dasher(newright2, newbottom2);
 			
 			mostleft = Math.min(newBottomRight.x, newTopLeft.x);
 		}
@@ -574,68 +574,70 @@ public abstract class CDasherView extends CDasherComponent {
 	
 	/**
 	 * Gets the point in the Dasher world currently pointed
-	 * to by our input device.
-	 * Also takes account of the type of input device we're using,
-	 * so that one-dimensional devices and eyetrackers are corrected
-	 * appropriately.
+	 * to by our input device. Convenience function wrapping
+	 * {@link #getInputDasherCoords(long[])} but with extra
+	 * allocation.
+	 * @return a new DPoint object containing the location (in Dasher co-ords)
+	 */
+	public DPoint getInputDasherCoords() {
+		
+		long[] temp = new long[2];
+		getInputDasherCoords(temp);
+		return new DPoint(temp[0],temp[1]);
+	}
+	
+	/**
+	 * Gets where our input device is currently pointing in Dasher space.
 	 * <p>
 	 * Internally this boils down to calling GetCoordinates
-	 * with the appropriate flags and then feeding the results
-	 * through Input2Dasher.
-	 * @param Added Ignored, may be null
+	 * and then feeding the results through Screen2Dasher
+	 * if appropriate.
+	 * @param result array to fill with coordinates (must have >=2 elements)
+	 * @throw {@link ArrayIndexOutOfBoundsException} if the supplied array has <2 elements
 	 */
-	public CDasherView.DPoint getInputDasherCoords() {
+	public void getInputDasherCoords(long[] result) {
+		if (inputCoords==null || inputCoords.length != GetCoordinateCount())
+			inputCoords = new long[GetCoordinateCount()];
 		
-		// FIXME - rename this something more appropriate (all this really should do is convert the coordinates)
+		int iType = (GetCoordinates(inputCoords));
 		
-		// NOTE - we now ignore the values which are actually passed to the display
 		
-		// FIXME - Actually turn autocalibration on and off!
-		// FIXME - AutoCalibrate should use Dasher co-ordinates, not raw mouse co-ordinates?
-		// FIXME - Have I broken this by moving it before the offset is applied?
-		// FIXME - put ymap stuff back in 
-		
-		// FIXME - optimise this
-		
-		long[] Coordinates = new long[GetCoordinateCount()];
-		
-		int iType = (GetCoordinates(Coordinates));
-		
-		int mousex, mousey;
-		
-		if(Coordinates.length == 1) {
-			mousex = 0;
-			mousey = (int)Coordinates[0];
+		if(inputCoords.length == 1) {
+			result[0] = 0;
+			result[1] = inputCoords[0];
 		}
 		else {
-			mousex = (int)Coordinates[0];
-			mousey = (int)Coordinates[1];
+			result[0] = inputCoords[0];
+			result[1] = inputCoords[1];
 		}
-		
+
 		// Convert the input co-ordinates to dasher co-ordinates
-		
-		CDasherView.DPoint retval = Input2Dasher(mousex, mousey, iType);
-		
-		/* CSFS: As well as extensive replacement of functions which used 
-		 * primitives by reference, I've removed code which saved co-ordinates
-		 * to m_iDasherXCache as it appears it never gets referenced.
-		 */
-		
-		return retval;
+		if (iType==0) Screen2Dasher(result); else if (iType!=1) throw new AssertionError();
 	}
+	/** Temporary array used for e.g. input coordinates (cache to avoid reallocating) */ 
+	private long[] inputCoords;
 	
 //	TODO: Autocalibration should be in the eyetracker filter class
 		
 	/**
-	 * Should convert a given screen co-ordinate to dasher co-ordinates.
-	 * 
+	 * Convert a given screen co-ordinate to dasher co-ordinates. 
+	 * (Wraps {@link #Screen2Dasher(long[])}).
 	 * @param iInputX Screen x co-ordinate  
 	 * @param iInputY Screen y co-ordinate
-	 * @param b1D Indicates whether these co-ordinates come from a 1D device
-	 * @param bNonlinearity If true, we may wish to correct for a non-linearity in one or other co-ordinate system
 	 * @return Dasher co-ordinates
 	 */
-	public abstract CDasherView.DPoint Screen2Dasher(int iInputX, int iInputY, boolean b1D, boolean bNonlinearity);
+	public CDasherView.DPoint Screen2Dasher(int iInputX, int iInputY) {
+		long[] temp = new long[] {iInputX, iInputY};
+		Screen2Dasher(temp);
+		return new DPoint(temp[0],temp[1]);
+	}
+	
+	/**
+	 * Convert a given screen coordinate into dasher co-ordinates.
+	 * @param coords on entry, contains screen coordinates; on exit, contains dasher coordinates.
+	 * (Must have at least 2 elements; any beyond first two are ignored.)
+	 */
+	public abstract void Screen2Dasher(long[] coords);
 	
 	/**
 	 * Should convert a given Dasher co-ordinate to its equivalent
@@ -646,18 +648,6 @@ public abstract class CDasherView extends CDasherComponent {
 	 * @return Screen co-ordinates
 	 */
 	public abstract CDasherView.Point Dasher2Screen(long iDasherX, long iDasherY);
-		
-
-	/**
-	 * Converts input device co-ordinates to the appropriate, not
-	 * necessarily equivalent, Dasher co-ordinates.
-	 * 
-	 * @param iInputX Input x co-ordinate
-	 * @param iInputY Input y co-ordinate
-	 * @param iType Input co-ordinate scheme: 0 for Screen or 1 for Dasher co-ordintes
-	 * @return Dasher co-ordinates corresponding to given input co-ordinates
-	 */
-	protected abstract CDasherView.DPoint Input2Dasher(int iInputX, int iInputY, int iType);
 		
 	/**
 	 * Gets our current screen

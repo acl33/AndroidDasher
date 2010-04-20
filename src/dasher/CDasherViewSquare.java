@@ -491,13 +491,10 @@ public class CDasherViewSquare extends CDasherView {
 	 * 
 	 * @param iInputX Screen x co-ordinate
 	 * @param iInputY Screen y co-ordinate
-	 * @param b1D Should we use a simpler transform
-	 * for 1D devices?
-	 * @param bNonlinearity Should we use unapplyXMapping and m_ymap.unmap
-	 * to reverse an applied nonlinearity?
 	 * @return Point in Dasher space equivalent to the given Screen point
 	 */	
-	public CDasherView.DPoint Screen2Dasher(int iInputX, int iInputY, boolean b1D, boolean bNonlinearity) {
+	@Override
+	public void Screen2Dasher(long[] coords) {
 		
 		// Things we're likely to need:
 		
@@ -507,43 +504,32 @@ public class CDasherViewSquare extends CDasherView {
 		int iScreenWidth = Screen().GetWidth();
 		int iScreenHeight = Screen().GetHeight();
 		
-		if( b1D ) { // Special case for 1D mode...
-			return new CDasherView.DPoint(
-					iInputX * iDasherWidth / iScreenWidth,
-					iInputY * iDasherHeight / iScreenHeight);
-		}
-		
 		int eOrientation = realOrientation;
 		
 		long rx,ry;
 		switch(eOrientation) {
 		case Opts.ScreenOrientations.LeftToRight:
-			rx = iDasherWidth / 2 - ( iInputX - iScreenWidth / 2 ) * m_iScalingFactor / m_iScaleFactorX;
-			ry = iDasherHeight / 2 + ( iInputY - iScreenHeight / 2 ) * m_iScalingFactor / m_iScaleFactorY;
+			rx = iDasherWidth / 2 - ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor / m_iScaleFactorX;
+			ry = iDasherHeight / 2 + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor / m_iScaleFactorY;
 		break;
 		case Opts.ScreenOrientations.RightToLeft:
-			rx = (iDasherWidth / 2 + ( iInputX - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
-			ry = (iDasherHeight / 2 + ( iInputY - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
+			rx = (iDasherWidth / 2 + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
+			ry = (iDasherHeight / 2 + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
 		break;
 		case Opts.ScreenOrientations.TopToBottom:
-			rx = (iDasherWidth / 2 - ( iInputY - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
-			ry = (iDasherHeight / 2 + ( iInputX - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
+			rx = (iDasherWidth / 2 - ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
+			ry = (iDasherHeight / 2 + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
 		break;
 		case Opts.ScreenOrientations.BottomToTop:
-			rx = (iDasherWidth / 2 + ( iInputY - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
-			ry = (iDasherHeight / 2 + ( iInputX - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
+			rx = (iDasherWidth / 2 + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
+			ry = (iDasherHeight / 2 + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
 		break;
 		default:
 			throw new AssertionError();
 		}
 		
-		// FIXME - disabled to avoid floating point
-		if( bNonlinearity ) {
-			rx = unapplyXMapping(rx);
-			ry = (long)yunmap(ry);
-		}
-		
-		return new CDasherView.DPoint(rx, ry);
+		coords[0] = unapplyXMapping(rx);
+		coords[1] = (long)yunmap(ry);
 	}
 	
 	/**
@@ -663,20 +649,20 @@ public class CDasherViewSquare extends CDasherView {
 			DPoint m_iDasherMin,m_iDasherMax;		
 			switch( realOrientation ) {
 			case Opts.ScreenOrientations.LeftToRight:
-				m_iDasherMin = Screen2Dasher(Screen().GetWidth(),0,false,true);
-				m_iDasherMax = Screen2Dasher(0,Screen().GetHeight(),false,true);
+				m_iDasherMin = Screen2Dasher(Screen().GetWidth(),0);
+				m_iDasherMax = Screen2Dasher(0,Screen().GetHeight());
 			break;
 			case Opts.ScreenOrientations.RightToLeft:
-				m_iDasherMin = Screen2Dasher(0,0,false,true);
-				m_iDasherMax = Screen2Dasher(Screen().GetWidth(),Screen().GetHeight(),false,true);
+				m_iDasherMin = Screen2Dasher(0,0);
+				m_iDasherMax = Screen2Dasher(Screen().GetWidth(),Screen().GetHeight());
 			break;
 			case Opts.ScreenOrientations.TopToBottom:
-				m_iDasherMin = Screen2Dasher(0,Screen().GetHeight(),false,true);
-				m_iDasherMax = Screen2Dasher(Screen().GetWidth(),0,false,true);
+				m_iDasherMin = Screen2Dasher(0,Screen().GetHeight());
+				m_iDasherMax = Screen2Dasher(Screen().GetWidth(),0);
 			break;
 			case Opts.ScreenOrientations.BottomToTop:
-				m_iDasherMin = Screen2Dasher(0,0,false,true);
-				m_iDasherMax = Screen2Dasher(Screen().GetWidth(),Screen().GetHeight(),false,true);
+				m_iDasherMin = Screen2Dasher(0,0);
+				m_iDasherMax = Screen2Dasher(Screen().GetWidth(),Screen().GetHeight());
 			break;
 			default:
 				throw new IllegalArgumentException("Unknown Orientation "+realOrientation);
@@ -689,82 +675,6 @@ public class CDasherViewSquare extends CDasherView {
 		return visibleRegion; 
 	}
 	
-
-	/* CSFS: Removed functions which returned a single aspect of the visible region;
-	 * it didn't seem any routine made use of them anymore.
-	 */
-
-	
-	/** 
-	 * Convert abstract 'input coordinates', which may or may not
-	 * correspond to actual screen positions, depending on the settings,
-	 * into dasher co-ordinates.
-	 * <p>
-	 * This should be done once initially, then we work in Dasher
-	 * co-ordinates for everything else. Input co-ordinates will be
-	 * assumed to range over the extent of the screen.
-	 * <p>
-	 * Internally, we work in three modes: Direct (ie mouse), 1D and Eyetracker.
-	 * Essentially, we
-	 * <ol>
-	 * <li>Feed screen co-ordinates through Screen2Dasher with the
-	 * appropriate flags (1D and Nonlinear as necessary)
-	 * <li>Apply y co-ordinate scaling if this is a 1D device.
-	 * </ol>
-	 * 
-	 * @param iInputX Input x co-ordinate
-	 * @param iInputY Input y co-ordinate
-	 * @param iType 0 if input co-ordinates are in pixels
-	 * or 1 if in Dasher co-ordinates
-	 * @return Dasher world point corresponding but not necessarily
-	 * in the same place as this input point.
-	 */
-	public CDasherView.DPoint Input2Dasher(int iInputX, int iInputY, int iType) {
-		// FIXME - need to incorporate one-button mode?
-		boolean b1D = GetBoolParameter(Ebp_parameters.BP_NUMBER_DIMENSIONS);
-		// First convert the supplied co-ordinates to 'linear' Dasher co-ordinates
-			
-		CDasherView.DPoint retval;
-		
-		switch (iType) {
-		case 0:
-			// Raw secreen coordinates
-			
-			retval = Screen2Dasher( iInputX, iInputY, b1D, !b1D);
-			break;
-		case 1:
-			// Raw dasher coordinates
-			retval = new CDasherView.DPoint(iInputX, iInputY);
-			break;
-		default:
-			throw new AssertionError();
-		}
-		
-		// Apply y scaling
-		
-		// TODO: Check that this is still doing something vaguely sensible - I think it isn't
-		
-		if(b1D) {
-			if( GetLongParameter(Elp_parameters.LP_YSCALE) > 0 ) {
-				
-				double dYScale;
-				
-				if(( realOrientation == Opts.ScreenOrientations.LeftToRight ) || ( realOrientation == Opts.ScreenOrientations.RightToLeft )) {
-					dYScale = Screen().GetHeight() / (double)(GetLongParameter(Elp_parameters.LP_YSCALE));
-				}
-				else {
-					dYScale = Screen().GetWidth() / (double)(GetLongParameter(Elp_parameters.LP_YSCALE));
-				}
-				
-				retval = new CDasherView.DPoint(retval.x,
-						(long)((retval.y - lpMaxY/2) * dYScale + lpMaxY/2));
-			}
-		}
-		
-		return retval;
-	}
-	
-
 	/**
 	 * Truncate a set of co-ordinates so that they are on the screen
 	 *   

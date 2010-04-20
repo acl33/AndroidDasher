@@ -219,28 +219,7 @@ public class CDefaultFilter extends CInputFilter {
 	 */
 	public void DrawMouse(CDasherView View) {
 		
-		long[] Coordinates = (new long[View.GetCoordinateCount()]);
-		
-		int iType = View.GetCoordinates(Coordinates);
-		
-		int mousex;
-		int mousey;
-		
-		if(Coordinates.length == 1) {
-			mousex = 0;
-			mousey = (int)Coordinates[0];
-		}
-		else {
-			mousex = (int)Coordinates[0];
-			mousey = (int)Coordinates[1];
-			
-			/* CSFS: This looks a little questionable; however this is also exactly
-			 * what's found in the C++ version only using "myint" for the long and
-			 * screenint for the int...
-			 */
-		}
-		
-		CDasherView.DPoint dashXY = View.Input2Dasher(mousex, mousey, iType);
+		CDasherView.DPoint dashXY = View.getInputDasherCoords();
 		
 		// ApplyAutoCalibration(iDasherX, iDasherY, false);
 		// ApplyTransform(iDasherX, iDasherY);
@@ -264,21 +243,7 @@ public class CDefaultFilter extends CInputFilter {
 	 */
 	public void DrawMouseLine(CDasherView View) {
 		
-		long[] Coordinates = new long[View.GetCoordinateCount()];
-		
-		int iType = View.GetCoordinates(Coordinates);
-		
-		int mousex;
-		int mousey;
-		
-		if(Coordinates.length == 1) {
-			mousex = 0;
-			mousey = (int)Coordinates[0];
-		}
-		else {
-			mousex = (int)Coordinates[0];
-			mousey = (int)Coordinates[1];
-		}
+		CDasherView.DPoint newXY = View.getInputDasherCoords();
 		
 		long[] x = new long[2];
 		long[] y = new long[2];
@@ -292,7 +257,6 @@ public class CDefaultFilter extends CInputFilter {
 		// probably be using a cached value rather than computing this
 		// separately to TapOn
 		
-		CDasherView.DPoint newXY = View.Input2Dasher(mousex, mousey, iType);
 		x[1] = newXY.x;
 		y[1] = newXY.y;
 		
