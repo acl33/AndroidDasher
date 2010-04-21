@@ -56,8 +56,8 @@ public class CAlphabetManager<C> {
 	 */
     protected final CDasherModel m_Model;
     
-    // Undocumented, as these are present as caches only.
-    protected final int SPSymbol, ConvertSymbol, ContSymbol;
+    /* Cache the alphabet's Space Symbol, as this is given a different colour */
+    protected final int SPSymbol;
     
     /**
      * Pointer to the current Alphabet, used to find out what a
@@ -75,9 +75,9 @@ public class CAlphabetManager<C> {
 		if(iColour == -1) {
 			if(sym == SPSymbol) {
 				iColour = 9;
-			} else if(sym == ContSymbol) {
+			} /*else if(sym == ContSymbol) {
 				iColour = 8;
-			} else if (sym==0){ 
+			} */else if (sym==0){ 
 				iColour = 7;
 			} else {
 				iColour = (sym % 3) + 10;
@@ -110,9 +110,6 @@ public class CAlphabetManager<C> {
     	m_DisplayText = m_Alphabet.GetDisplayTexts();
     	
     	SPSymbol = m_Alphabet.GetSpaceSymbol();
-    	ConvertSymbol = m_Alphabet.GetStartConversionSymbol();
-    	ContSymbol = m_Alphabet.GetControlSymbol();
-    	
     	
     	/* Caching these as the repeated requests which were twice deferred were
     	 * actually taking 5% of our runtime
@@ -296,7 +293,7 @@ public class CAlphabetManager<C> {
 			if (bCommitted) return;
 			bCommitted=true;
 			//ACL this was used as an 'if' condition:
-			assert (m_Symbol < m_Alphabet.GetNumberTextSymbols());
+			assert (m_Symbol < m_Alphabet.GetNumberSymbols());
 			//...before performing the following. But I can't see why it should ever fail?!
 			
 			if (m_Model.GetBoolParameter(Ebp_parameters.BP_LM_ADAPTIVE)) {
@@ -474,30 +471,20 @@ public class CAlphabetManager<C> {
     }
     
     CDasherNode mkSymbol(CAlphNode parent, int sym, long iLbnd, long iHbnd) {
-    	CDasherNode NewNode;
-    	if(sym == ContSymbol)
-			NewNode = m_Model.GetCtrlRoot(parent, iLbnd, iHbnd);
-		else if(sym == ConvertSymbol) {
-			NewNode = m_Model.GetConvRoot(parent, iLbnd, iHbnd, 0);
-			NewNode.Seen(false);
+    	//ACL make the new node's context ( - this used to be done only in PushNode(),
+		// before calling populate...)
+		C cont;
+		if (sym < m_Alphabet.GetNumberSymbols() && sym > 0) {
+			// Normal symbol - derive context from parent
+			cont = m_LanguageModel.ContextWithSymbol(parent.context,sym);
+		} else {
+			assert false; //ACL I don't see how this can/should ever happen?
+			// For new "root" nodes (such as under control mode), we want to 
+			// mimic the root context
+			cont = m_LanguageModel.EmptyContext();
+			//      EnterText(cont, "");
 		}
-		else {
-			//ACL make the new node's context ( - this used to be done only in PushNode(),
-			// before calling populate...)
-			C cont;
-			if (sym < m_Alphabet.GetNumberTextSymbols() && sym > 0) {
-				// Normal symbol - derive context from parent
-				cont = m_LanguageModel.ContextWithSymbol(parent.context,sym);
-			} else {
-				// For new "root" nodes (such as under control mode), we want to 
-				// mimic the root context
-				cont = m_LanguageModel.EmptyContext();
-				//      EnterText(cont, "");
-			}
-			NewNode = allocSymbol(parent, sym, (parent.m_iPhase+1)%2, iLbnd, iHbnd, cont);
-		}
-
-		return NewNode;
+		return allocSymbol(parent, sym, (parent.m_iPhase+1)%2, iLbnd, iHbnd, cont);
     }
     
     CGroupNode mkGroup(CAlphNode parent, SGroupInfo group, long iLbnd, long iHbnd) {

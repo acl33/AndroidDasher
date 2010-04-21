@@ -65,33 +65,6 @@ public class CAlphabet {
 	protected int m_SpaceSymbol;
 	
 	/**
-	 * The symbol number of the control node.
-	 * 
-	 * Currently redundant as control mode is not implemented
-	 * in Java.
-	 */
-	protected int m_ControlSymbol;
-	
-	//-- Added for Kanji Conversion 13 July 2005 by T.Kaburagi
-	
-	/**
-	 * The symbol number of the Start Conversion symbol.
-	 * 
-	 * Current redundant as kanji conversion is not yet
-	 * implemented in Java.
-	 */
-	protected int m_StartConversionSymbol;
-	
-
-	/**
-	 * The symbol number of the End Conversion symbol.
-	 * 
-	 * Current redundant as kanji conversion is not yet
-	 * implemented in Java.
-	 */
-	protected int m_EndConversionSymbol;
-	
-	/**
 	 * Path of a file containing training text relevant
 	 * to this alphabet.
 	 */
@@ -160,7 +133,6 @@ public class CAlphabet {
 	
 	public CAlphabet() {
 		m_Orientation = Opts.ScreenOrientations.LeftToRight;
-		m_ControlSymbol = -1; 
 				
 		m_Characters = new ArrayList<String>();
 		m_Display = new ArrayList<String>();
@@ -193,7 +165,6 @@ public class CAlphabet {
 	
 	public CAlphabet(CAlphIO.AlphInfo AlphabetInfo) { 
 		m_Orientation = Opts.ScreenOrientations.LeftToRight;
-		m_ControlSymbol = (-1);
 		
 		int nSymbols = AlphabetInfo.m_iCharacters + 5;
 		// +5 because of space, paragraph, control, start/end conversion.
@@ -208,9 +179,6 @@ public class CAlphabet {
 		m_Colours.add(-1);
 		m_Foreground.add("");
 		TextMap = new CAlphabetMap();
-		
-		m_StartConversionSymbol = -1;
-		m_EndConversionSymbol = -1;
 		
 		// Set miscellaneous options
 		
@@ -232,22 +200,6 @@ public class CAlphabet {
 		
 		if(AlphabetInfo.SpaceCharacter.Text.length() != 0)
 			AddSpaceSymbol(AlphabetInfo.SpaceCharacter.Text, AlphabetInfo.SpaceCharacter.Display, AlphabetInfo.SpaceCharacter.Colour, AlphabetInfo.SpaceCharacter.Foreground);
-		
-		//-- Added for Kanji Conversion 13 July 2005 by T.Kaburagi START
-		if(AlphabetInfo.StartConvertCharacter.Text.length() != 0)
-			AddStartConversionSymbol(AlphabetInfo.StartConvertCharacter.Text, AlphabetInfo.StartConvertCharacter.Display, AlphabetInfo.StartConvertCharacter.Colour, AlphabetInfo.StartConvertCharacter.Foreground);
-		
-		if(AlphabetInfo.EndConvertCharacter.Text.length() != 0)
-			AddEndConversionSymbol(AlphabetInfo.EndConvertCharacter.Text, AlphabetInfo.EndConvertCharacter.Display, AlphabetInfo.EndConvertCharacter.Colour, AlphabetInfo.EndConvertCharacter.Foreground);
-		//-- Added for Kanji Conversion 13 July 2005 by T.Kaburagi END
-		
-		// DJW - now the control symbol is always a part of the alphabet
-		// DasherModel knows whether or not to use it
-		
-		// FIXME - We really need to ensure that the control symbol is last in the alphabet with the current logic.
-		
-		if(AlphabetInfo.ControlCharacter.Display.length() != 0 && GetControlSymbol() == -1)
-			AddControlSymbol(AlphabetInfo.ControlCharacter.Text, AlphabetInfo.ControlCharacter.Display, AlphabetInfo.ControlCharacter.Colour, AlphabetInfo.ControlCharacter.Foreground);
 		
 		// New group stuff
 		
@@ -341,57 +293,6 @@ public class CAlphabet {
 	}
 	
 	/**
-	 * Adds a control symbol to the alphabet. Since there is only
-	 * one identifier for the control symbol, if multiple control
-	 * symbols are added all but the latest will lose their
-	 * status and will become ordinary symbols.
-	 * 
-	 * @param NewCharacter Redundant; the Control character is not typed.
-	 * @param Display Representation to be shown on screen. (typically 'Control')
-	 * @param Colour Background colour index to be used in drawing nodes containing this character. 
-	 * @param Foreground Foreground colour to be used drawing the text..
-	 */
-	
-	public void AddControlSymbol(String NewCharacter, String Display, int Colour, String Foreground) {
-		AddChar(NewCharacter, Display, Colour, Foreground);
-		m_ControlSymbol = GetNumberSymbols() - 1;
-	}
-	
-	/**
-	 * Adds a start-conversion symbol top the alphabet. Since there is only
-	 * one identifier for the symbol, if multiple start-conversion
-	 * symbols are added all but the latest will lose their
-	 * status and will become ordinary symbols.
-	 * 
-	 * @param NewCharacter Redundant; the conversion symbol is not a typed character in the ordinary sense.
-	 * @param Display Representation to be shown on screen.
-	 * @param Colour Background colour index to be used in drawing nodes containing this character. 
-	 * @param Foreground Foreground colour to be used drawing the text..
-	 */	
-	
-	public void AddStartConversionSymbol(String NewCharacter, String Display, int Colour, String Foreground) {
-		AddChar(NewCharacter, Display, Colour, Foreground);
-		m_StartConversionSymbol = GetNumberSymbols() - 1;
-	}
-	
-	/**
-	 * Adds an end-conversion symbol top the alphabet. Since there is only
-	 * one identifier for the end-conversion symbol, if multiple end-conversion
-	 * symbols are added all but the latest will lose their
-	 * status and will become ordinary symbols.
-	 * 
-	 * @param NewCharacter Redundant; the end-conversion symbol is not typed in the ordinary sense.
-	 * @param Display Representation to be shown on screen.
-	 * @param Colour Background colour index to be used in drawing nodes containing this character. 
-	 * @param Foreground Foreground colour to be used drawing the text..
-	 */
-	
-	public void AddEndConversionSymbol(String NewCharacter, String Display, int Colour, String Foreground) {
-		AddChar(NewCharacter, Display, Colour, Foreground);
-		m_EndConversionSymbol = GetNumberSymbols() - 1;
-	}
-
-	/**
 	 * Retrieves the text colour to be used in drawing the specified
 	 * symbol. In the case that a foreground colour was not specified
 	 * (and so the m_Foreground list contains "" at this index)
@@ -420,21 +321,6 @@ public class CAlphabet {
 	public int GetNumberSymbols() {
 		return m_Characters.size();
 	}
-	
-	/**
-	 * Gets the number of symbols in this alphabet which are not
-	 * 'special symbols' (eg the Control symbol). In reality
-	 * this is the same as GetNumberSymbols() - 1.
-	 * <p>
-	 * This method needs improving to correctly recognise the
-	 * start conversion symbol.
-	 * 
-	 * @return Textual symbol count in this alphabet.
-	 */
-	 
-	public int GetNumberTextSymbols() {
-		return m_Characters.size() - 1;
-	} 
 	
 	/**
 	 * Gets the orientation associated with this alphabet.
@@ -616,36 +502,6 @@ public class CAlphabet {
 	
 	public int GetSpaceSymbol()  {
 		return m_SpaceSymbol;
-	}
-	
-	/**
-	 * Gets the index of this alphabet's control symbol.
-	 * 
-	 * @return index of control symbol, or -1 if there is none.
-	 */
-	
-	public int GetControlSymbol()  {
-		return m_ControlSymbol;
-	}
-	
-	/**
-	 * Gets the index of this alphabet's start-conversion symbol.
-	 * 
-	 * @return index of start-conversion symbol, or -1 if there is none.
-	 */
-	
-	public int GetStartConversionSymbol()  {
-		return m_StartConversionSymbol;
-	}
-	
-	/**
-	 * Gets the index of this alphabet's end-conversion symbol.
-	 * 
-	 * @return index of end-conversion symbol, or -1 if there is none.
-	 */
-	
-	public int GetEndConversionSymbol()  {
-		return m_EndConversionSymbol;
 	}
 	
 }

@@ -133,9 +133,9 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 		//exclusions[] array etc. was removed by CSFS.
 		// this was CountExclusion, not UpdateExclusion - a (minor) speed
 		// improvement at the cost of worse compression/prediction, hence leaving it out. 
-		int iNumSymbols = GetSize();
+		int iNumSymbols = m_Alphabet.GetNumberSymbols();
 
-		long[] probs = new long[iNumSymbols + 1];
+		long[] probs = new long[iNumSymbols];
 
 		int i;
 
@@ -198,7 +198,7 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 
 		if(sym==0) return ctx;
 
-		assert(sym >= 0 && sym < GetSize());
+		assert(sym >= 0 && sym < m_Alphabet.GetNumberSymbols());
 		CPPMnode r = AddSymbol(ctx,sym);
 		while(!orderOk(r))
 			r = r.vine;		
@@ -236,7 +236,7 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 	public CPPMnode ContextWithSymbol(CPPMnode ctx, int Symbol) {
 		if(Symbol==0) return ctx;
 
-		assert(Symbol >= 0 && Symbol < GetSize());
+		assert(Symbol >= 0 && Symbol < m_Alphabet.GetNumberSymbols());
 
 		while(ctx != null) {
 			CPPMnode find = ctx.find_symbol(Symbol);

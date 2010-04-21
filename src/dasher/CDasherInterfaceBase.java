@@ -1001,35 +1001,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	
 	// REMOVED: See bug notes at the top.
 	
-//	Control mode stuff
-	
-	/**
-	 * Deferred to m_DasherModel.
-	 * 
-	 * @see CDasherModel
-	 */
-	public void RegisterNode( int iID, String strLabel, int iColour ) {
-		m_DasherModel.RegisterNode(iID, strLabel, iColour);
-	}
-	
-	/**
-	 * Deferred to m_DasherModel.
-	 * 
-	 * @see CDasherModel
-	 */
-	public void ConnectNode(int iChild, int iParent, int iAfter) {
-		m_DasherModel.ConnectNode(iChild, iParent, iAfter);
-	}
-	
-	/**
-	 * Deferred to m_DasherModel.
-	 * 
-	 * @see CDasherModel
-	 */
-	public void DisconnectNode(int iChild, int iParent) {
-		m_DasherModel.DisconnectNode(iChild, iParent);
-	}
-	
 	/**
 	 * Deferred to CSettingsStore
 	 * 

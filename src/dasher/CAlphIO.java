@@ -174,24 +174,6 @@ public class CAlphIO implements XMLFileParser {
 		 * Space character for this alphabet.
 		 */
 		character SpaceCharacter = new character();   // display and edit text of Space character. Typically (" ", "_"). Use ("", "") if no space character.
-		
-		/**
-		 * Control character for this alphabet.
-		 */
-		character ControlCharacter = new character(); // display and edit text of Control character. Typically ("", "Control"). Use ("", "") if no control character.
-		
-		// Added for Kanji Conversion by T.Kaburagi 15 July 2005
-		/**
-		 * Start conversion character for this alphabet.
-		 * (Used to convert Hiragana to Kanji)
-		 */
-		character StartConvertCharacter = new character();
-		
-		/**
-		 * End conversion character for this alphabet.
-		 * (Used to convert Hiragana to Kanji)
-		 */
-		character EndConvertCharacter = new character();
 				
 	}
 	
@@ -312,9 +294,6 @@ public class CAlphIO implements XMLFileParser {
 					currentAlph.Mutable = bLoadMutable;
 				    currentAlph.SpaceCharacter.Colour = -1;
 				    currentAlph.ParagraphCharacter.Colour = -1;
-				    currentAlph.ControlCharacter.Colour = -1;
-				    currentAlph.StartConvertCharacter.Text = "";
-				    currentAlph.EndConvertCharacter.Text = "";
 				    currentAlph.m_iCharacters = 1; // Start at 1 as 0 is the root node symbol
 				    currentAlph.m_BaseGroup = null;
 				    
@@ -426,7 +405,8 @@ public class CAlphIO implements XMLFileParser {
 				}
 				
 				else if(tagName == "control") {
-					for(int i = 0; i < tagAttributes.getLength(); i++) {
+					//ACL Skip, as not implemented in Java. But we could read in display info, as follows...
+					/*for(int i = 0; i < tagAttributes.getLength(); i++) {
 						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
 						if(attributeName == "d") {
 							currentAlph.ControlCharacter.Display = tagAttributes.getValue(i);
@@ -440,11 +420,12 @@ public class CAlphIO implements XMLFileParser {
 						if(attributeName == "f") {
 							currentAlph.ControlCharacter.Foreground = tagAttributes.getValue(i);
 						}
-					}	
+					}*/
 				}
 				
 				else if(tagName == "convert") {
-					for(int i = 0; i < tagAttributes.getLength(); i++) {
+					//ACL Skip, as not implemented in Java. But we could read in display info, as follows...
+					/*for(int i = 0; i < tagAttributes.getLength(); i++) {
 						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
 						if(attributeName == "d") {
 							currentAlph.StartConvertCharacter.Display = tagAttributes.getValue(i);
@@ -458,11 +439,12 @@ public class CAlphIO implements XMLFileParser {
 						if(attributeName == "f") {
 							currentAlph.StartConvertCharacter.Foreground = tagAttributes.getValue(i);
 						}
-					}	
+					}*/
 				}
 				
 				else if(tagName == "protect") {
-					for(int i = 0; i < tagAttributes.getLength(); i++) {
+					//ACL Skip, as (conversion) not yet implemented in Java. But we could read in display info, as follows...
+					/*for(int i = 0; i < tagAttributes.getLength(); i++) {
 						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
 						if(attributeName == "d") {
 							currentAlph.EndConvertCharacter.Display = tagAttributes.getValue(i);
@@ -476,7 +458,7 @@ public class CAlphIO implements XMLFileParser {
 						if(attributeName == "f") {
 							currentAlph.EndConvertCharacter.Foreground = tagAttributes.getValue(i);
 						}
-					}	
+					}*/
 				}
 				
 				else if(tagName == "group") {
@@ -726,9 +708,6 @@ public class CAlphIO implements XMLFileParser {
 		Default.SpaceCharacter.Display = "_";
 		Default.SpaceCharacter.Text = " ";
 		Default.SpaceCharacter.Colour = 9;
-		Default.ControlCharacter.Display = "Control";
-		Default.ControlCharacter.Text = "";
-		Default.ControlCharacter.Colour = 8;
 		Default.TrainingFile = "training_english_GB.txt";
 		Default.GameModeFile = "gamemode_english_GB.txt";
 		Default.PreferredColours = "Default";

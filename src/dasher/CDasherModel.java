@@ -1159,12 +1159,12 @@ public class CDasherModel extends CDasherComponent {
 		
 		assert (probs.length == m_cAlphabet.GetNumberSymbols());
 		
-		//skip root and control symbols...
-		for(int k = 1; k < probs.length-1; ++k) probs[k] += uniformAdd;
+		//skip root "symbol"...
+		for(int k = 1; k < probs.length; ++k) probs[k] += uniformAdd;
 		
-		probs[probs.length - 1] = controlSpace;
-
-		
+		//ACL...and would have done:
+		//    probs[probs.length - 1] = controlSpace;
+		//but not now!
 	}
 	
 	/**
@@ -1176,12 +1176,7 @@ public class CDasherModel extends CDasherComponent {
 	
 	protected void computeNormFactor() {
 //		 Total number of symbols
-		int iSymbols = m_cAlphabet.GetNumberSymbols();      // note that this includes the control node and the root node
-		
-		//NewSymbols.ensureCapacity(iSymbols);
-		//for(int i = 0; i < iSymbols; i++) {
-		//	NewSymbols.add(i);          // This will be replaced by something that works out valid nodes for this context
-		//}
+		int iSymbols = m_cAlphabet.GetNumberSymbols()-1;      // take off the root "symbol" 0
 		
 		// TODO - sort out size of control node - for the timebeing I'll fix the control node at 5%
 		long iNorm = GetLongParameter(Elp_parameters.LP_NORMALIZATION);
@@ -1192,8 +1187,8 @@ public class CDasherModel extends CDasherComponent {
 			controlSpace = 0;
 		}
 		
-		uniformAdd = (int)((iNorm * GetLongParameter(Elp_parameters.LP_UNIFORM)) / 1000) / (iSymbols - 2);  // Subtract 2 from no symbols to lose control/root nodes
-		nonUniformNorm = iNorm - (iSymbols - 2) * uniformAdd;
+		uniformAdd = (int)((iNorm * GetLongParameter(Elp_parameters.LP_UNIFORM)) / 1000) / iSymbols;  // Subtract 2 from no symbols to lose control/root nodes
+		nonUniformNorm = iNorm - iSymbols * uniformAdd;
 		
 	}
 	
@@ -1488,74 +1483,6 @@ public class CDasherModel extends CDasherComponent {
      * return from GetAlphabetNew will be a pointer to the current
      * alphabet which one could then alter
      */
-	
-	/**
-	 * Constructs a new root Node of a given type, with a given parent
-	 * which may be null if necessary.
-	 * 
-	 * @param iType Type of node to create. At present, ignored; only ordinary letter nodes are created.
-	 * @param Parent Parent of the node we will create. May be null.
-	 * @param iLower Desired Lbnd of the new Node
-	 * @param iUpper Desired Hbnd of the new Node
-	 * @return Newly created DasherNode
-	 */
-	public CDasherNode GetAlphRoot( CDasherNode Parent, long iLower, long iUpper ) {
-		
-		//ACL fake out empty context here. This method seems a bit meaningless/pointless right now...
-			return m_AlphabetManager.GetRoot(Parent, iLower, iUpper, false, ". ");
-	}
-	
-	public CDasherNode GetCtrlRoot(CDasherNode parent, long iLower, long iUpper) {
-		if (iLower==iUpper) {
-			//control mode off - node has zero size allocated, so will never be displayed.
-			// however, we need a non-null CDasherNode object!
-			return GetAlphRoot(parent, iLower, iUpper);
-		}
-		throw new UnsupportedOperationException("No Control Mode yet");
-	}
-	
-	public CDasherNode GetConvRoot(CDasherNode parent, long iLower, long iUpper, int iUserData) {
-		throw new UnsupportedOperationException("No Conversion yet either");
-		//	return m_ConversionManagerFactory.GetRoot(pParent, iLower, iUpper, UserData);
-		
-		
-		/* CSFS: Excluded the last case for now as it was surrounded
-		 * by #ifdef JAPANESE in the original source, and I have not
-		 * ported the Japanese modules yet.
-		 */
-		
-	}
-	
-	// Control mode stuff
-	
-	/**
-	 * Stub; implement if Control Mode is required.
-	 * <p>
-	 * The code for this is commented but present in the source.
-	 */
-	public void RegisterNode( int iID, String strLabel, int iColour ) {
-		// m_ControlManagerFactory.RegisterNode(iID, strLabel, iColour);
-	}
-	
-	/**
-	 * Stub; implement if Control Mode is required.
-	 * <p>
-	 * The code for this is commented but present in the source.
-	 */
-	public void ConnectNode(int iChild, int iParent, int iAfter) {
-		// m_ControlManagerFactory.ConnectNode(iChild, iParent, iAfter);
-	}
-	
-	/**
-	 * Stub; implement if Control Mode is required.
-	 * <p>
-	 * The code for this is commented but present in the source.
-	 */
-	public void DisconnectNode(int iChild, int iParent) {
-		// m_ControlManagerFactory.DisconnectNode(iChild, iParent);
-	}
-	
-	/* CSFS: These mades stubs for now until I've written Control Mode back in */
 	
 	/**
 	 * Retrieves the number of points currently in the m_deGotoQueue.

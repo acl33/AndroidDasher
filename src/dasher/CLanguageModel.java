@@ -179,15 +179,6 @@ public abstract class CLanguageModel<C> extends CDasherComponent {
 	}
 
 	/**
-	 * Gets the number of characters in our alphabet
-	 * 
-	 * @return m_Alphabet.size()
-	 */
-	protected int GetSize() {
-	    return m_Alphabet.GetNumberTextSymbols();
-	}
-
-	/**
 	 * Extends a given language model context without modifying
 	 * the model itself.
 	 * <p>
