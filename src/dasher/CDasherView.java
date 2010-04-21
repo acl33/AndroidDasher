@@ -659,13 +659,6 @@ public abstract class CDasherView extends CDasherComponent {
 	}
 	
 	/**
-	 * Stub
-	 *
-	 */
-	public void ResetYAutoOffset() {
-	}
-	
-	/**
 	 * Applies auto speed control given the user's current input
 	 * position in Dasher co-ordinates.
 	 * 

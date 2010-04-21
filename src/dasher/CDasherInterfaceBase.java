@@ -510,9 +510,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			//ACL preserving behaviour etc., but this doesn't look right...use start-of-sentence ctx?
 			m_DasherModel.SetContext("");
 		}
-		if(m_DasherView != null) {
-			m_DasherView.ResetYAutoOffset();
-		}
 	}
 	
 	/**

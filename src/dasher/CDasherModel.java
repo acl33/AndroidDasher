@@ -618,7 +618,7 @@ public class CDasherModel extends CDasherComponent {
 		
 		m_Root = m_AlphabetManager.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), bUseLastSym, sNewContext);
 		
-		Recursive_Push_Node(m_Root, 0);
+		Push_Node(m_Root);
 		
 		double dFraction = ( 1 - (1 - m_Root.MostProbableChild() / (double)(GetLongParameter(Elp_parameters.LP_NORMALIZATION))) / 2.0 );
 		
@@ -1218,37 +1218,6 @@ public class CDasherModel extends CDasherComponent {
 		
 		Node.PopulateChildren();
 		Node.SetHasAllChildren(true);
-	}
-	
-	/**
-	 * Pushes a given node and recursively pushes its children to a given depth.
-	 * <p>
-	 * The tree of recursive pushes will be truncated whenever an attempt
-	 * is made to push a node filling less than 10% of the screen
-	 * or which is the control node.
-	 * 
-	 * @param Node Node at which to start pushing
-	 * @param iDepth Maximum depth to which we should push
-	 */
-	protected void Recursive_Push_Node(CDasherNode Node, int iDepth) {
-		
-		if(Node.Range() < 0.1 * GetLongParameter(Elp_parameters.LP_NORMALIZATION)) {
-			return;
-		}
-		
-		// Resurrect this if/when we redo control mode...
-		// if(Node.Symbol() == GetControlSymbol()) {
-		//	return;
-		//}
-		
-		Push_Node(Node);
-		
-		if(iDepth == 0)
-			return;
-		
-		for(CDasherNode ch : Node.Children()) {
-			Recursive_Push_Node(ch, iDepth - 1);
-		}
 	}
 	
 	/**
