@@ -106,7 +106,7 @@ public class CAlphabet {
 	/**
 	 * Stores the foreground colour of the symbols.
 	 */
-	protected ArrayList<String> m_Foreground;   // stores the colour of the character foreground
+	protected ArrayList<Integer> m_Foreground;   // stores the colour of the character foreground
 	
 	/**
 	 * Root of the group tree. Contains all other groups.
@@ -137,12 +137,12 @@ public class CAlphabet {
 		m_Characters = new ArrayList<String>();
 		m_Display = new ArrayList<String>();
 		m_Colours = new ArrayList<Integer>();
-		m_Foreground = new ArrayList<String>();
+		m_Foreground = new ArrayList<Integer>();
 		
 		m_Characters.add("");
 		m_Display.add("");
 		m_Colours.add(-1);
-		m_Foreground.add("");
+		m_Foreground.add(4);
 		TextMap = new CAlphabetMap();
 		
 	}
@@ -172,12 +172,12 @@ public class CAlphabet {
 		m_Characters = new ArrayList<String>(nSymbols);
 		m_Display = new ArrayList<String>(nSymbols);
 		m_Colours = new ArrayList<Integer>(nSymbols);
-		m_Foreground = new ArrayList<String>(nSymbols);
+		m_Foreground = new ArrayList<Integer>(nSymbols);
 		
 		m_Characters.add("");
 		m_Display.add("");
 		m_Colours.add(-1);
-		m_Foreground.add("");
+		m_Foreground.add(4);
 		TextMap = new CAlphabetMap();
 		
 		// Set miscellaneous options
@@ -243,14 +243,15 @@ public class CAlphabet {
 	 * @param NewCharacter Representation of this character as to be shown in textual output.
 	 * @param Display Representation to be shown on screen.
 	 * @param Colour Background colour index to be used in drawing nodes containing this character. 
-	 * @param Foreground Foreground colour to be used drawing the text..
+	 * @param Foreground String representation of foreground colour to be used drawing the text;
+	 * <code>""</code> =&gt; use default of 4
 	 */
 	
 	public void AddChar(String NewCharacter, String Display, int Colour, String Foreground) {
 		m_Characters.add(NewCharacter);
 		m_Display.add(Display);
 		m_Colours.add(Colour);
-		m_Foreground.add(Foreground);
+		m_Foreground.add(Foreground.equals("") ? 4 : Integer.parseInt(Foreground));
 		
 		//don't add a symbol with no text (the map's only used for
 		// importing training text, i.e. converting from text to symbol!)
@@ -290,26 +291,6 @@ public class CAlphabet {
 	public void AddSpaceSymbol(String NewCharacter, String Display, int Colour, String Foreground) {
 		AddChar(NewCharacter, Display, Colour, Foreground);
 		m_SpaceSymbol = GetNumberSymbols() - 1;
-	}
-	
-	/**
-	 * Retrieves the text colour to be used in drawing the specified
-	 * symbol. In the case that a foreground colour was not specified
-	 * (and so the m_Foreground list contains "" at this index)
-	 * the default colour 4 is returned.
-	 * 
-	 * @param Symbol Symbol whose colour is to be looked up.
-	 * @return Colour identifier to be used drawing this text.
-	 */
-	
-	public int GetTextColour(int Symbol) {
-		String TextColour = m_Foreground.get(Symbol);
-		if(!"".equals(TextColour)) {
-			return (Integer.parseInt(TextColour)); // CSFS: This used to use atoi.
-		}
-		else {
-			return 4;
-		}
 	}
 	
 	/**
@@ -432,7 +413,7 @@ public class CAlphabet {
 	 * @return Foreground colour for this symbol.
 	 */
 	
-	public String GetForeground(int i) {
+	public int GetForeground(int i) {
 	      return m_Foreground.get(i);
 	} 
 
