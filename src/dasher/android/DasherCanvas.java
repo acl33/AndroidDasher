@@ -48,8 +48,7 @@ public class DasherCanvas extends SurfaceView implements Callback {
 	}
 
 	public void surfaceDestroyed(SurfaceHolder holder) {
-		// TODO Auto-generated method stub
-		
+		stopAnimating();
 	}
 	
 	@Override
@@ -70,24 +69,30 @@ public class DasherCanvas extends SurfaceView implements Callback {
 		return true;
 	}
 	
-	/*package*/ void CreateModules() {
-		intf.RegisterModule(new CDasherInput(intf, intf.getSettingsStore(), 0, 0, "Mouse Input") {
+	/*package*/ static class TouchInput extends CDasherInput {
+		private DasherCanvas surf;
+		TouchInput(ADasherInterface intf) {
+			super(intf, intf.getSettingsStore(), 0, 0, "Mouse Input");
+		}
+		
+		public void setCanvas(DasherCanvas surf) {
+			this.surf=surf;
+		}
 			
-			@Override
-			public int GetCoordinates(long[] Coordinates) {
-				if (Coordinates.length != 2) throw new IllegalArgumentException();
-				// TODO Auto-generated method stub
-				Coordinates[0] = x;
-				Coordinates[1] = y;
-				return 0;
+		@Override
+		public int GetCoordinates(long[] Coordinates) {
+			if (Coordinates.length != 2) throw new IllegalArgumentException();
+			if (surf!=null) {
+				Coordinates[0] = surf.x;
+				Coordinates[1] = surf.y;
 			}
+			return 0;
+		}
 			
-			@Override
-			public int GetCoordinateCount() {
-				// TODO Auto-generated method stub
-				return 2;
-			}
-		});
+		@Override
+		public int GetCoordinateCount() {
+			return 2;
+		}
 	}
 	
 	public void requestRender() {
@@ -118,6 +123,7 @@ public class DasherCanvas extends SurfaceView implements Callback {
 		private final SurfaceHolder holder;
 		private Canvas canvas;
 		private CCustomColours colours;
+		
 		/** Single Paint we'll use for everything - i.e. by changing
 		 * all its parameters for each primitive.
 		 * TODO: think about having multiple Paint objects caching different
@@ -131,13 +137,14 @@ public class DasherCanvas extends SurfaceView implements Callback {
 		}
 		
 		public void run() {
+			synchronized(DasherCanvas.this) {
+				if (!animating) return;
+			}
 			canvas = holder.lockCanvas();
 			intf.NewFrame(System.currentTimeMillis());
 			holder.unlockCanvasAndPost(canvas);
 			canvas=null;
-			synchronized(DasherCanvas.this) {
-				if (animating) intf.enqueue(this);
-			}
+			intf.enqueue(this);
 		}
 		
 		public void Blank() {
