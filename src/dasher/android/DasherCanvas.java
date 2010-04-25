@@ -10,6 +10,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Paint.Style;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -31,6 +32,7 @@ public class DasherCanvas extends SurfaceView implements Callback {
 
 	public void surfaceChanged(SurfaceHolder holder, int format, int width,
 			int height) {
+		Log.d("DasherIME","surfaceChanged ("+width+", "+height+")");
 		intf.enqueue(new Runnable() {
 			public void run() {
 				intf.ChangeScreen(rTh);
@@ -48,6 +50,7 @@ public class DasherCanvas extends SurfaceView implements Callback {
 	}
 
 	public void surfaceDestroyed(SurfaceHolder holder) {
+		Log.d("DasherIME","surfaceDestroyed");
 		stopAnimating();
 	}
 	

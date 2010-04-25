@@ -67,7 +67,9 @@ public class DasherActivity extends Activity {
         //text.setText("Hello!");
         //setContentView(text);
         intf.Realize();
+        Log.d("DasherIME","Activity realize()d, setting content view...");
         setContentView(surf);
         surf.startAnimating();
+        Log.d("DasherIME","Activity onCreate() finished");
     }
 }

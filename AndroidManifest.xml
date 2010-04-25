@@ -3,6 +3,24 @@
       android:versionCode="1"
       android:versionName="1.0" package="dasher.android">
     <application android:icon="@drawable/icon" android:label="@string/app_name" android:debuggable="true">
+    
+    <!-- Declares the input method service -->
+        <service android:name="DasherInputMethod"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_INPUT_METHOD">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data android:name="android.view.im" android:resource="@xml/method" />
+        </service>
+
+        <!-- Optional activities. A good idea to have some user settings. -->
+        <!--<activity android:name="DasherIMESettings" android:label="@string/dasher_settings">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+            </intent-filter>
+        </activity> -->
+    
         <activity android:name=".DasherActivity"
                   android:label="@string/app_name">
             <intent-filter>
