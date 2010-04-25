@@ -119,23 +119,29 @@ public class CAlphabetManager<C> {
     /**
      * Creates a new root CDasherNode with the supplied parameters.
      */
-    public CAlphNode GetRoot(CDasherNode Parent, long iLower, long iUpper, boolean useLastSym, String string) {
-    	  int iSymbol = 0;
-    	  if (useLastSym) {
-    		  List<Integer> syms = new ArrayList<Integer>();
-    		  m_Alphabet.GetSymbols(syms,string);
-    		  if (syms.size()>0) {
-    			  iSymbol = syms.get(syms.size()-1);
-    		  }
-    	  }
+    public CAlphNode GetRoot(CDasherNode Parent, long iLower, long iUpper, ListIterator<Character> previousChars) {
+    	return GetRoot(Parent, iLower, iUpper, previousChars, previousChars.hasPrevious());
+    }
+    
+    public CAlphNode GetRoot(CDasherNode Parent, long iLower, long iUpper, ListIterator<Character> previousChars, boolean bUseLastSym) {
+    	if (bUseLastSym && !previousChars.hasPrevious()) throw new IllegalArgumentException("Cannot use last symbol as there is none");
+    	ListIterator<Integer> previousSyms = m_Alphabet.GetSymbols(previousChars);
+    	CAlphNode NewNode;
+    	if (bUseLastSym) {
+    		int iSym = previousSyms.previous();
+    		previousSyms.next(); //move back to initial position
+    		NewNode = allocSymbol(Parent,iSym,0,iLower,iUpper, m_LanguageModel.BuildContext(previousSyms));
+    	} else {
+    		//TODO should get a default start-of-sentence context from the alphabet.
+    		C ctx = previousChars.hasPrevious()
+    			? m_LanguageModel.BuildContext(previousSyms)
+    			: m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), ". ");
+    		NewNode = allocGroup(Parent, null, 0, iLower, iUpper, ctx);
+    	}
     	  
-    	  C ctx = m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), string);
-    	  
-    	  CAlphNode NewNode = (iSymbol==0) ? allocGroup(Parent, null, 0, iLower, iUpper, ctx) : allocSymbol(Parent, iSymbol, 0, iLower, iUpper, ctx);
-    	  
-    	  NewNode.Seen(true);
+    	NewNode.Seen(true);
 
-    	  return NewNode;
+    	return NewNode;
     }
     
     abstract class CAlphNode extends CDasherNode {
@@ -201,12 +207,7 @@ public class CAlphabetManager<C> {
 				 * that we've backed off far enough to need to do so.
 				 */
 				
-				StringBuilder ctx = new StringBuilder();
-				while (charsBefore.hasPrevious() && ctx.length()<5) //ACL TODO, don't fix on 5 chars!
-					ctx.append(charsBefore.previous());
-				String strContext = ctx.reverse().toString();
-				
-				CAlphNode newNode = GetRoot(null, 0, 0, strContext.length()>0, strContext);
+				CAlphNode newNode = GetRoot(null, 0, 0, charsBefore);
 				newNode.Seen(true);
 				
 				IterateChildGroups(newNode, null, this);

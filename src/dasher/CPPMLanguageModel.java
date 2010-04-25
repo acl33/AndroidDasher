@@ -26,6 +26,8 @@
 
 package dasher;
 
+import java.util.ListIterator;
+
 /**
  * Subclass of LanguageModel which implements Prediction by
  * Partial Match. For information on the algorithm and its 
@@ -294,4 +296,10 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 	public CPPMnode EmptyContext() {
 		return m_Root;
 	}
+	
+	@Override
+	protected CPPMnode BuildContext(ListIterator<Integer> previousSyms, int countSoFar) {
+		return (countSoFar >= m_iMaxOrder) ? EmptyContext() : super.BuildContext(previousSyms, countSoFar);
+	}
+
 }

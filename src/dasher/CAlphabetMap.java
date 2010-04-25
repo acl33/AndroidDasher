@@ -55,14 +55,14 @@ public class CAlphabetMap {
 	 * are also stored in the map with value {@link #PREFIX}.
 	 * @see #singleChars
 	 */
-	protected final HashMap<String, Integer> multiChars = new HashMap<String, Integer>();
+	private final HashMap<String, Integer> multiChars = new HashMap<String, Integer>();
 	
 	/**
 	 * Map to symbol number from display text, but <emph>only</emph> for
 	 * symbols whose display text is a single character. (However prefixes
 	 * of multicharacter symbols are also stored, with value {@link #PREFIX}).
 	 */
-	protected int[] singleChars = new int[0];
+	private int[] singleChars = new int[0];
 	
 	/**
 	 * Adds a symbol to the map
@@ -176,5 +176,11 @@ public class CAlphabetMap {
 			}
 			if (sym>0) return sym;
 		}
+	}
+	
+	private static final int CHAR_MASK = (1<<Character.SIZE)-1;
+	public int GetSingleChar(char c) {
+		if (!multiChars.isEmpty()) throw new RuntimeException("Not Yet Implemented");
+		return singleChars[(int)c & CHAR_MASK];
 	}
 }

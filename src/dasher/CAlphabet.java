@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.ListIterator;
 
 /**
  * Represents an Alphabet, including a list of its symbols,
@@ -234,6 +235,21 @@ public class CAlphabet {
 				break;
 			}
 		}
+	}
+	
+	public ListIterator<Integer> GetSymbols(final ListIterator<Character> previousChars) {
+		//assume characters are 1:1 with symbols....NOT A SAFE ASSUMPTION
+		return new ListIterator<Integer>() {
+			public boolean hasPrevious() {return previousChars.hasPrevious();}
+			public Integer previous() {return TextMap.GetSingleChar(previousChars.previous());}
+			public int previousIndex() {return previousChars.previousIndex();}
+			public boolean hasNext() {return previousChars.hasNext();}
+			public Integer next() {return TextMap.GetSingleChar(previousChars.next());}
+			public int nextIndex() {return previousChars.nextIndex();}
+			public void add(Integer i) {throw new UnsupportedOperationException("Immutable");}
+			public void remove() {throw new UnsupportedOperationException("Immutable");}
+			public void set(Integer i) {throw new UnsupportedOperationException("Immutable");}
+		};
 	}
 	
 	/**

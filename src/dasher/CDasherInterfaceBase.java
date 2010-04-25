@@ -498,19 +498,10 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	}
 	
 	/**
-	 * Simply calls DasherModel.Start() and DasherView.ResetYAutoOffset()
-	 * so see these functions' documentation for detail. 
+	 * Utility method, preserved for backwards compatibility.
+	 * Simply calls {@link #InvalidateContext(boolean)} with <code>true</code>.
 	 */
-	public void Start() {
-		// TODO: Clarify the relationship between Start() and
-		// InvalidateContext() - I believe that they essentially do the same
-		// thing
-		PauseAt(0, 0);
-		if(m_DasherModel != null) {
-			//ACL preserving behaviour etc., but this doesn't look right...use start-of-sentence ctx?
-			m_DasherModel.SetContext("");
-		}
-	}
+	public void Start() {InvalidateContext(true);}
 	
 	/**
 	 * Pauses Dasher at a given mouse location, and sets
@@ -969,8 +960,10 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		 * which has been removed per the notes at the top of the file.
 		 */
 		//ACL couldn't find said notes! But changing context system anyway.
-		// The previous code seemed to extract the most recent 10 characters,
-		// so I'm preserving that behaviour!
+		PauseAt(0,0);
+		
+		// The previous code seemed to extract the most recent 10 characters
+		// to write to the training file, so I'm preserving that behaviour!
 		StringBuilder strLast = new StringBuilder(10);
 		for (ListIterator<Character> it = charactersEntered(); it.hasPrevious() && strLast.length()<10;)
 			strLast.append(it.previous());
@@ -980,10 +973,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 						
 		if(bForceStart || charactersEntered().hasPrevious()) {
 			if(m_DasherModel != null) {
-				if(m_DasherModel.m_bContextSensitive || bForceStart) {
-					m_DasherModel.SetContext(strNewContext);
-					PauseAt(0,0);
-				}
+				m_DasherModel.SetContext(charactersEntered());
 			}
 		}
 		

@@ -27,6 +27,7 @@ package dasher;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.ListIterator;
@@ -592,31 +593,22 @@ public class CDasherModel extends CDasherComponent {
 	 * 
 	 * @param sNewContext Context to set
 	 */
-	public void SetContext(String sNewContext) {
-		
-		m_deGotoQueue.clear();
+	public void SetContext(ListIterator<Character> previousChars) {
 		
 		/* If a zoom was in progress, cancel it -- this function will likely change
 		 * our location within the Dasher world, and so the target being aimed for
 		 * is likely not to be there anymore.
 		 */
+		m_deGotoQueue.clear();
 		
-		if(oldroots.size() > 0) {
-			oldroots.get(0).DeleteNode();
-			oldroots.clear();
-			// At this point we have also deleted the root - so better NULL pointer
-		}
+		ClearRootQueue();
 		
 		/* CSFS: BUGFIX: Didn't used to check the root really exists before deleting it */
-		
 		if(m_Root != null) {
 			m_Root.DeleteNode();
 		}
 		
-		boolean bUseLastSym = sNewContext.length()!=0;
-		if (!bUseLastSym) sNewContext = ". ";
-		
-		m_Root = m_AlphabetManager.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), bUseLastSym, sNewContext);
+		m_Root = m_AlphabetManager.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), previousChars);
 		
 		Push_Node(m_Root);
 		

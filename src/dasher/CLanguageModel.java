@@ -32,6 +32,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.ListIterator;
 
 /* CSFS: WARNING: This is a DasherComponent derived class and so MUST
  * have UnregisterComponent called on destruction.
@@ -195,6 +196,18 @@ public abstract class CLanguageModel<C> extends CDasherComponent {
 		for(int i = 0; i < Symbols.size(); i++)
 			ctx=ContextWithSymbol(ctx, Symbols.get(i)); // FIXME - conversion to symbol alphabet
 		return ctx;
+	}
+	
+	public final C BuildContext(ListIterator<Integer> previousSyms) {
+		return BuildContext(previousSyms,0);
+	}
+	
+	protected C BuildContext(ListIterator<Integer> previousSyms, int countSoFar) {
+		if (previousSyms.hasPrevious()) {
+			int sym = previousSyms.previous();
+			return ContextWithSymbol(BuildContext(previousSyms,countSoFar+1),sym);
+		}
+		return EmptyContext();
 	}
 
 	/**
