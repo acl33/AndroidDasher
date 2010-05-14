@@ -1506,5 +1506,10 @@ public class CDasherModel extends CDasherComponent {
 		// See comments in CAlphabet
 		return m_cAlphabet.GetColours();
 	}
+
+	public void shutdown() {
+		ClearRootQueue();
+		if (m_Root!=null) m_Root.DeleteNode();
+	}
 	
 }

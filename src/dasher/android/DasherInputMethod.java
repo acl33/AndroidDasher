@@ -9,12 +9,17 @@ import dasher.CEvent;
 import dasher.CEventHandler;
 import dasher.CSettingsStore;
 import dasher.android.DasherCanvas.TouchInput;
+import android.R;
 import android.content.Context;
+import android.inputmethodservice.ExtractEditText;
 import android.inputmethodservice.InputMethodService;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup.LayoutParams;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 
 public class DasherInputMethod extends InputMethodService {
 	private DasherIntfIME intf;
@@ -36,12 +41,16 @@ public class DasherInputMethod extends InputMethodService {
 	
 	@Override public void onDestroy() {
 		Log.d("DasherIME","onDestroy");
+		intf.StartShutdown();
+		super.onDestroy();
 	}
 	
 	@Override public View onCreateInputView() {
 		if (surf==null) {
 			Log.d("DasherIME","onCreateInputView");
 			surf = new DasherCanvas(DasherInputMethod.this, intf);
+			//LayoutParams params = new LayoutParams(480,600);
+			//surf.setLayoutParams(params);
 			touchIn.setCanvas(surf);
 		} else {
 			Log.d("DasherIME","onCreateInputView - surf exists!");
@@ -49,10 +58,26 @@ public class DasherInputMethod extends InputMethodService {
 		return surf;
 	}
 	
+	/*private FrameLayout fl;
+	@Override public View onCreateInputView() {
+		if (fl==null) {
+			Log.d("DasherIME","onCreateInputView");
+			fl = new FrameLayout(DasherInputMethod.this);
+			fl.addView(surf = new DasherCanvas(DasherInputMethod.this, intf), new LayoutParams(480,600));
+			//LayoutParams params = new LayoutParams(480,600);
+			//surf.setLayoutParams(params);
+			touchIn.setCanvas(surf);
+		} else {
+			Log.d("DasherIME","onCreateInputView - surf exists!");
+		}
+		return fl;
+	}*/
+	
 	@Override 
 	public void onStartInputView(EditorInfo attribute, boolean restarting) {
 		Log.d("DasherIME","onStartInputView ("+attribute+", "+restarting+")");
 		intf.SetInputConnection(getCurrentInputConnection());
+		surf.startAnimating();
 		//TODO, use EditorInfo to select appropriate...language? (e.g. numbers only!).
 		// Passwords???
 	}
@@ -73,22 +98,42 @@ public class DasherInputMethod extends InputMethodService {
 	@Override
 	public boolean onEvaluateFullscreenMode() {
 		Log.d("DasherIME","onEvaluateFullscreenMode");
+		setExtractViewShown(true);
+		setCandidatesViewShown(false);
 		return true;
 	}
 	
-	@Override
-	public void onUpdateExtractingVisibility(EditorInfo ei) {
-		super.onUpdateExtractingVisibility(ei);
-		setExtractViewShown(true);
-		setCandidatesViewShown(false);
-	}
+	/*@Override
+	public boolean isExtractViewShown() {
+		boolean ret=super.isExtractViewShown();
+		Log.d("DasherIME","isExtractViewShown would return "+ret);
+		return true;
+	}*/
 	
 	@Override
-	public void onBindInput() {
-		//can getCurrentInputConnection() now. extract/cache context?
-		super.onBindInput();
+	public void onComputeInsets(InputMethodService.Insets out) {
+		super.onComputeInsets(out);
+		Log.d("DasherIME","onComputeInsets(touchable="+out.touchableInsets+" content="+out.contentTopInsets+" visible="+out.visibleTopInsets);
+/*		out.touchableInsets = InputMethodService.Insets.TOUCHABLE_INSETS_FRAME;
+		out.contentTopInsets = 128;
+		out.visibleTopInsets = 128;*/
 	}
 	
+	/*@Override
+	public View onCreateExtractTextView() {
+		//View sup = super.onCreateExtractTextView();
+		ExtractEditText ret = new ExtractEditText(DasherInputMethod.this);
+		ret.setId(R.id.inputExtractEditText);
+		//if (sup instanceof LinearLayout) {
+		//	((LinearLayout)sup).addView(ret,new LayoutParams(LayoutParams.FILL_PARENT,LayoutParams.FILL_PARENT));
+		//	return sup;
+		//} else
+		{
+			ret.setLayoutParams(new LayoutParams(480,162));
+			return ret;
+		}
+	}*/
+		
 	private class DasherIntfIME extends ADasherInterface
 	{
 		private InputConnection ic;
@@ -175,12 +220,7 @@ public class DasherInputMethod extends InputMethodService {
 			enqueue(new Runnable() {
 				public void run() {
 					DasherIntfIME.this.ic=_ic;
-					if (_ic==null) {
-						surf.stopAnimating();
-					} else {
-						InvalidateContext(true);
-						surf.startAnimating();
-					}
+					if (_ic!=null) InvalidateContext(true);
 				}
 			});
 		}

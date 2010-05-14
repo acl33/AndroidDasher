@@ -1249,6 +1249,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	public void StartShutdown() {
 		m_bShutdownLock = true;
+		if (m_DasherModel!=null) m_DasherModel.shutdown();
 	}
 	
 	

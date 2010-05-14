@@ -9,6 +9,7 @@ import dasher.android.DasherCanvas.TouchInput;
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.TextView;
 
 public class DasherActivity extends Activity {
 	private ADasherInterface intf;
@@ -18,7 +19,7 @@ public class DasherActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
     	Log.d("DasherIME","Activity onCreate");
         super.onCreate(savedInstanceState);
-        intf = new ADasherInterface(this) {
+        /*intf = new ADasherInterface(this) {
         	private String allEntered = "";
         	
         	@Override
@@ -62,14 +63,22 @@ public class DasherActivity extends Activity {
 			}
 			
         };
-        surf = new DasherCanvas(this,intf);
-        //TextView text = new TextView(this);
-        //text.setText("Hello!");
-        //setContentView(text);
-        intf.Realize();
+        surf = new DasherCanvas(this,intf);*/
+        TextView text = new TextView(this);
+        text.setText("No settings available yet");
+        setContentView(text);
+        /*intf.Realize();
         Log.d("DasherIME","Activity realize()d, setting content view...");
         setContentView(surf);
         surf.startAnimating();
-        Log.d("DasherIME","Activity onCreate() finished");
+        Log.d("DasherIME","Activity onCreate() finished");*/
     }
+    
+    @Override
+    public void onDestroy() {
+    	Log.d("DasherIME","Activity onDestroy");
+    	super.onDestroy();
+    	//intf.StartShutdown();
+    }
+    
 }

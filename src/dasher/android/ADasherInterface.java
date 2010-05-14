@@ -16,10 +16,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.AssetManager;
+import android.util.Log;
 
 import dasher.CAlphIO;
 import dasher.CColourIO;
 import dasher.CDasherInterfaceBase;
+import dasher.CDasherNode;
 import dasher.CEventHandler;
 import dasher.CLockEvent;
 import dasher.CSettingsStore;
@@ -34,7 +36,10 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	
 	public void enqueue(Runnable r) {tasks.add(r);}
 	
-	public ADasherInterface(Context androidCtx) {this.androidCtx = androidCtx;}
+	public ADasherInterface(Context androidCtx) {
+		Log.d("DasherIME","new CDasherInterfaceBase - "+CDasherNode.currentNumNodeObjects()+" nodes");
+		this.androidCtx = androidCtx;
+	}
 	
 	@Override
 	public void Realize() {

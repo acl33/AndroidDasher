@@ -30,6 +30,25 @@ public class DasherCanvas extends SurfaceView implements Callback {
 		rTh=new RenderTask(holder);
 	}
 
+	protected void onMeasure(int widthMS, int heightMS) {
+		Log.d("DasherIME","onMeasure ("+MeasureSpec.toString(widthMS)+","+MeasureSpec.toString(heightMS)+")");
+		int w = ms(widthMS,480),h = ms(heightMS,600);
+		setMeasuredDimension(w,h);
+	}
+	
+	private int ms(int mSpec, int pref) {
+		switch (MeasureSpec.getMode(mSpec)) {
+		case MeasureSpec.AT_MOST:
+			return Math.min(MeasureSpec.getSize(mSpec),pref);
+		case MeasureSpec.UNSPECIFIED:
+			return pref;
+		case MeasureSpec.EXACTLY:
+			return MeasureSpec.getSize(mSpec);
+		default:
+			throw new IllegalArgumentException("Invalid MeasureSpec "+mSpec);
+		}
+	}
+	
 	public void surfaceChanged(SurfaceHolder holder, int format, int width,
 			int height) {
 		Log.d("DasherIME","surfaceChanged ("+width+", "+height+")");

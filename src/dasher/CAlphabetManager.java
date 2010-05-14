@@ -243,6 +243,14 @@ public class CAlphabetManager<C> {
     	 */
     	protected int m_Symbol;	// the character to display
     
+    	/** Absorb the characters output by this symbol in our alphabet */	
+    	@Override public void absorbContext(ListIterator<Character> it) {
+    		String text = m_Alphabet.GetText(m_Symbol);
+    		for (int i=text.length(); i-->0; )
+    			if (it.previous() != text.charAt(i))
+    				throw new IllegalArgumentException("Previous character "+it.next()+" but node would have output "+text.substring(0,i+1));		
+   		}
+    	 
     	/**
          * Generates an EditEvent announcing a new character has been
          * entered, inferring the character from the Node supplied.
