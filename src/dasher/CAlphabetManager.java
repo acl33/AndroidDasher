@@ -201,7 +201,7 @@ public class CAlphabetManager<C> {
 		 * @return The newly created parent, which may be the root node.
 		 */
 		public CDasherNode RebuildParent(ListIterator<Character> charsBefore) {
-			if (Parent()==null) {
+			if (Parent()==null && charsBefore.hasPrevious()) {
 			
 				/* This used to clear m_Model.strContextBuffer. Removed as per notes
 				 * at the top of CDasherInterfaceBase.
@@ -382,7 +382,7 @@ public class CAlphabetManager<C> {
     	public CDasherNode RebuildParent(ListIterator<Character> charsBefore) {
     		//a "root node" which did not insert a symbol, has/had no parent
     		// (an alph node with no preceding characters should - namely, a root!)
-    		if (m_Group==null && !charsBefore.hasPrevious()) return null;
+    		if (m_Group==null) return null;
     		return super.RebuildParent(charsBefore);
     	}
     	
