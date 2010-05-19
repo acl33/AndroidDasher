@@ -22,26 +22,33 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
 public class DasherInputMethod extends InputMethodService {
-	private DasherIntfIME intf;
+	private static DasherIntfIME intf;
 	private DasherCanvas surf;
 	private TouchInput touchIn;
 
 	@Override public void onCreate() {
 		super.onCreate();
-		Log.d("DasherIME", "onCreate begin");
-		intf = new DasherIntfIME();
-		Log.d("DasherIME", "onCreate made intf");
-		try {
-			intf.Realize();
-			Log.d("DasherIME", "onCreate realized");
-		} catch (RuntimeException e) {
-			Log.d("DasherIME", "onCreate failed to realize", e);
+		synchronized(DasherInputMethod.class) {
+			if (intf==null) {
+				Log.d("DasherIME", "onCreate making interface...");
+				DasherIntfIME temp = new DasherIntfIME();
+				Log.d("DasherIME","Realizing...");
+				try {
+					temp.Realize();
+					Log.d("DasherIME","Realized.");
+					intf = temp;
+				} catch (RuntimeException e) {
+					Log.d("DasherIME", "Realization error", e);
+					throw e;
+				}
+			} else
+				Log.d("DasherIME","onCreate interface already made");
 		}
 	}
 	
 	@Override public void onDestroy() {
 		Log.d("DasherIME","onDestroy");
-		intf.StartShutdown();
+		//intf.StartShutdown();
 		super.onDestroy();
 	}
 	
