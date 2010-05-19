@@ -127,18 +127,22 @@ public class CAlphabetManager<C> {
     	if (bUseLastSym && !previousChars.hasPrevious()) throw new IllegalArgumentException("Cannot use last symbol as there is none");
     	ListIterator<Integer> previousSyms = m_Alphabet.GetSymbols(previousChars);
     	CAlphNode NewNode;
-    	if (bUseLastSym) {
-    		int iSym = previousSyms.previous();
-    		previousSyms.next(); //move back to initial position
-    		NewNode = allocSymbol(Parent,iSym,0,iLower,iUpper, m_LanguageModel.BuildContext(previousSyms));
-    	} else {
-    		//TODO should get a default start-of-sentence context from the alphabet.
-    		C ctx = previousChars.hasPrevious()
-    			? m_LanguageModel.BuildContext(previousSyms)
-    			: m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), ". ");
-    		NewNode = allocGroup(Parent, null, 0, iLower, iUpper, ctx);
+    	GotNode: {
+    		if (bUseLastSym) {
+    			int iSym = previousSyms.previous();
+    			previousSyms.next(); //move back to initial position
+    			if (iSym!=CAlphabet.UNDEFINED) {
+    				NewNode = allocSymbol(Parent,iSym,0,iLower,iUpper, m_LanguageModel.BuildContext(previousSyms));
+    				break GotNode;
+    			}
+    		} 
+	    	//Didn't/couldn't use previous symbol.
+	    	//TODO should get a default start-of-sentence context from the alphabet.
+	    	C ctx = previousChars.hasPrevious()
+	    		? m_LanguageModel.BuildContext(previousSyms)
+	    		: m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), ". ");
+	    	NewNode = allocGroup(Parent, null, 0, iLower, iUpper, ctx);
     	}
-    	  
     	NewNode.Seen(true);
 
     	return NewNode;

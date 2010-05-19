@@ -31,9 +31,7 @@ import java.io.PushbackReader;
 import java.io.Reader;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.SortedMap;
+import static dasher.CAlphabet.UNDEFINED;
 
 /**
  * Map from the textual representation of alphabet symbols
@@ -41,10 +39,6 @@ import java.util.SortedMap;
  */
 public class CAlphabetMap {
 
-	/** Value used (internally - in {@link #singleChars} and as a return value)
-	 * to indicate 'no such symbol' */
-	private static final int UNDEFINED = -1;
-	
 	/** Value used (internally) to indicate that the text/etc. is a prefix of the
 	 * string for a symbol (or more than one) but does not make up a symbol itself. */
 	private static final int PREFIX = -2;

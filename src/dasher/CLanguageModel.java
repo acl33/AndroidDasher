@@ -205,7 +205,8 @@ public abstract class CLanguageModel<C> extends CDasherComponent {
 	protected C BuildContext(ListIterator<Integer> previousSyms, int countSoFar) {
 		if (previousSyms.hasPrevious()) {
 			int sym = previousSyms.previous();
-			return ContextWithSymbol(BuildContext(previousSyms,countSoFar+1),sym);
+			if (sym!=CAlphabet.UNDEFINED)
+				return ContextWithSymbol(BuildContext(previousSyms,countSoFar+1),sym);
 		}
 		return EmptyContext();
 	}

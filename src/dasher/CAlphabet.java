@@ -119,6 +119,10 @@ public class CAlphabet {
 	 * training text.
 	 */
 	protected CAlphabetMap TextMap;
+
+	/** Value used (internally - in {@link #singleChars} and as a return value)
+	 * to indicate 'no such symbol' */
+	public static final int UNDEFINED = -1;
 	
 	/* CSFS: It would be good to fix the code duplication between these
 	 * two constructors.
