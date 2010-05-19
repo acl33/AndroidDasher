@@ -643,12 +643,23 @@ public abstract class CDasherView extends CDasherComponent {
 	 * Should convert a given Dasher co-ordinate to its equivalent
 	 * screen co-ordinates.
 	 * 
-	 * @param iDasherX Dasher x co-ordinate
-	 * @param iDasherY Dasher y co-ordinate
-	 * @return Screen co-ordinates
+	 * @param coords array of (x,y) coordinates - on entry, will contain Dasher coordinates;
+	 * on exit, should contain corresponding screen coordinates.
 	 */
-	public abstract CDasherView.Point Dasher2Screen(long iDasherX, long iDasherY);
-		
+	public abstract void Dasher2Screen(long[] coords);
+
+	/**
+	 * Convert a Dasher co-ordinate to the equivalent screen co-ordinates
+	 * 
+	 * @param iDasherX dasher X coordinate
+	 * @param iDasherY dasher Y coordinate
+	 * @return screen coordinates
+	 */
+	public final CDasherView.Point Dasher2Screen(long iDasherX, long iDasherY) {
+		long[] temp = new long[] {iDasherX, iDasherY};
+		Dasher2Screen(temp);
+		return new Point((int)temp[0],(int)temp[1]);
+	}
 	/**
 	 * Gets our current screen
 	 * 

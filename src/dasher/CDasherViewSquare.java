@@ -105,7 +105,7 @@ public class CDasherViewSquare extends CDasherView {
 	protected double m_dXMappingLinearScaleFactor;
 		
 	/**
-	 * Height of our current screen in pixels
+	 * Height of our current screen in pixels - i.e., a cache of the screen's GetHeight().
 	 */
 	protected int CanvasY;
 	
@@ -118,6 +118,9 @@ public class CDasherViewSquare extends CDasherView {
 	 * The factor that scale factors are multipled by
 	 */  
 	protected static final long m_iScalingFactor = 100000000;
+	
+	/** X center after allowing for margin */
+	protected int m_iCenterX;
 	
 	protected DRect visibleRegion;
 	
@@ -161,12 +164,6 @@ public class CDasherViewSquare extends CDasherView {
 		m_DelayDraw = new CDelayedDraw();
 		ChangeScreen(DasherScreen);
 		
-		// TODO - Make these parameters
-		// tweak these if you know what you are doing
-		m_dXMappingLogarithmicScaleFactor = 0.2;                // these are for the x non-linearity
-		m_dXMappingLogLinearBoundary = 0.5;
-		m_dXMappingLinearScaleFactor = 0.9;
-				
 		double dY1 = 0.25;
 		double dY2 = 0.95;
 		double dY3 = 0.05;
@@ -498,31 +495,26 @@ public class CDasherViewSquare extends CDasherView {
 		
 		// Things we're likely to need:
 		
-		long iDasherWidth = lpMaxY;
-		long iDasherHeight = lpMaxY;
-		
 		int iScreenWidth = Screen().GetWidth();
 		int iScreenHeight = Screen().GetHeight();
 		
-		int eOrientation = realOrientation;
-		
 		long rx,ry;
-		switch(eOrientation) {
+		switch(realOrientation) {
 		case Opts.ScreenOrientations.LeftToRight:
-			rx = iDasherWidth / 2 - ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor / m_iScaleFactorX;
-			ry = iDasherHeight / 2 + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor / m_iScaleFactorY;
+			rx = m_iCenterX - ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor / m_iScaleFactorX;
+			ry = lpMaxY / 2 + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor / m_iScaleFactorY;
 		break;
 		case Opts.ScreenOrientations.RightToLeft:
-			rx = (iDasherWidth / 2 + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
-			ry = (iDasherHeight / 2 + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
+			rx = (m_iCenterX + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
+			ry = (lpMaxY / 2 + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
 		break;
 		case Opts.ScreenOrientations.TopToBottom:
-			rx = (iDasherWidth / 2 - ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
-			ry = (iDasherHeight / 2 + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
+			rx = (m_iCenterX - ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
+			ry = (lpMaxY / 2 + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
 		break;
 		case Opts.ScreenOrientations.BottomToTop:
-			rx = (iDasherWidth / 2 + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
-			ry = (iDasherHeight / 2 + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
+			rx = (m_iCenterX + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
+			ry = (lpMaxY / 2 + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
 		break;
 		default:
 			throw new AssertionError();
@@ -541,6 +533,14 @@ public class CDasherViewSquare extends CDasherView {
 	 */
 	public void SetScaleFactor()
 	{
+		//Default values for x non-linearity (TODO - Make these parameters)
+		m_dXMappingLogLinearBoundary = 0.5; //threshold: DasherX's less than (that * MAX_Y) are linear...
+		m_dXMappingLinearScaleFactor = 0.9; //...but multiplied by that; DasherX's above that, are logarithmic...
+
+		//set log scaling coefficient (unused if LP_NONLINEAR_X==0)
+		// note previous value of m_dXmpa = 0.2, i.e. a value of LP_NONLINEAR_X =~= 4.8
+		m_dXMappingLogarithmicScaleFactor = Math.exp(GetLongParameter(Elp_parameters.LP_NON_LINEAR_X)/-3.0);
+		
 		long iDasherWidth = lpMaxY;
 		long iDasherHeight = iDasherWidth;
 		
@@ -549,30 +549,45 @@ public class CDasherViewSquare extends CDasherView {
 		
 		// Try doing this a different way:
 		
-		long iDasherMargin = ( 300 ); // Make this a parameter
+		long iDasherMargin = GetLongParameter(Elp_parameters.LP_DASHER_MARGIN);
 		
 		long iMinX = ( 0-iDasherMargin );
-		long iMaxX = ( iDasherWidth + iDasherMargin );
+		long iMaxX = ( iDasherWidth );
+		m_iCenterX = (int)((iMinX + iMaxX) / 2);
 		long iMinY = ( 0 );
 		long iMaxY = ( iDasherHeight );
 		
-		double dLRHScaleFactor;
-		double dLRVScaleFactor;
-		double dTBHScaleFactor;
-		double dTBVScaleFactor;
-		
-		dLRHScaleFactor = iScreenWidth / (double)( iMaxX - iMinX );
-		dLRVScaleFactor = iScreenHeight / (double)( iMaxY - iMinY );
-		dTBHScaleFactor = iScreenWidth / (double)( iMaxY - iMinY );
-		dTBVScaleFactor = iScreenHeight / (double)( iMaxX - iMinX );
+		double dScaleFactorX, dScaleFactorY;
 		
 		if (realOrientation == Opts.ScreenOrientations.LeftToRight || realOrientation == Opts.ScreenOrientations.RightToLeft) {
-			m_iScaleFactorX = (long)(Math.max(Math.min(dLRHScaleFactor, dLRVScaleFactor), dLRHScaleFactor / 4.0) * m_iScalingFactor);
-			m_iScaleFactorY = (long)(Math.max(Math.min(dLRHScaleFactor, dLRVScaleFactor), dLRVScaleFactor / 4.0) * m_iScalingFactor);
+			dScaleFactorX = iScreenWidth / (double)( iMaxX - iMinX );
+			dScaleFactorY = iScreenHeight / (double)( iMaxY - iMinY );
 		} else {
-			m_iScaleFactorX = (long)(Math.max(Math.min(dTBHScaleFactor, dTBVScaleFactor), dTBVScaleFactor / 4.0) * m_iScalingFactor);
-			m_iScaleFactorY = (long)(Math.max(Math.min(dTBHScaleFactor, dTBVScaleFactor), dTBHScaleFactor / 4.0) * m_iScalingFactor);
+			dScaleFactorX = iScreenHeight / (double)( iMaxX - iMinX );
+			dScaleFactorY = iScreenWidth / (double)( iMaxY - iMinY );
 		}
+		String temp = "SetScaleFactor: dx "+dScaleFactorX+", dy "+dScaleFactorY;
+		if (dScaleFactorX < dScaleFactorY) {
+		    //fewer (pixels per dasher coord) in X direction - i.e., X is more compressed.
+		    //So, use X scale for Y too...except first, we'll _try_ to reduce the difference
+		    // by changing the relative scaling of X and Y (by at most 20%):
+		    double dMul = Math.max(0.8, dScaleFactorX / dScaleFactorY);
+		    m_dXMappingLinearScaleFactor *= dMul;
+		    dScaleFactorX /= dMul;
+		    m_iScaleFactorX = (long)(dScaleFactorX * m_iScalingFactor);
+		    m_iScaleFactorY = (long)(Math.max(dScaleFactorX, dScaleFactorY / 4.0) * m_iScalingFactor);
+		    temp+=" => dX /= "+dMul;
+		} else {
+		    //X has more room; use Y scale for both -> will get lots history
+		    m_iScaleFactorX = (long)(Math.max(dScaleFactorY, dScaleFactorX / 4.0) * m_iScalingFactor);
+		    m_iScaleFactorY = (long)(dScaleFactorY * m_iScalingFactor);
+		    // however, "compensate" by relaxing the default "relative scaling" of X
+		    // (normally only 90% of Y) towards 1...
+		    m_dXMappingLinearScaleFactor = Math.min(1.0,0.9 * dScaleFactorX / dScaleFactorY);
+		    temp+=" => Xscale "+m_dXMappingLinearScaleFactor;
+		}
+		android.util.Log.d("DasherIME",temp+", m_iX"+ m_iScaleFactorX+" m_iY"+m_iScaleFactorY);
+		m_iCenterX *= m_dXMappingLinearScaleFactor;
 	}
 	
 	/**
@@ -587,47 +602,45 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param iDasherY Dasher y co-ordinate
 	 * @return Screen point corresponding to this location
 	 */
-	public CDasherView.Point Dasher2Screen(long iDasherX, long iDasherY) {
+	public void Dasher2Screen(long[] coords) {
 		
 		// Apply the nonlinearities
 		
 		
 		// FIXME
-		iDasherX = applyXMapping(iDasherX);
-		iDasherY = ymap(iDasherY);
+		coords[0] = applyXMapping(coords[0]);
+		coords[1] = ymap(coords[1]);
 		
 		
 		// Things we're likely to need:
 		
-		long iDasherWidth = lpMaxY;
-		long iDasherHeight = lpMaxY;
-		
 		int iScreenWidth = Screen().GetWidth();
 		int iScreenHeight = Screen().GetHeight();
 
-		int rx, ry;
 		switch( realOrientation ) {
 		case Opts.ScreenOrientations.LeftToRight:
-			rx = (int)(iScreenWidth / 2 - ( iDasherX - iDasherWidth / 2 ) * m_iScaleFactorX / m_iScalingFactor);
-			ry = (int)(iScreenHeight / 2 + ( iDasherY - iDasherHeight / 2 ) * m_iScaleFactorY / m_iScalingFactor);
+			coords[0] = (int)(iScreenWidth / 2 - ( coords[0] - m_iCenterX ) * m_iScaleFactorX / m_iScalingFactor);
+			coords[1] = (int)(iScreenHeight / 2 + ( coords[1] - lpMaxY / 2 ) * m_iScaleFactorY / m_iScalingFactor);
 		break;
 		case Opts.ScreenOrientations.RightToLeft:
-			rx = (int)(iScreenWidth / 2 + ( iDasherX - iDasherWidth / 2 ) * m_iScaleFactorX / m_iScalingFactor);
-			ry = (int)(iScreenHeight / 2 + ( iDasherY - iDasherHeight / 2 ) * m_iScaleFactorY / m_iScalingFactor);
+			coords[0] = (int)(iScreenWidth / 2 + ( coords[0] - m_iCenterX ) * m_iScaleFactorX / m_iScalingFactor);
+			coords[1] = (int)(iScreenHeight / 2 + ( coords[1] - lpMaxY / 2 ) * m_iScaleFactorY / m_iScalingFactor);
 		break;
-		case Opts.ScreenOrientations.TopToBottom:
-			rx = (int)(iScreenWidth / 2 + ( iDasherY - iDasherHeight / 2 ) * m_iScaleFactorX / m_iScalingFactor);
-			ry = (int)(iScreenHeight / 2 - ( iDasherX - iDasherWidth / 2 ) * m_iScaleFactorY / m_iScalingFactor);
-		break;
-		case Opts.ScreenOrientations.BottomToTop:
-			rx = (int)(iScreenWidth / 2 + ( iDasherY - iDasherHeight / 2 ) * m_iScaleFactorX / m_iScalingFactor);
-			ry = (int)(iScreenHeight / 2 + ( iDasherX - iDasherWidth / 2 ) * m_iScaleFactorY / m_iScalingFactor);
-		break;
+		case Opts.ScreenOrientations.TopToBottom: {
+			long temp = (int)(iScreenWidth / 2 + ( coords[1] - lpMaxY / 2 ) * m_iScaleFactorX / m_iScalingFactor);
+			coords[1] = (int)(iScreenHeight / 2 - ( coords[0] - m_iCenterX ) * m_iScaleFactorY / m_iScalingFactor);
+			coords[0] = temp;
+			break;
+		}
+		case Opts.ScreenOrientations.BottomToTop: {
+			long temp = (int)(iScreenWidth / 2 + ( coords[1] - lpMaxY / 2 ) * m_iScaleFactorX / m_iScalingFactor);
+			coords[1] = (int)(iScreenHeight / 2 + ( coords[0] - m_iCenterX ) * m_iScaleFactorY / m_iScalingFactor);
+			coords[0] = temp;
+			break;
+		}
 		default:
 			throw new AssertionError();
 		}
-		
-		return new CDasherView.Point(rx, ry);
 	}
 	
 	/**
@@ -712,11 +725,7 @@ public class CDasherViewSquare extends CDasherView {
 	public void ChangeScreen(CDasherScreen NewScreen) {
 		m_Screen = NewScreen;
 		visibleRegion = null;
-		//int Width = Screen().GetWidth();
-		int Height = Screen().GetHeight();
-		//CanvasX = 9 * Width / 10;
-		// CanvasBorder = Width - CanvasX; REMOVED: redundant according to Eclipse.
-		CanvasY = Height;
+		CanvasY = Screen().GetHeight();
 		SetScaleFactor();
 	}
 	

@@ -138,7 +138,9 @@ public class CParamTables {
 			  new lp_table(Elp_parameters.LP_INPUT_FILTER, "InputFilterID", PERS, 3, "Module ID of input filter"),
 			  new lp_table(Elp_parameters.LP_CIRCLE_PERCENT, "CirclePercent", PERS, 10, "Percentage of nominal vertical range to use for radius of start circle"),
 			  new lp_table(Elp_parameters.LP_TWO_BUTTON_OFFSET, "TwoButtonOffset", PERS, 1024, "Offset for two button dynamic mode"),
-			  new lp_table(Elp_parameters.LP_TAP_TIME, "TapTime", PERS, 100, "Max time for tap in Stylus Mode")};
+			  new lp_table(Elp_parameters.LP_TAP_TIME, "TapTime", PERS, 100, "Max time for tap in Stylus Mode"),
+			  new lp_table(Elp_parameters.LP_NON_LINEAR_X, "NonLinearX", PERS, 8, "Nonlinear compression of X-axis (0 = none, higher = more extreme)"),
+			  new lp_table(Elp_parameters.LP_DASHER_MARGIN, "MarginWidth", PERS, 400, "Width of RHS margin (in Dasher co-ords)")};
 	
 	/**
 	 * Table of all available string parameters
