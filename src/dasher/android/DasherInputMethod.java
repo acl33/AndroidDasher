@@ -45,7 +45,7 @@ public class DasherInputMethod extends InputMethodService {
 		Log.d("DasherIME","onCreateInputView");
 		synchronized(DasherInputMethod.class) {
 			while (intf==null) try {DasherInputMethod.class.wait();} catch (InterruptedException e) {throw new RuntimeException(e);}
-			surf = new DasherCanvas(DasherInputMethod.this, intf);
+			surf = new DasherCanvas(DasherInputMethod.this, intf, 480, 600);
 			intf.setCanvas(surf);
 		}
 		return surf;

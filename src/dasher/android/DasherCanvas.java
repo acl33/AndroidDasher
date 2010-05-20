@@ -21,11 +21,15 @@ public class DasherCanvas extends SurfaceView implements Callback {
 	private final RenderTask rTh;
     private boolean animating, bReady;
     private int x,y;
+    /* Desired width & height */
+    private final int dw,dh;
     
-	public DasherCanvas(Context context, ADasherInterface intf) {
+	public DasherCanvas(Context context, ADasherInterface intf, int dw, int dh) {
 		super(context);
 		if (intf==null) throw new NullPointerException();//just do it now!
 		this.intf=intf;
+		this.dw=dw;
+		this.dh=dh;
 		SurfaceHolder holder = getHolder();
 		holder.addCallback(this);
 		rTh=new RenderTask(holder);
@@ -33,8 +37,7 @@ public class DasherCanvas extends SurfaceView implements Callback {
 
 	protected void onMeasure(int widthMS, int heightMS) {
 		Log.d("DasherIME","onMeasure ("+MeasureSpec.toString(widthMS)+","+MeasureSpec.toString(heightMS)+")");
-		int w = ms(widthMS,480),h = ms(heightMS,600);
-		setMeasuredDimension(w,h);
+		setMeasuredDimension(ms(widthMS,dw),ms(heightMS,dh));
 	}
 	
 	private int ms(int mSpec, int pref) {
