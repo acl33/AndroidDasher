@@ -1,5 +1,6 @@
 package dasher.android;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
@@ -15,6 +16,7 @@ import android.inputmethodservice.InputMethodService;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
+import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.widget.FrameLayout;
@@ -86,6 +88,11 @@ public class DasherInputMethod extends InputMethodService {
 								  int newSelStart, int newSelEnd,
 								  int candidatesStart, int candidatesEnd) {
 		Log.d("DasherIME","onUpdateSelection "+oldSelStart+"-"+oldSelEnd+" => "+newSelStart+"-"+newSelEnd+" / "+candidatesStart+"-"+candidatesEnd);
+	}
+
+	@Override
+	public void onDisplayCompletions(CompletionInfo[] ci) {
+		Log.d("DasherIME","Completions: "+Arrays.toString(ci));
 	}
 	
 	@Override
