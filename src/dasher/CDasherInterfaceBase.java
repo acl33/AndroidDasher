@@ -114,8 +114,9 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	/**
 	 * Our settings repository
 	 */
-	protected final CSettingsStore m_SettingsStore;
-	
+	private CSettingsStore m_SettingsStore;
+	protected final CSettingsStore getSettingsStore() {return m_SettingsStore;}
+
 	/**
 	 * Our logging module
 	 */
@@ -172,17 +173,13 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	public abstract void SetupPaths();
 	
 	/**
-	 * Called at construction time to make the settings store.
-	 * Subclasses should override to return something appropriate
+	 * Called at realization time to make the settings store.
+	 * Subclasses should implement to return something appropriate
 	 * - i.e. to store persistent settings - or return a CSettingsStore
-	 * as a fallback.
-	 * @param handler EventHandler for the settings store to use (to propagate
-	 * parameter change notifications); actually <code>this</code>, i.e. a
-	 * CDasherInterfaceBase, but of course the CDasherInterfaceBase bits aren't
-	 * initialised yet (whereas the CEventHandler bits are!)
-	 * @return
+	 * as a fallback. (Note that <code>this</code> is an {@link CEventHandler}) 
+	 * @return a platform-dependent persistent settings store, or a plain CSettingsStore.
 	 */
-	protected abstract CSettingsStore createSettingsStore(CEventHandler handler);
+	protected abstract CSettingsStore createSettingsStore();
 	
 	/**
 	 * Returns an iterator over all characters that have been entered (i.e. up to
@@ -206,7 +203,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * the event handler and module manager.
 	 */
 	public CDasherInterfaceBase() {
-		m_SettingsStore = createSettingsStore(this);
 		strTrainfileBuffer = new StringBuffer();
 		m_oModuleManager = new CModuleManager();
 				
@@ -220,6 +216,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * Dasher. The sequence of actions is as follows:
 	 * <p>
 	 * <ul>
+	 * <li>Creates the settings store
 	 * <li>Sets up the system and user locations (by calling SetupPaths())
 	 * <li>Reads in the available alphabets and colour schemes
 	 * using ScanAlphabetFiles and then creating a CAlphIO based upon
@@ -236,8 +233,8 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * state, tho it will need a screen which should be created
 	 * externally and registered with ChangeScreen().
 	 */
-	public void Realize() {
-		
+	protected void Realize() {
+		m_SettingsStore = createSettingsStore();
 		SetupPaths();
 		
 		m_AlphIO = new CAlphIO(this);

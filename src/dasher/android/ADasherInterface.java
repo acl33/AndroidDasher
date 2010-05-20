@@ -20,29 +20,31 @@ import android.util.Log;
 
 import dasher.CAlphIO;
 import dasher.CColourIO;
+import dasher.CDasherInput;
 import dasher.CDasherInterfaceBase;
-import dasher.CDasherNode;
-import dasher.CEventHandler;
 import dasher.CLockEvent;
-import dasher.CSettingsStore;
 import dasher.CStylusFilter;
 import dasher.XMLFileParser;
-import dasher.android.DasherCanvas.TouchInput;
 
 public abstract class ADasherInterface extends CDasherInterfaceBase {
-	private final Context androidCtx;
+	private Context androidCtx;
+	private boolean realized;
 	private final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<Runnable>();
 	private Thread taskThread;
+	private DasherCanvas surf;
 	
 	public void enqueue(Runnable r) {tasks.add(r);}
 	
-	public ADasherInterface(Context androidCtx) {
-		Log.d("DasherIME","new CDasherInterfaceBase - "+CDasherNode.currentNumNodeObjects()+" nodes");
-		this.androidCtx = androidCtx;
+	@Override
+	protected void Realize() {
+		throw new RuntimeException("Should not call no-args Realize directly, rather call Realize(Context).");
 	}
 	
-	@Override
-	public void Realize() {
+	public void Realize(Context androidCtx) {
+		this.androidCtx = androidCtx;
+		if (realized) return;
+		realized=true;
+		Log.d("DasherIME","Realize()ing...");
 		if (taskThread != null) throw new IllegalStateException("Already Realize()d!");
 		super.Realize();
 		taskThread = new Thread() {
@@ -72,17 +74,27 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	
 	@Override
 	public void CreateModules() {
-		RegisterModule(new CStylusFilter(this, m_SettingsStore));
+		RegisterModule(new CStylusFilter(this, getSettingsStore()));
+		RegisterModule(new CDasherInput(this, getSettingsStore(), 0, 0, "Mouse Input") {
+			
+			@Override
+			public int GetCoordinates(long[] Coordinates) {
+				surf.GetCoordinates(Coordinates);
+				return 0; //screen coords
+			}
+				
+			@Override
+			public int GetCoordinateCount() {
+				return 2;
+			}
+		
+		});
 	}
 	
 	@Override
 	public void SetupPaths() {
 		// TODO Auto-generated method stub
 
-	}
-
-	/*package*/ CSettingsStore getSettingsStore() {
-		return m_SettingsStore;
 	}
 
 	@Override
@@ -93,6 +105,10 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	@Override
 	public void ScanAlphabetFiles(CAlphIO alphIO) {
 		ScanXMLFiles(alphIO,"alphabet");
+	}
+	
+	public void setCanvas(DasherCanvas surf) {
+		this.surf=surf;
 	}
 
 	private void ScanXMLFiles(XMLFileParser parser, String prefix) {

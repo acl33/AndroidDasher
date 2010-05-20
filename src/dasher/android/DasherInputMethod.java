@@ -8,7 +8,6 @@ import dasher.CEditEvent;
 import dasher.CEvent;
 import dasher.CEventHandler;
 import dasher.CSettingsStore;
-import dasher.android.DasherCanvas.TouchInput;
 import android.R;
 import android.content.Context;
 import android.inputmethodservice.ExtractEditText;
@@ -24,26 +23,16 @@ import android.widget.LinearLayout;
 public class DasherInputMethod extends InputMethodService {
 	private static DasherIntfIME intf;
 	private DasherCanvas surf;
-	private TouchInput touchIn;
-
 	@Override public void onCreate() {
 		super.onCreate();
+		Log.d("DasherIME", "onCreate...");
 		synchronized(DasherInputMethod.class) {
-			if (intf==null) {
-				Log.d("DasherIME", "onCreate making interface...");
-				DasherIntfIME temp = new DasherIntfIME();
-				Log.d("DasherIME","Realizing...");
-				try {
-					temp.Realize();
-					Log.d("DasherIME","Realized.");
-					intf = temp;
-				} catch (RuntimeException e) {
-					Log.d("DasherIME", "Realization error", e);
-					throw e;
-				}
-			} else
-				Log.d("DasherIME","onCreate interface already made");
+			if (intf==null) intf = new DasherIntfIME();
+			//set context. (Note, only does normal Realize() the first time)
+			intf.Realize(this);
+			DasherInputMethod.class.notifyAll();
 		}
+		Log.d("DasherIME", "onCreate made interface...");
 	}
 	
 	@Override public void onDestroy() {
@@ -53,14 +42,11 @@ public class DasherInputMethod extends InputMethodService {
 	}
 	
 	@Override public View onCreateInputView() {
-		if (surf==null) {
-			Log.d("DasherIME","onCreateInputView");
+		Log.d("DasherIME","onCreateInputView");
+		synchronized(DasherInputMethod.class) {
+			while (intf==null) try {DasherInputMethod.class.wait();} catch (InterruptedException e) {throw new RuntimeException(e);}
 			surf = new DasherCanvas(DasherInputMethod.this, intf);
-			//LayoutParams params = new LayoutParams(480,600);
-			//surf.setLayoutParams(params);
-			touchIn.setCanvas(surf);
-		} else {
-			Log.d("DasherIME","onCreateInputView - surf exists!");
+			intf.setCanvas(surf);
 		}
 		return surf;
 	}
@@ -99,12 +85,11 @@ public class DasherInputMethod extends InputMethodService {
 	public void onUpdateSelection(int oldSelStart, int oldSelEnd,
 								  int newSelStart, int newSelEnd,
 								  int candidatesStart, int candidatesEnd) {
-		Log.d("DasherIME","onUpdateSelection");
+		Log.d("DasherIME","onUpdateSelection "+oldSelStart+"-"+oldSelEnd+" => "+newSelStart+"-"+newSelEnd+" / "+candidatesStart+"-"+candidatesEnd);
 	}
 	
 	@Override
 	public boolean onEvaluateFullscreenMode() {
-		Log.d("DasherIME","onEvaluateFullscreenMode");
 		setExtractViewShown(true);
 		setCandidatesViewShown(false);
 		return true;
@@ -116,15 +101,6 @@ public class DasherInputMethod extends InputMethodService {
 		Log.d("DasherIME","isExtractViewShown would return "+ret);
 		return true;
 	}*/
-	
-	@Override
-	public void onComputeInsets(InputMethodService.Insets out) {
-		super.onComputeInsets(out);
-		Log.d("DasherIME","onComputeInsets(touchable="+out.touchableInsets+" content="+out.contentTopInsets+" visible="+out.visibleTopInsets);
-/*		out.touchableInsets = InputMethodService.Insets.TOUCHABLE_INSETS_FRAME;
-		out.contentTopInsets = 128;
-		out.visibleTopInsets = 128;*/
-	}
 	
 	/*@Override
 	public View onCreateExtractTextView() {
@@ -145,11 +121,9 @@ public class DasherInputMethod extends InputMethodService {
 	{
 		private InputConnection ic;
 		
-		/*package*/DasherIntfIME() {super(DasherInputMethod.this);}
-		
 		@Override
-		protected CSettingsStore createSettingsStore(CEventHandler handler) {
-			return new AndroidSettings(handler, getSharedPreferences("DasherIMEPrefs", Context.MODE_PRIVATE));
+		protected CSettingsStore createSettingsStore() {
+			return new AndroidSettings(this, getSharedPreferences("DasherIMEPrefs", Context.MODE_PRIVATE));
 		}
 
 		@Override
@@ -192,12 +166,6 @@ public class DasherInputMethod extends InputMethodService {
 				public void remove() {throw new UnsupportedOperationException("Immutable");}
 				public void set(Character object) {throw new UnsupportedOperationException("Immutable");}					
 			};
-		}
-		
-		@Override
-		public void CreateModules() {
-			super.CreateModules();
-			RegisterModule(touchIn = new DasherCanvas.TouchInput(this));
 		}
 		
 		@Override

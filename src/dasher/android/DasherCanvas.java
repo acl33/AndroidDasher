@@ -24,6 +24,7 @@ public class DasherCanvas extends SurfaceView implements Callback {
     
 	public DasherCanvas(Context context, ADasherInterface intf) {
 		super(context);
+		if (intf==null) throw new NullPointerException();//just do it now!
 		this.intf=intf;
 		SurfaceHolder holder = getHolder();
 		holder.addCallback(this);
@@ -91,30 +92,11 @@ public class DasherCanvas extends SurfaceView implements Callback {
 		return true;
 	}
 	
-	/*package*/ static class TouchInput extends CDasherInput {
-		private DasherCanvas surf;
-		TouchInput(ADasherInterface intf) {
-			super(intf, intf.getSettingsStore(), 0, 0, "Mouse Input");
-		}
-		
-		public void setCanvas(DasherCanvas surf) {
-			this.surf=surf;
-		}
-			
-		@Override
-		public int GetCoordinates(long[] Coordinates) {
-			if (Coordinates.length != 2) throw new IllegalArgumentException();
-			if (surf!=null) {
-				Coordinates[0] = surf.x;
-				Coordinates[1] = surf.y;
-			}
-			return 0;
-		}
-			
-		@Override
-		public int GetCoordinateCount() {
-			return 2;
-		}
+	/* Gets (screen/pixel) x,y coordinates of last touch event*/
+	public void GetCoordinates(long[] coords) {
+		if (coords.length!=2) throw new IllegalArgumentException("Coordinate array must have exactly two elements");
+		coords[0]=x;
+		coords[1]=y;
 	}
 	
 	public void requestRender() {

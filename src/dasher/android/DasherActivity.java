@@ -5,7 +5,6 @@ import java.util.ListIterator;
 import dasher.CEventHandler;
 import dasher.CSettingsStore;
 import dasher.CStylusFilter;
-import dasher.android.DasherCanvas.TouchInput;
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
