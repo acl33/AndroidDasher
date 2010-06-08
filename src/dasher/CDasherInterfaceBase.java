@@ -182,13 +182,13 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	protected abstract CSettingsStore createSettingsStore();
 	
 	/**
-	 * Returns an iterator over all characters that have been entered (i.e. up to
-	 * the node under the crosshair, inclusive). Initial position of the iterator
-	 * should be at the end, i.e. after the most recent character, such that we
-	 * can navigate *backwards* using previous()/hasPrevious().
+	 * Returns an iterator over all characters that have been entered - including
+	 * any after the (insertion point = node under crosshair). Initial position
+	 * should be such that the first call to previous() returns the character with
+	 * the specified offset.
 	 * @return a ListIterator of all characters entered
 	 */
-	public abstract ListIterator<Character> charactersEntered();
+	public abstract ListIterator<Character> getContext(int iOffset);
 	
 	/**
 	 * Sole constructor. Creates an EventHandler, sets up an
@@ -498,7 +498,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * Utility method, preserved for backwards compatibility.
 	 * Simply calls {@link #InvalidateContext(boolean)} with <code>true</code>.
 	 */
-	public void Start() {InvalidateContext(true);}
+	public void Start() {setOffset(m_DasherModel.GetOffset(),true);}
 	
 	/**
 	 * Pauses Dasher at a given mouse location, and sets
@@ -951,8 +951,9 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * 
 	 * @param bForceStart Should we rebuild the context even if none is submitted?
 	 */
-	public void InvalidateContext(boolean bForceStart) {
-			
+	public void setOffset(int iOffset, boolean bForce) {
+		if (m_DasherModel==null) return; //hmmm. does this ever happen?
+		if (iOffset == m_DasherModel.GetOffset() && !bForce) return;
 		/* CSFS: This used to clear m_DasherModel.strContextBuffer,
 		 * which has been removed per the notes at the top of the file.
 		 */
@@ -962,17 +963,13 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		// The previous code seemed to extract the most recent 10 characters
 		// to write to the training file, so I'm preserving that behaviour!
 		StringBuilder strLast = new StringBuilder(10);
-		for (ListIterator<Character> it = charactersEntered(); it.hasPrevious() && strLast.length()<10;)
+		for (ListIterator<Character> it = getContext(iOffset); it.hasPrevious() && strLast.length()<10;)
 			strLast.append(it.previous());
 		//we build the string in reverse order, so reverse it now...
 		String strNewContext = strLast.reverse().toString();
 		strTrainfileBuffer.append(strNewContext);
 						
-		if(bForceStart || charactersEntered().hasPrevious()) {
-			if(m_DasherModel != null) {
-				m_DasherModel.SetContext(charactersEntered());
-			}
-		}
+		m_DasherModel.SetOffset(iOffset,bForce);
 		
 		if(m_DasherView != null)
 			m_DasherModel.CheckForNewRoot(m_DasherView);

@@ -96,6 +96,8 @@ public abstract class CDasherNode {
      *  by ExpansionPolicy - but easiest to store here... */
     public double m_dCost;
     
+    private int m_iOffset;
+    public int getOffset() {return m_iOffset;}
     /**
      * Whether this Node shoves or not (ie. whether the symbols
      * of its children should be displaced to the right so as
@@ -126,7 +128,8 @@ public abstract class CDasherNode {
 	 * @param lm LanguageModel
 	 * @param Colour Colour number
 	 */
-    protected void initNode(CDasherNode Parent, long ilbnd, long ihbnd, int Colour, String strDisplayText) {
+    protected void initNode(CDasherNode Parent, int iOffset, long ilbnd, long ihbnd, int Colour, String strDisplayText) {
+    	m_iOffset = iOffset;
 		m_iLbnd = ilbnd;
 		m_iHbnd = ihbnd;
 		//m_bHasAllChildren = false; //default at construction time, and cleared by DeleteNode()
@@ -156,12 +159,12 @@ public abstract class CDasherNode {
 	 * <p>
 	 * This method will be called when a user enters a given Node.
 	 * <p>
-	 * @param Added CSymbolProbs detailing what has been output should
+	 * @param pAdded CSymbolProbs detailing what has been output should
 	 * be added to this list
 	 * @param iNormalization Normalisation value (total to which
 	 * node probabilities always add up)
 	 */
-	public abstract void Output(ArrayList<CSymbolProb> Added, int iNormalization);
+	public abstract void Output(List<CSymbolProb> pAdded, int iNormalization);
     
 	/**
 	 * Reverse or undo the output associated with this Node
@@ -200,10 +203,9 @@ public abstract class CDasherNode {
      * <p>
      * See CAlphabetManager for a concrete example.
      * 
-     * @param context ListIterator at end of characters immediately preceding this node
      * @return Parent of this Node.
      */
-    public abstract CDasherNode RebuildParent(ListIterator<Character> context);
+    public abstract CDasherNode RebuildParent();
     
 	/**
 	 * At present, does nothing; Nodes will be "deleted" by virtue

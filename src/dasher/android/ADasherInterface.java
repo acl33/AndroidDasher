@@ -27,7 +27,7 @@ import dasher.CStylusFilter;
 import dasher.XMLFileParser;
 
 public abstract class ADasherInterface extends CDasherInterfaceBase {
-	private Context androidCtx;
+	protected Context androidCtx;
 	private boolean realized;
 	private final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<Runnable>();
 	private Thread taskThread;
@@ -62,6 +62,11 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			}
 		};
 		taskThread.start();
+	}
+	
+	@Override
+	public void Redraw(boolean bChanged) {
+		if (surf!=null) surf.requestRender();
 	}
 	
 	@Override

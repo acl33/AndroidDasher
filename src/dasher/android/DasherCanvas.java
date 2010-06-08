@@ -73,8 +73,12 @@ public class DasherCanvas extends SurfaceView implements Callback {
 	}
 
 	public void surfaceDestroyed(SurfaceHolder holder) {
-		Log.d("DasherIME","surfaceDestroyed");
-		stopAnimating();
+		Log.d("DasherIME",this+" surfaceDestroyed");
+		//stopAnimating();
+		synchronized(this) {
+			//disable animation until we have another surfaceChanged
+			bReady=false;
+		}
 	}
 	
 	@Override
@@ -145,9 +149,10 @@ public class DasherCanvas extends SurfaceView implements Callback {
 		
 		public void run() {
 			synchronized(DasherCanvas.this) {
-				if (!animating) return;
+				if (!animating || !bReady) return;
 			}
 			canvas = holder.lockCanvas();
+			if (canvas==null) Log.d("DasherIME",this+" render got null canvas");
 			intf.NewFrame(System.currentTimeMillis());
 			holder.unlockCanvasAndPost(canvas);
 			canvas=null;

@@ -118,33 +118,33 @@ public class CAlphabetManager<C> {
 
     /**
      * Creates a new root CDasherNode with the supplied parameters.
+     * @param iOffset index of character which this root should be considered as entering;
+     * -1 indicates the root group node containing all potential first (offset=0) characters
+     * @return a symbol node, as long as there is at least one preceding character; a group node if not
      */
-    public CAlphNode GetRoot(CDasherNode Parent, long iLower, long iUpper, ListIterator<Character> previousChars) {
-    	return GetRoot(Parent, iLower, iUpper, previousChars, previousChars.hasPrevious());
-    }
-    
-    public CAlphNode GetRoot(CDasherNode Parent, long iLower, long iUpper, ListIterator<Character> previousChars, boolean bUseLastSym) {
-    	if (bUseLastSym && !previousChars.hasPrevious()) throw new IllegalArgumentException("Cannot use last symbol as there is none");
+    public CAlphNode GetRoot(CDasherNode Parent, long iLower, long iUpper, int iOffset) {
+    	if (iOffset < -1) throw new IllegalArgumentException("offset "+iOffset+" must be at least -1");
+    	ListIterator<Character> previousChars = m_Model.m_DasherInterface.getContext(iOffset);
+    	assert iOffset>=0 || !previousChars.hasPrevious();
     	ListIterator<Integer> previousSyms = m_Alphabet.GetSymbols(previousChars);
     	CAlphNode NewNode;
     	GotNode: {
-    		if (bUseLastSym) {
+    		if (previousSyms.hasPrevious()) {
     			int iSym = previousSyms.previous();
-    			previousSyms.next(); //move back to initial position
     			if (iSym!=CAlphabet.UNDEFINED) {
-    				NewNode = allocSymbol(Parent,iSym,0,iLower,iUpper, m_LanguageModel.BuildContext(previousSyms));
+        			NewNode = allocSymbol(Parent,iOffset,iSym,0,iLower,iUpper, 
+        					m_LanguageModel.ContextWithSymbol(m_LanguageModel.BuildContext(previousSyms),iSym));
     				break GotNode;
     			}
     		} 
-	    	//Didn't/couldn't use previous symbol.
+	    	//Couldn't use previous symbol.
 	    	//TODO should get a default start-of-sentence context from the alphabet.
-	    	C ctx = previousChars.hasPrevious()
-	    		? m_LanguageModel.BuildContext(previousSyms)
-	    		: m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), ". ");
-	    	NewNode = allocGroup(Parent, null, 0, iLower, iUpper, ctx);
+    		// Note that for (escaping from) Control Mode, etc., we'll need an extra param
+    		// to enforce jumping here; and we'll then need to attempt to build a context
+	    	NewNode = allocGroup(Parent, iOffset, null, 0, iLower, iUpper,
+	    			m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), ". "));
     	}
-    	NewNode.Seen(true);
-
+    	
     	return NewNode;
     }
     
@@ -163,13 +163,13 @@ public class CAlphabetManager<C> {
     	
     	private CAlphNode() {}
     	@Override
-    	protected void initNode(CDasherNode Parent, long iLbnd, long iHbnd, int colour, String label) {
-    		throw new RuntimeException("Call the 7-arg version with iphase & context instead");
+    	protected void initNode(CDasherNode Parent, int iOffset, long iLbnd, long iHbnd, int colour, String label) {
+    		throw new RuntimeException("Call version with extra iphase & context args instead");
     	}
-        void initNode(CDasherNode Parent, int iphase,
+        void initNode(CDasherNode Parent, int iOffset, int iphase,
 				long ilbnd, long ihbnd, int Colour, C context,
 				String label) {
-			super.initNode(Parent, ilbnd, ihbnd, Colour, label);
+			super.initNode(Parent, iOffset, ilbnd, ihbnd, Colour, label);
 			this.context = context;
 			this.m_iPhase = iphase;
 		}
@@ -200,8 +200,8 @@ public class CAlphabetManager<C> {
 		 * @param charsBefore the context - i.e. characters preceding this node
 		 * @return The newly created parent, which may be the root node.
 		 */
-		public CDasherNode RebuildParent(ListIterator<Character> charsBefore) {
-			if (Parent()==null && charsBefore.hasPrevious()) {
+		public CDasherNode RebuildParent() {
+			if (Parent()==null && getOffset()>=0) {
 			
 				/* This used to clear m_Model.strContextBuffer. Removed as per notes
 				 * at the top of CDasherInterfaceBase.
@@ -211,7 +211,7 @@ public class CAlphabetManager<C> {
 				 * that we've backed off far enough to need to do so.
 				 */
 				
-				CAlphNode newNode = GetRoot(null, 0, 0, charsBefore);
+				CAlphNode newNode = GetRoot(null, 0, 0, getOffset()-1);
 				newNode.Seen(true);
 				
 				IterateChildGroups(newNode, null, this);
@@ -229,11 +229,11 @@ public class CAlphabetManager<C> {
     	private CSymbolNode() {}
     	
     	@Override
-    	void initNode(CDasherNode Parent, int iphase, long ilbnd, long ihbnd, int Colour, C context, String label) {
+    	void initNode(CDasherNode Parent, int iOffset, int iphase, long ilbnd, long ihbnd, int Colour, C context, String label) {
     		throw new RuntimeException("Use (CDasherNode, int, int, long, long, C) instead");
     	}
-    	void initNode(CDasherNode Parent, int symbol, int iphase, long ilbnd, long ihbnd, C context) {
-			super.initNode(Parent, iphase, ilbnd, ihbnd, getColour(symbol, iphase), context, m_DisplayText.get(symbol));
+    	void initNode(CDasherNode Parent, int iOffset, int symbol, int iphase, long ilbnd, long ihbnd, C context) {
+			super.initNode(Parent, iOffset, iphase, ilbnd, ihbnd, getColour(symbol, iphase), context, m_DisplayText.get(symbol));
 			this.m_Symbol = symbol;
 		}
 
@@ -270,7 +270,8 @@ public class CAlphabetManager<C> {
          * @param Added An ArrayList<CSymbolProb> to which the typed symbol, annotated with its probability, will be added for logging purposes.
          * @param iNormalization The total to which probabilities should add (usually LP_NORMALIZATION) for the purposes of generating the logged probability.
          */
-        public void Output( ArrayList<CSymbolProb> Added, int iNormalization) {
+    	@Override
+        public void Output(List<CSymbolProb> Added, int iNormalization) {
         	m_Model.m_bContextSensitive = true;
         	if(m_Symbol != 0) { // Ignore symbol 0 (root node)
         		CEditEvent oEvent = new CEditEvent(1, m_Alphabet.GetText(m_Symbol));
@@ -352,13 +353,13 @@ public class CAlphabetManager<C> {
     protected class CGroupNode extends CAlphNode {
     	private CGroupNode() {}
     	@Override
-    	void initNode(CDasherNode Parent, int iphase, long ilbnd, long ihbnd, int Colour, C context, String label) {
+    	void initNode(CDasherNode Parent, int iOffset, int iphase, long ilbnd, long ihbnd, int Colour, C context, String label) {
     		throw new RuntimeException("Use (CDasherNode, int, int, long, long, C) instead");
     	}
     	
-    	void initNode(CDasherNode Parent, SGroupInfo group,
+    	void initNode(CDasherNode Parent, int iOffset, SGroupInfo group,
 				int iphase, long ilbnd, long ihbnd, C context) {
-			super.initNode(Parent, iphase, ilbnd, ihbnd, group==null ? 7 : group.bVisible ? group.iColour : Parent==null ? 7 : Parent.m_iColour, context, (group==null || !group.bVisible) ? "" : group.strLabel);
+			super.initNode(Parent, iOffset, iphase, ilbnd, ihbnd, group==null ? 7 : group.bVisible ? group.iColour : Parent==null ? 7 : Parent.m_iColour, context, (group==null || !group.bVisible) ? "" : group.strLabel);
 			this.m_Group = group;
 		}
 
@@ -379,11 +380,11 @@ public class CAlphabetManager<C> {
     	}
     	
     	@Override
-    	public CDasherNode RebuildParent(ListIterator<Character> charsBefore) {
+    	public CDasherNode RebuildParent() {
     		//a "root node" which did not insert a symbol, has/had no parent
     		// (an alph node with no preceding characters should - namely, a root!)
     		if (m_Group==null) return null;
-    		return super.RebuildParent(charsBefore);
+    		return super.RebuildParent();
     	}
     	
     	@Override
@@ -399,7 +400,7 @@ public class CAlphabetManager<C> {
     	protected SGroupInfo m_Group;
 
 		@Override
-		public void Output(ArrayList<CSymbolProb> Added, int iNormalization) {
+		public void Output(List<CSymbolProb> Added, int iNormalization) {
 			// Do nothing.
 		}
 
@@ -497,26 +498,26 @@ public class CAlphabetManager<C> {
 			cont = m_LanguageModel.EmptyContext();
 			//      EnterText(cont, "");
 		}
-		return allocSymbol(parent, sym, (parent.m_iPhase+1)%2, iLbnd, iHbnd, cont);
+		return allocSymbol(parent, parent.getOffset()+1, sym, (parent.m_iPhase+1)%2, iLbnd, iHbnd, cont);
     }
     
     CGroupNode mkGroup(CAlphNode parent, SGroupInfo group, long iLbnd, long iHbnd) {
-    	return allocGroup(parent, group, parent.m_iPhase, iLbnd, iHbnd, parent.context);
+    	return allocGroup(parent, parent.getOffset(), group, parent.m_iPhase, iLbnd, iHbnd, parent.context);
     }
     
     private final List<CGroupNode> freeGroupList = new ArrayList<CGroupNode>();
     
-    private CGroupNode allocGroup(CDasherNode parent, SGroupInfo group, int phase, long iLbnd, long iHbnd, C ctx) {
+    private CGroupNode allocGroup(CDasherNode parent, int iOffset, SGroupInfo group, int phase, long iLbnd, long iHbnd, C ctx) {
     	CGroupNode node = (freeGroupList.isEmpty()) ? new CGroupNode() : freeGroupList.remove(freeGroupList.size()-1);
-    	node.initNode(parent, group, phase, iLbnd, iHbnd, ctx);
+    	node.initNode(parent, iOffset, group, phase, iLbnd, iHbnd, ctx);
     	return node;
     }
 
     private final List<CSymbolNode> freeSymbolList = new ArrayList<CSymbolNode>();
     
-    private CSymbolNode allocSymbol(CDasherNode parent, int sym, int phase, long iLbnd, long iHbnd, C ctx) {
+    private CSymbolNode allocSymbol(CDasherNode parent, int iOffset, int sym, int phase, long iLbnd, long iHbnd, C ctx) {
     	CSymbolNode node = (freeSymbolList.isEmpty()) ? new CSymbolNode() : freeSymbolList.remove(freeSymbolList.size()-1);
-    	node.initNode(parent, sym, phase, iLbnd, iHbnd, ctx);
+    	node.initNode(parent, iOffset, sym, phase, iLbnd, iHbnd, ctx);
     	return node;
     }
     /**

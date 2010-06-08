@@ -30,6 +30,7 @@ import java.io.InputStream;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.ListIterator;
 
 /**
@@ -188,6 +189,8 @@ public class CDasherModel extends CDasherComponent {
 		 */
 		public int iStyle;
 	}
+	
+	private CDasherNode m_pLastOutput;
 	
 	/**
 	 * Initialise a new DasherModel. This consists of:
@@ -510,15 +513,7 @@ public class CDasherModel extends CDasherComponent {
 		if(oldroots.size() == 0) {
 			
 			/* If our internal buffer of old roots is exhausted, */
-			
-			ListIterator<Character> allEntered = m_DasherInterface.charactersEntered();
-			
-			for (CDasherNode cur = Get_node_under_crosshair(); ; cur=cur.Parent()) {
-				cur.absorbContext(allEntered);
-				if (cur == m_Root) break;
-			}
-			
-			NewRoot = m_Root.RebuildParent(allEntered);
+			NewRoot = m_Root.RebuildParent();
 			if (NewRoot == null) return; // no existing parent and no way of recreating => give up
 		}
 		else {
@@ -593,7 +588,8 @@ public class CDasherModel extends CDasherComponent {
 	 * 
 	 * @param sNewContext Context to set
 	 */
-	public void SetContext(ListIterator<Character> previousChars) {
+	public void SetOffset(int iOffset, boolean bForce) {
+		if (iOffset == GetOffset() && !bForce) return;
 		
 		/* If a zoom was in progress, cancel it -- this function will likely change
 		 * our location within the Dasher world, and so the target being aimed for
@@ -608,8 +604,11 @@ public class CDasherModel extends CDasherComponent {
 			m_Root.DeleteNode();
 		}
 		
-		m_Root = m_AlphabetManager.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), previousChars);
-		
+		m_Root = m_AlphabetManager.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), iOffset);
+		//we've already entered the node, as it was reconstructed from previously-written context
+		m_Root.Enter();
+		m_Root.Seen(true);
+		m_pLastOutput=m_Root;
 		Push_Node(m_Root);
 		
 		double dFraction = ( 1 - (1 - m_Root.MostProbableChild() / (double)(GetLongParameter(Elp_parameters.LP_NORMALIZATION))) / 2.0 );
@@ -620,6 +619,10 @@ public class CDasherModel extends CDasherComponent {
 		m_Rootmax = GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 + iWidth / 2;
 		
 		m_iDisplayOffset = 0;
+	}
+	
+	public int GetOffset() {
+		return m_pLastOutput==null ? -1 : m_pLastOutput.getOffset();
 	}
 	
 	/**
@@ -855,32 +858,6 @@ public class CDasherModel extends CDasherComponent {
 		}
 	}
 	
-	/**
-	 * Given a Node which is supposed to be the current end of
-	 * output, recursively checks whether the parent's Seen property
-	 * is true (which indicates it has been output if appropriate)
-	 * and invokes the AlphabetManager's Enter and Output methods
-	 * on each unseen ancestor in tree-descending order.
-	 * <p>
-	 * The nodes' Seen flag is also set, preventing repeated
-	 * output of the same nodes.
-	 * 
-	 * @param Node Node to output, possibly including its ancestors
-	 * @param pAdded ArrayList which will be filled with output characters
-	 * for logging purposes.
-	 */
-	protected void RecursiveOutput(CDasherNode Node, ArrayList<CSymbolProb> pAdded) {
-		if(Node.Parent() != null && (!Node.Parent().isSeen())) 
-			RecursiveOutput(Node.Parent(), pAdded);
-		
-		if(Node.Parent() != null) Node.Parent().Leave();
-			
-		Node.Enter();
-		
-		Node.Seen(true);
-		Node.Output(pAdded, (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION));
-	}
-
 	/*
 	class PNGCReturn {
 		int iSteps;
@@ -999,8 +976,6 @@ public class CDasherModel extends CDasherComponent {
 	 * @param newRootmax Desired new value of m_RootMax
 	 */
 	protected void NewGoTo(long newRootmin, long newRootmax) {
-		// Find out the current node under the crosshair
-		CDasherNode old_under_cross=Get_node_under_crosshair();
 		
 		// Update the max and min of the root node to make iTargetMin and iTargetMax the edges of the viewport.
 			
@@ -1037,7 +1012,7 @@ public class CDasherModel extends CDasherComponent {
 		CDasherNode new_under_cross = Get_node_under_crosshair();
 		Push_Node(new_under_cross);
 		
-		HandleOutput(new_under_cross, old_under_cross);
+		OutputTo(new_under_cross, null);
 		//ACL TODO: following should(/did) use original newRootmin/max params
         // not modified versions...
         total_nats += -1.0 * Math.log((newRootmax - newRootmin) / 4096.0);
@@ -1057,88 +1032,27 @@ public class CDasherModel extends CDasherComponent {
 	 * @param NewNode Node now under the crosshair
 	 * @param OldNode Node previously under the crosshair (maybe the same as NewNode)
 	 */
-	protected void HandleOutput(CDasherNode NewNode, CDasherNode OldNode) {
-		if(NewNode != OldNode)
-			DeleteCharacters(NewNode, OldNode);
-		
-		if(NewNode.isSeen())
-			return;
-		
-		// TODO: Reimplement second parameter
-		RecursiveOutput(NewNode, null);
+	protected void OutputTo(CDasherNode NewNode, List<CSymbolProb> pAdded) {
+		if (NewNode!=null && !NewNode.isSeen()) {
+			OutputTo(NewNode.Parent(), pAdded);
+			if (NewNode.Parent()!=null) NewNode.Parent().Leave();
+			NewNode.Enter();
+			NewNode.Seen(true);
+			m_pLastOutput=NewNode;
+			NewNode.Output(pAdded, (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION));
+		} else {
+			//NewNode either null or has been seen; delete back to it
+			while (m_pLastOutput != NewNode) {
+				//if NewNode has been seen, m_pLastOutput!=null...
+				m_pLastOutput.Undo();
+				m_pLastOutput.Seen(false);
+				m_pLastOutput.Leave();
+				m_pLastOutput = m_pLastOutput.Parent();
+				m_pLastOutput.Enter();
+			}
+		}
 	}
 	
-	/**
-	 * Traces back from oldnode to either a) newnode, in the case
-	 * that oldnode is a descendent of newnode, or b) to the nearest
-	 * common ancestor (ie. the nearest ancestor of newnode which
-	 * has its seen flag set), calling the AlphabetManager's
-	 * Undo method on each in turn.
-	 * <p>
-	 * In case a) we will now be consistent with the user's current
-	 * location; in case b) we have deleted the text belonging
-	 * to oldnode's branch but not output the text for newnode;
-	 * HandleOutput must be used to finish the job.
-	 * <p>
-	 * If either parameter is null, this method will return false
-	 * and take no action.
-	 * 
-	 * @param newnode Node currently under the crosshair
-	 * @param oldnode Node previously under the crosshair
-	 * @return False if either argument as null, True otherwise.
-	 */
-	protected boolean DeleteCharacters(CDasherNode newnode, CDasherNode oldnode) {
-			
-		/* CSFS: Much like tap_on_screen, this method used to have an int *
-		 * argument named pNumDeleted. However, every call from an external
-		 * method passed in a null argument; only DeleteCharacters itself ever
-		 * made use of it. I'm assuming this is fossilised code and have
-		 * removed the argument.
-		 */
-		
-		if(newnode == null || oldnode == null)
-			return false;
-		
-		// This deals with the trivial instance - we're reversing back over
-		// text that we've seen already
-		if(newnode.isSeen() == true) {
-			if(oldnode.Parent() == newnode) {
-				oldnode.Undo();
-				oldnode.Parent().Enter();
-				oldnode.Seen(false);
-				return true;
-			}
-			if(DeleteCharacters(newnode, oldnode.Parent()) == true) {
-				oldnode.Undo();
-				oldnode.Parent().Enter();
-				oldnode.Seen(false);
-				return true;
-			}
-		}
-		else {
-			// This one's more complicated - the user may have moved onto a new branch
-			// Find the last seen node on the new branch
-			CDasherNode lastseen = newnode.Parent();
-			
-			while(lastseen != null && lastseen.isSeen() == false) {
-				lastseen = lastseen.Parent();
-			}
-			// Delete back to last seen node
-			while(oldnode != lastseen) {
-				
-				oldnode.Seen(false);
-				
-				oldnode.Undo();
-				oldnode.Parent().Enter();
-				oldnode = oldnode.Parent();
-				if(oldnode == null) {
-					return false;
-				}
-			}
-		}
-		return false;
-	}
-
 	/**
 	 * Increments all symbol probabilities by the value of {@link #uniformAdd},
 	 * and sets the final probability to {@link #controlSpace}. (The first and last
