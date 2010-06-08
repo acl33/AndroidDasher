@@ -28,7 +28,6 @@ import dasher.XMLFileParser;
 
 public abstract class ADasherInterface extends CDasherInterfaceBase {
 	protected Context androidCtx;
-	private boolean realized;
 	private final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<Runnable>();
 	private Thread taskThread;
 	private DasherCanvas surf;
@@ -40,13 +39,9 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		throw new RuntimeException("Should not call no-args Realize directly, rather call Realize(Context).");
 	}
 	
-	public void Realize(Context androidCtx) {
+	public synchronized void Realize(Context androidCtx) {
 		this.androidCtx = androidCtx;
-		if (realized) return;
-		realized=true;
-		Log.d("DasherIME","Realize()ing...");
-		if (taskThread != null) throw new IllegalStateException("Already Realize()d!");
-		super.Realize();
+		if (taskThread!=null) return;
 		taskThread = new Thread() {
 			public void run() {
 				try {
@@ -61,6 +56,8 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 				}
 			}
 		};
+		Log.d("DasherIME","Realize()ing...");
+		super.Realize();
 		taskThread.start();
 	}
 	

@@ -25,22 +25,12 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
 public class DasherInputMethod extends InputMethodService {
-	private static DasherIntfIME intf;
+	private static final DasherIntfIME intf = new DasherIntfIME();
 	/* cursorPos from Android - i.e. cursor just _before_ this character */
 	private DasherCanvas surf;
 	@Override public void onCreate() {
 		super.onCreate();
-		synchronized(DasherInputMethod.class) {
-			if (intf==null) {
-				Log.d("DasherIME", this+" onCreate making interface...");
-				intf = new DasherIntfIME();
-			} else {
-				Log.d("DasherIME", this+" onCreate found interface...");
-			}
-			//set context. (Note, only does normal Realize() the first time)
-			intf.Realize(this);
-			DasherInputMethod.class.notifyAll();
-		}
+		intf.Realize(this);
 	}
 	
 	@Override public void onDestroy() {
@@ -51,12 +41,8 @@ public class DasherInputMethod extends InputMethodService {
 	
 	@Override public View onCreateInputView() {
 		Log.d("DasherIME",this+" onCreateInputView");
-		synchronized(DasherInputMethod.class) {
-			while (intf==null) {
-				Log.d("DasheIME",this+" waiting for DasherIntf");
-				try {DasherInputMethod.class.wait();} catch (InterruptedException e) {throw new RuntimeException(e);}
-			}
-			intf.Realize(this); //in case (we were waiting for) initialization by a different instance
+		intf.Realize(this); //if already initialized by this IME instance, does nothing!
+		if (surf==null) {
 			surf = new DasherCanvas(DasherInputMethod.this, intf, 480, 600);
 			Log.d("DasherIME", this+" created surface "+surf);
 			intf.setCanvas(surf);
