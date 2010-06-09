@@ -39,12 +39,11 @@ public class DasherInputMethod extends InputMethodService {
 		super.onDestroy();
 	}
 	
-	@Override public View onCreateInputView() {
-		Log.d("DasherIME",this+" onCreateInputView");
+	@Override public DasherCanvas onCreateInputView() {
 		intf.Realize(this); //if already initialized by this IME instance, does nothing!
 		if (surf==null) {
 			surf = new DasherCanvas(DasherInputMethod.this, intf, 480, 600);
-			Log.d("DasherIME", this+" created surface "+surf);
+			Log.d("DasherIME", this+" onCreateInputView creating surface "+surf);
 			intf.setCanvas(surf);
 		}
 		return surf;
@@ -66,10 +65,10 @@ public class DasherInputMethod extends InputMethodService {
 	}*/
 	
 	@Override 
-	public void onStartInputView(EditorInfo attribute, boolean restarting) {
+	public void onStartInput(EditorInfo attribute, boolean restarting) {
 		InputConnection ic = getCurrentInputConnection();
-		Log.d("DasherIME",this + " onStartInputView ("+attribute+", "+restarting+") with IC "+ic);
-		if (ic==null) return; //yes, it happens. What else can we do????
+		String msg = this + " onStartInput ("+attribute+", "+restarting+") with IC "+ic;
+		if (ic==null) {Log.d("DasherIME",msg); return;} //yes, it happens. What else can we do????
 		//try and get current cursor position...
 		ExtractedTextRequest req = new ExtractedTextRequest();
 		req.hintMaxChars=0;
@@ -80,11 +79,11 @@ public class DasherInputMethod extends InputMethodService {
 			intf.numSelectedChars = resp.selectionEnd-resp.selectionStart;
 		} else
 			intf.numSelectedChars = 0;
-		Log.d("DasherIME","onStartInputView: cursor "+initCursorPos+" starting animation of "+surf);
+		Log.d("DasherIME",msg+" cursor "+initCursorPos+" starting animation of "+surf);
 		intf.SetInputConnection(ic);
 		intf.lastCursorPos = initCursorPos;
 		intf.setOffset(initCursorPos-1, true);
-		surf.startAnimating();
+		onCreateInputView().startAnimating();
 		//TODO, use EditorInfo to select appropriate...language? (e.g. numbers only!).
 		// Passwords???
 	}
@@ -92,7 +91,7 @@ public class DasherInputMethod extends InputMethodService {
 	@Override
 	public void onFinishInput() {
 		Log.d("DasherIME",this + " onFinishInput");
-		surf.stopAnimating();
+		if (surf!=null) surf.stopAnimating(); //yeah, we can get sent onFinishInput before/without onCreate...
 		intf.SetInputConnection(null);
 	}
 
