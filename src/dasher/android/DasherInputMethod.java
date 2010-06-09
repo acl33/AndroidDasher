@@ -15,7 +15,6 @@ import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 import android.widget.LinearLayout;
 
@@ -64,18 +63,11 @@ public class DasherInputMethod extends InputMethodService {
 		InputConnection ic = getCurrentInputConnection();
 		String msg = this + " onStartInput ("+attribute+", "+restarting+") with IC "+ic;
 		if (ic==null) {Log.d("DasherIME",msg); return;} //yes, it happens. What else can we do????
-		//try and get current cursor position...
-		ExtractedTextRequest req = new ExtractedTextRequest();
-		req.hintMaxChars=0;
-		android.view.inputmethod.ExtractedText resp = ic.getExtractedText(req, 0);
-		int initCursorPos=0,initNumSel=0;
-		if (resp!=null) {
-			initCursorPos = resp.startOffset+resp.selectionStart;
-			initNumSel = resp.selectionEnd-resp.selectionStart;
-		}
+		//get current cursor position...
+		int initCursorPos=attribute.initialSelStart,initNumSel=attribute.initialSelEnd-initCursorPos;
 		Log.d("DasherIME",msg+" cursor "+initCursorPos+" starting animation of "+surf);
 		intf.SetInputConnection(ic);
-		updateSel(initCursorPos,initNumSel,true);
+		updateSel(Math.max(0,initCursorPos),initNumSel,true);
 		//that'll ensure a setOffset() task is enqueued first...
 		onCreateInputView().startAnimating();
 		//...and then any repaint task afterwards.
