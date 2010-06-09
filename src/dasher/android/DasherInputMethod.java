@@ -8,20 +8,15 @@ import java.util.NoSuchElementException;
 
 import dasher.CEditEvent;
 import dasher.CEvent;
-import dasher.CEventHandler;
 import dasher.CSettingsStore;
-import android.R;
 import android.content.Context;
-import android.inputmethodservice.ExtractEditText;
 import android.inputmethodservice.InputMethodService;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup.LayoutParams;
 import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
 public class DasherInputMethod extends InputMethodService {
@@ -73,17 +68,18 @@ public class DasherInputMethod extends InputMethodService {
 		ExtractedTextRequest req = new ExtractedTextRequest();
 		req.hintMaxChars=0;
 		android.view.inputmethod.ExtractedText resp = ic.getExtractedText(req, 0);
-		int initCursorPos=0;
+		int initCursorPos=0,initNumSel=0;
 		if (resp!=null) {
 			initCursorPos = resp.startOffset+resp.selectionStart;
-			intf.numSelectedChars = resp.selectionEnd-resp.selectionStart;
-		} else
-			intf.numSelectedChars = 0;
+			initNumSel = resp.selectionEnd-resp.selectionStart;
+		}
 		Log.d("DasherIME",msg+" cursor "+initCursorPos+" starting animation of "+surf);
 		intf.SetInputConnection(ic);
-		intf.lastCursorPos = initCursorPos;
-		intf.setOffset(initCursorPos-1, true);
+		updateSel(initCursorPos,initNumSel,true);
+		//that'll ensure a setOffset() task is enqueued first...
 		onCreateInputView().startAnimating();
+		//...and then any repaint task afterwards.
+		
 		//TODO, use EditorInfo to select appropriate...language? (e.g. numbers only!).
 		// Passwords???
 	}
@@ -99,32 +95,40 @@ public class DasherInputMethod extends InputMethodService {
 	public void onUpdateSelection(int oldSelStart, int oldSelEnd,
 								  int newSelStart, int newSelEnd,
 								  int candidatesStart, int candidatesEnd) {
+		updateSel(newSelStart,newSelEnd - newSelStart,false);
+	}
+	
+	private void updateSel(int nPos, int nSel, boolean bStart) {
 		boolean need2queue;
 		synchronized (updSelTask) {
 			need2queue = updSelTask.nPos == Integer.MIN_VALUE;
-			updSelTask.nPos = newSelStart;
-			updSelTask.nSel = newSelEnd - newSelStart;
+			updSelTask.nPos = nPos;
+			updSelTask.nSel = nSel;
+			if (bStart) updSelTask.bStarting=true;
 			if (need2queue) intf.enqueue(updSelTask);
 		}
-		Log.d("DasherIME",this+" onUpdateSelection("+newSelStart+") "+need2queue);
+		Log.d("DasherIME",this+" updateSelection("+nPos+", "+nSel+") "+need2queue);
 		
 	}
 	
 	private final class UpdateSelTask implements Runnable {
 		/*package*/ int nPos=Integer.MIN_VALUE;
 		/*package*/ int nSel;
+		/*package*/ boolean bStarting;
 		
 		public void run() {
-			int nPos,nSel;
+			int nPos,nSel; boolean bStarting;
 			synchronized(this) {
 				if (this.nPos==Integer.MIN_VALUE) return;
 				nPos=this.nPos;
 				nSel=this.nSel;
+				bStarting = this.bStarting;
 				this.nPos=Integer.MIN_VALUE;
+				this.bStarting = false;
 			}
 			intf.lastCursorPos = nPos;
 			intf.numSelectedChars = nSel;
-			intf.setOffset(nPos-1, false);
+			intf.setOffset(nPos-1, bStarting);
 		}
 	};
 	private final UpdateSelTask updSelTask = new UpdateSelTask();
