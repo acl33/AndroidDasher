@@ -41,6 +41,11 @@ package dasher;
  */
 public class CDasherModule extends CDasherComponent {
 	
+	/** {@link #GetType()} for input devices ({@link CDasherInput}) */
+	public static final int INPUT_DEVICE=0;
+	/** {@link #GetType()} for input filters ({@link CInputFilter}) */
+	public static final int INPUT_FILTER=1;
+	
 	/**
 	 * This module's unique identifier
 	 */
@@ -48,6 +53,7 @@ public class CDasherModule extends CDasherComponent {
 	
 	/**
 	 * This module's type number
+	 * @see {@value #INPUT_DEVICE}, {@value #INPUT_FILTER}
 	 */
 	private int m_iType;
 	
@@ -97,7 +103,7 @@ public class CDasherModule extends CDasherComponent {
 	 * 
 	 * @return Type
 	 */
-	public int GetType() {
+	public final int GetType() {
 		return m_iType;
 	}
 	

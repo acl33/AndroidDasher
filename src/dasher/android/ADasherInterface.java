@@ -93,7 +93,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			class TiltInput extends CDasherInput implements SensorEventListener {
 				int x,y;
 				public TiltInput() {
-					super(ADasherInterface.this, getSettingsStore(), 1, 0, "Tilt Input");
+					super(ADasherInterface.this, getSettingsStore(), 1, "Tilt Input");
 				}
 				
 				@Override
@@ -134,7 +134,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			};
 			RegisterModule(new TiltInput());
 		}
-		RegisterModule(new CDasherInput(this, getSettingsStore(), 0, 0, "Mouse Input") {
+		RegisterModule(new CDasherInput(this, getSettingsStore(), 0, "Mouse Input") {
 			
 			@Override
 			public int GetCoordinates(long[] Coordinates) {

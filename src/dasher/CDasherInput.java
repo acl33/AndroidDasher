@@ -51,8 +51,8 @@ abstract public class CDasherInput extends CDasherModule {
 	 * @param iType This device's type number
 	 * @param szName Friendly name for this device, to be used with GetModuleByName
 	 */
-	public CDasherInput(CEventHandler EventHandler, CSettingsStore SettingsStore, long iID, int iType, String szName) { 
-		super(EventHandler, SettingsStore, iID, iType, szName);
+	public CDasherInput(CEventHandler EventHandler, CSettingsStore SettingsStore, long iID, String szName) { 
+		super(EventHandler, SettingsStore, iID, CDasherModule.INPUT_DEVICE, szName);
 	}
 	
 	/**

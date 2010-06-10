@@ -75,9 +75,9 @@ public class CInputFilter extends CDasherModule {
 	 * @param szName Friendly name (ideally unique)
 	 * @see CDasherModule
 	 */
-	public CInputFilter(CDasherInterfaceBase iface, CSettingsStore SettingsStore, long iID, int iType, String szName)
+	public CInputFilter(CDasherInterfaceBase iface, CSettingsStore SettingsStore, long iID, String szName)
     { 
-      	super(iface, SettingsStore, iID, iType, szName);
+      	super(iface, SettingsStore, iID, CDasherModule.INPUT_FILTER, szName);
       	m_Interface = iface;
     }
 	

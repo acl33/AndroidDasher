@@ -57,7 +57,7 @@ public class CClickFilter extends CInputFilter {
 	 * @param Interface Interface with which the filter should be registered.
 	 */
 	public CClickFilter(CDasherInterfaceBase iface, CSettingsStore SettingsStore) {
-	  super(iface, SettingsStore, 7, 1, "Click Mode");
+	  super(iface, SettingsStore, 7, "Click Mode");
 	  DasherView = null;
 	}
 

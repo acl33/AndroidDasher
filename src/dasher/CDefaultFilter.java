@@ -72,7 +72,7 @@ public class CDefaultFilter extends CInputFilter {
 	 */
 	public CDefaultFilter(CDasherInterfaceBase iface, CSettingsStore SettingsStore, long iID, String szName)
 	{ 
-		super(iface, SettingsStore, iID, 1, szName);
+		super(iface, SettingsStore, iID, szName);
 		m_StartHandler = null;
 		m_AutoSpeedControl = new CAutoSpeedControl(m_EventHandler, m_SettingsStore, iface.GetCurFPS());
 		

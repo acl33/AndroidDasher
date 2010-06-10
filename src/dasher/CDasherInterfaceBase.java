@@ -28,6 +28,7 @@ package dasher;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Collection;
+import java.util.List;
 import java.util.ListIterator;
 import java.io.*;
 
@@ -828,15 +829,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * 
 	 * @see CAlphIO
 	 */
-	public void GetAlphabets(ArrayList<String> AlphabetList) {
-		m_AlphIO.GetAlphabets(AlphabetList);
-	}
-	
-	/**
-	 * Deferred to m_AlphIO
-	 * 
-	 * @see CAlphIO
-	 */
 	public CAlphIO.AlphInfo GetInfo(String AlphID) {
 		return m_AlphIO.GetInfo(AlphID);
 	}
@@ -858,16 +850,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	public void DeleteAlphabet(String AlphID) {
 		m_AlphIO.Delete(AlphID);
 	}
-	
-	/**
-	 * Deferred to m_ColourIO
-	 * 
-	 * @see CColourIO
-	 */
-	public void GetColours(ArrayList<String> ColourList) {
-		m_ColourIO.GetColours(ColourList);
-	}
-	
+		
 	/** Subclasses should implement to train the model with both user &amp; system texts.
 	 * Progress updates are an optional extra for subclasses, albeit desirable.
 	 * 
@@ -1214,29 +1197,23 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		
 	}
 	
-	/* CSFS: This is worrisome, it looks as if all identifiers and their associated
-	 * functions may need to be set to use UTF-8, ie. prevented from using Java
-	 * Strings. Commenting out for the time being since I won't be using GetValues
-	 * until much later in testing.
-	 */
 	
-	/* public void GetPermittedValues(int iParameter, ArrayList<String> vList) {
-		// TODO: Deprecate direct calls to these functions
-		switch (iParameter) {
-		case Esp_parameters.SP_ALPHABET_ID:
-			GetAlphabets(vList);
-			break;
-		case Esp_parameters.SP_COLOUR_ID:
-			GetColours(vList);
-			break;
-		case Esp_parameters.SP_INPUT_FILTER:
-			m_oModuleManager.ListModules(1, vList);
-			break;
-		case Esp_parameters.SP_INPUT_DEVICE:
-			m_oModuleManager.ListModules(0, vList);
-			break;
+	public void GetPermittedValues(Esp_parameters param, Collection<String> vList) {
+		if (param == Esp_parameters.SP_ALPHABET_ID)
+			m_AlphIO.GetAlphabets(vList);
+		else if (param == Esp_parameters.SP_COLOUR_ID)
+			m_ColourIO.GetColours(vList);
+		else {
+			List<CDasherModule> mods=new ArrayList<CDasherModule>();
+			if(param == Esp_parameters.SP_INPUT_FILTER)
+				m_oModuleManager.ListModules(CDasherModule.INPUT_FILTER, mods);
+			else if (param==Esp_parameters.SP_INPUT_DEVICE)
+				m_oModuleManager.ListModules(CDasherModule.INPUT_DEVICE, mods);
+			else
+				return;
+			for (CDasherModule m : mods) vList.add(m.GetName());
 		}
-	} */
+	}
 	
 	/**
 	 * Engages the shutdown lock (m_bShutdownLock).
