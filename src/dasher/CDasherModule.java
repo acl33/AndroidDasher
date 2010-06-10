@@ -35,9 +35,6 @@ package dasher;
  * the class is constructed, in order to facilitate GetModuleByName.
  * <li>Type and ID, to classify modules without necessarily knowing
  * their class.
- * <li>Reference counting. When the count reaches zero, the module
- * will automatically unregister itself from the EventHandler,
- * allowing the module to be garbage collected.
  */
 public class CDasherModule extends CDasherComponent {
 	
@@ -56,11 +53,6 @@ public class CDasherModule extends CDasherComponent {
 	 * @see {@value #INPUT_DEVICE}, {@value #INPUT_FILTER}
 	 */
 	private int m_iType;
-	
-	/**
-	 * Current reference count for this module
-	 */
-	private int m_iRefCount;
 	
 	/**
 	 * Module name
@@ -85,7 +77,6 @@ public class CDasherModule extends CDasherComponent {
 		
 		m_iID = iID;
 		m_iType = iType;
-		m_iRefCount = 0;
 		m_szName = szName;
 	}
 	
@@ -115,35 +106,5 @@ public class CDasherModule extends CDasherComponent {
 	public String GetName() {
 		return m_szName;
 	}
-	
-	/**
-	 * Increments this module's reference count
-	 *
-	 */
-	public void Ref() {
-		++m_iRefCount;
-	}
-	
-	/**
-	 * Decrements this module's reference count; if this becomes
-	 * zero, unregisters the module with the event handler so
-	 * that it can be garbage collected.
-	 *
-	 */
-	public void Unref() {
-		--m_iRefCount;
 		
-		/* CSFS: In the original C++, this read 'delete this'.
-		 * Since in Java we can't do that, I just unregister the component
-		 * with the manager (inherited method from CDasherComponent).
-		 * Therefore we *must* drop the reference at the other end
-		 * such that the module will be garbage collected.
-		 */
-		
-		if(m_iRefCount == 0) { 
-			this.UnregisterComponent();
-		}
-		
-	}
-	
 }

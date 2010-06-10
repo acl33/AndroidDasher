@@ -585,13 +585,11 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		
 		if(m_Input != null) {
 			m_Input.Deactivate();
-			m_Input.Unref();
 		}
 		
 		m_Input = (CDasherInput)GetModuleByName(GetStringParameter(Esp_parameters.SP_INPUT_DEVICE));
 		
 		if(m_Input != null) {
-			m_Input.Ref();
 			m_Input.Activate();
 		}
 		
@@ -1113,14 +1111,11 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	{
 		if(m_InputFilter != null) {
 			m_InputFilter.Deactivate();
-			m_InputFilter.Unref();
-			m_InputFilter = null;
 		}
 		
 		m_InputFilter = (CInputFilter)GetModuleByName(GetStringParameter(Esp_parameters.SP_INPUT_FILTER));
 		
 		if(m_InputFilter != null) {
-			m_InputFilter.Ref();
 			m_InputFilter.Activate();
 		}
 	}
