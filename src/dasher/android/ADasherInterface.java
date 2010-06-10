@@ -16,14 +16,22 @@ import java.util.concurrent.LinkedBlockingQueue;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.AssetManager;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.util.Log;
 
 import dasher.CAlphIO;
 import dasher.CColourIO;
 import dasher.CDasherInput;
 import dasher.CDasherInterfaceBase;
+import dasher.CDefaultFilter;
+import dasher.CEventHandler;
 import dasher.CLockEvent;
+import dasher.CSettingsStore;
 import dasher.CStylusFilter;
+import dasher.Elp_parameters;
 import dasher.XMLFileParser;
 
 public abstract class ADasherInterface extends CDasherInterfaceBase {
@@ -35,7 +43,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	public void enqueue(Runnable r) {tasks.add(r);}
 	
 	@Override
-	protected void Realize() {
+	protected final void Realize() {
 		throw new RuntimeException("Should not call no-args Realize directly, rather call Realize(Context).");
 	}
 	
@@ -77,6 +85,55 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	@Override
 	public void CreateModules() {
 		RegisterModule(new CStylusFilter(this, getSettingsStore()));
+		RegisterModule(new CDefaultFilter(this, getSettingsStore(), 14, "Normal Control"));
+		final SensorManager sm = (SensorManager)androidCtx.getSystemService(Context.SENSOR_SERVICE);
+		List<Sensor> ss = sm.getSensorList(Sensor.TYPE_ACCELEROMETER);
+		if (!ss.isEmpty()) {
+			final Sensor s = ss.get(0);
+			class TiltInput extends CDasherInput implements SensorEventListener {
+				int x,y;
+				public TiltInput() {
+					super(ADasherInterface.this, getSettingsStore(), 1, 0, "Tilt Input");
+				}
+				
+				@Override
+				public void Activate() {
+					sm.registerListener(this, s, SensorManager.SENSOR_DELAY_UI);
+				}
+				
+				@Override
+				public void Deactivate() {
+					sm.unregisterListener(this,s);
+				}
+				
+				public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+
+				public void onSensorChanged(SensorEvent event) {
+					if (m_DasherScreen==null) return;
+					float[] vals=event.values;
+					/*StringBuilder sb=new StringBuilder();
+					for (int i=0; i<vals.length; i++)
+						sb.append(i==0 ? "{" : ",").append(vals[i]);
+					sb.append("}");
+					android.util.Log.d("DasherIME","Got rotation "+sb);*/
+					float sx = (vals[0]-1.0f)/-2.0f;
+					x = (int)(m_DasherScreen.GetWidth() * Math.max(0.0f, Math.min(1.0f,sx)));
+					float sy = ((vals[1]-1.0f)/8.0f);
+					y = (int)(m_DasherScreen.GetHeight() * Math.max(0.0f,Math.min(1.0f,sy)));
+				}
+
+				@Override
+				public int GetCoordinateCount() {return 2;}
+
+				@Override
+				public int GetCoordinates(long[] Coordinates) {
+					Coordinates[0] = x;
+					Coordinates[1] = y;
+					return 0;
+				}
+			};
+			RegisterModule(new TiltInput());
+		}
 		RegisterModule(new CDasherInput(this, getSettingsStore(), 0, 0, "Mouse Input") {
 			
 			@Override

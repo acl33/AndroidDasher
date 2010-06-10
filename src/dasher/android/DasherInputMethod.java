@@ -9,6 +9,9 @@ import java.util.NoSuchElementException;
 import dasher.CEditEvent;
 import dasher.CEvent;
 import dasher.CSettingsStore;
+import dasher.Ebp_parameters;
+import dasher.Elp_parameters;
+import dasher.Esp_parameters;
 import android.content.Context;
 import android.inputmethodservice.InputMethodService;
 import android.util.Log;
@@ -124,6 +127,14 @@ public class DasherInputMethod extends InputMethodService {
 		protected CSettingsStore createSettingsStore() {
 			Log.d("DasherIME",androidCtx+" creating settings...");
 			return new AndroidSettings(this, androidCtx.getSharedPreferences("DasherIMEPrefs", Context.MODE_PRIVATE));
+		}
+		
+		@Override public void Realize(Context ctx) {
+			super.Realize(ctx);
+			SetBoolParameter(Ebp_parameters.BP_AUTO_SPEEDCONTROL, false);
+			SetLongParameter(Elp_parameters.LP_MAX_BITRATE, 150);
+			SetStringParameter(Esp_parameters.SP_INPUT_DEVICE, "Tilt Input");
+			SetStringParameter(Esp_parameters.SP_INPUT_FILTER, "Normal Control");
 		}
 
 		@Override
