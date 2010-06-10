@@ -1,0 +1,13 @@
+<PreferenceScreen
+	xmlns:android="http://schemas.android.com/apk/res/android"
+        android:key="root_prefs">
+    <CheckBoxPreference
+	android:key="AutoSpeedControl"
+	android:title="Auto speed control"/>
+    <ListPreference
+	android:key="InputFilter"
+	android:title="Control style" />
+    <ListPreference
+        android:key="InputDevice"
+        android:title="Input method" />
+</PreferenceScreen>

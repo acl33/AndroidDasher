@@ -32,19 +32,47 @@ import android.content.SharedPreferences;
 
 import dasher.CEventHandler;
 import dasher.CParameterNotFoundException;
+import dasher.CParameterNotificationEvent;
 import dasher.CSettingsStore;
+import dasher.EParameters;
+import dasher.Ebp_parameters;
+import dasher.Elp_parameters;
+import dasher.Esp_parameters;
 
-public class AndroidSettings extends CSettingsStore {
+public class AndroidSettings extends CSettingsStore implements SharedPreferences.OnSharedPreferenceChangeListener {
 
 	private final SharedPreferences pref;
 	public AndroidSettings(CEventHandler handler, SharedPreferences pref) {
 		
 		super(handler, false);
 		this.pref=pref;
-				
+		pref.registerOnSharedPreferenceChangeListener(this);
 		LoadPersistent();
 	}
 	
+	public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
+			String key) {
+		
+		// TODO Auto-generated method stub
+		EParameters param = EParameters.BY_NAME.get(key);
+		assert param.regName().equals(key);
+		//changed in the backing store, update in memory.
+		//note this'll end up writing it back to the backing store _again_,
+		// which'll call this again - but the second call to SetXXXXParameter
+		// will return without doing anything as the in-memory value will already be correct.
+		try {
+			if (param instanceof Ebp_parameters)
+				SetBoolParameter((Ebp_parameters)param,LoadBoolSetting(key));
+			else if (param instanceof Elp_parameters)
+				SetLongParameter((Elp_parameters)param,LoadLongSetting(key));
+			else if (param instanceof Esp_parameters)
+				SetStringParameter((Esp_parameters)param,LoadStringSetting(key));
+			//silently return...maybe a SharedPreferences not representing a Dasher parameter??
+		} catch (CParameterNotFoundException e) {
+			//hmmm. if the key has just been deleted?
+			throw new RuntimeException(e);
+		}
+	}
 	
 	protected boolean LoadBoolSetting(String key) throws CParameterNotFoundException {
 		
@@ -92,5 +120,5 @@ public class AndroidSettings extends CSettingsStore {
 		edit.putString(key, value);
 		edit.commit();
 	}
-		
+	
 }

@@ -9,6 +9,7 @@ import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
 import android.content.Context;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.inputmethod.InputConnection;
 import dasher.CEditEvent;
@@ -30,15 +31,11 @@ class IMDasherInterface extends ADasherInterface
 	@Override
 	protected CSettingsStore createSettingsStore() {
 		Log.d("DasherIME",androidCtx+" creating settings...");
-		return new AndroidSettings(this, androidCtx.getSharedPreferences("DasherIMEPrefs", Context.MODE_PRIVATE));
+		return new AndroidSettings(this, PreferenceManager.getDefaultSharedPreferences(androidCtx));
 	}
 	
 	@Override public void Realize(Context ctx) {
 		super.Realize(ctx);
-		SetBoolParameter(Ebp_parameters.BP_AUTO_SPEEDCONTROL, false);
-		SetLongParameter(Elp_parameters.LP_MAX_BITRATE, 150);
-		SetStringParameter(Esp_parameters.SP_INPUT_DEVICE, "Tilt Input");
-		SetStringParameter(Esp_parameters.SP_INPUT_FILTER, "Normal Control");
 	}
 
 	@Override
