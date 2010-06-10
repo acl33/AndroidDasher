@@ -51,23 +51,14 @@ package dasher;
  * 
  */
 public class CSettingsStore {
-		
-	/**
-	 * Our reference parameter tables
-	 */
-	protected CParamTables s_oParamTables;
-	
+	private final boolean[] boolParamValues;
+	private final long[] longParamValues;
+	private final String[] stringParamValues;
 	/**
 	 * Event handler which we should notify whenever a parameter
 	 * changes
 	 */
-	protected CEventHandler m_pEventHandler;
-	
-	protected final int ParamBool = 0;
-	protected final int ParamLong = 1;
-	protected final int ParamString = 2;
-	protected final int ParamInvalid = 3;
-	
+	protected final CEventHandler m_pEventHandler;
 	
 	/**
 	 * Same as new CSettingsStore(..., true)
@@ -92,8 +83,9 @@ public class CSettingsStore {
 	public CSettingsStore(CEventHandler pEventHandler, boolean readyYet) {
 		
 		m_pEventHandler = pEventHandler;
-		s_oParamTables = new CParamTables();
-		
+		boolParamValues = new boolean[Ebp_parameters.values().length];
+		longParamValues = new long[Elp_parameters.values().length];
+		stringParamValues = new String[Elp_parameters.values().length];
 		if(readyYet) { // If the backing store is ready (prepared by a subclass)
 			LoadPersistent();
 		}
@@ -135,39 +127,41 @@ public class CSettingsStore {
 		 * variable to actually confer the value. I have redesigned this
 		 * to use an Exception instead.
 		 */
-		
-		for(int i = 0; i < Ebp_parameters.values().length; ++i) {
-			if(s_oParamTables.BoolParamTable[i].persistent) {
+		Ebp_parameters[] bps = Ebp_parameters.values();
+		for(int i=0; i<bps.length; i++) {
+			if(bps[i].persistent) {
 				try {
-					s_oParamTables.BoolParamTable[i].value = LoadBoolSetting(s_oParamTables.BoolParamTable[i].regName);
+					boolParamValues[i] = LoadBoolSetting(bps[i].regName());
 				}
 				catch(CParameterNotFoundException e) {
-					SaveSetting(s_oParamTables.BoolParamTable[i].regName, s_oParamTables.BoolParamTable[i].value);
+					SaveSetting(bps[i].regName(), boolParamValues[i]=bps[i].defaultVal);
 				}
-			}			            
+			} else boolParamValues[i] = bps[i].defaultVal;		            
 		}
 		
-		for(int j = 0; j < Elp_parameters.values().length; ++j) {
-			if(s_oParamTables.LongParamTable[j].persistent) {
+		Elp_parameters[] lps = Elp_parameters.values();
+		for(int i=0; i<lps.length; i++) {
+			if(lps[i].persistent) {
 				try {
-					s_oParamTables.LongParamTable[j].value = LoadLongSetting(s_oParamTables.LongParamTable[j].regName);
+					longParamValues[i] = LoadLongSetting(lps[i].regName());
 				}
 				catch(CParameterNotFoundException e) {
-					SaveSetting(s_oParamTables.LongParamTable[j].regName, s_oParamTables.LongParamTable[j].value);            
+					SaveSetting(lps[i].regName(), longParamValues[i]=lps[i].defaultVal);
 				}
-			}
+			} else longParamValues[i] = lps[i].defaultVal;      
 		}
 		
-		for(int k = 0; k < Esp_parameters.values().length; ++k) {
-			if(s_oParamTables.StringParamTable[k].persistent) {
+		Esp_parameters[] sps = Esp_parameters.values();
+		for (int i=0; i<sps.length; i++) {
+			if (sps[i].persistent) {
 				try {
-					s_oParamTables.StringParamTable[k].value = LoadStringSetting(s_oParamTables.StringParamTable[k].regName);
+					stringParamValues[i] = LoadStringSetting(sps[i].regName());
+				} catch (CParameterNotFoundException e) {
+					SaveSetting(sps[i].regName(), stringParamValues[i] = sps[i].defaultVal);
 				}
-				catch(CParameterNotFoundException e) {
-					SaveSetting(s_oParamTables.StringParamTable[k].regName, s_oParamTables.StringParamTable[k].value);
-				}
-			}		            
+			} else stringParamValues[i] = sps[i].defaultVal;
 		}
+		
 	}
 	
 	/**
@@ -181,23 +175,18 @@ public class CSettingsStore {
 	 */
 	public void SetBoolParameter(Ebp_parameters iParameter, boolean bValue) {
 		
-		// Check that the parameter is in fact in the right spot in the table
-				
 		if(bValue == GetBoolParameter(iParameter))
 			return;
 		
 		// Set the value
-		s_oParamTables.BoolParamTable[iParameter.ordinal()].value = bValue;
+		boolParamValues[iParameter.ordinal()] = bValue;
 		
 		// Initiate events for changed parameter
-		CParameterNotificationEvent oEvent = new CParameterNotificationEvent(iParameter);
-		
-		m_pEventHandler.InsertEvent(oEvent);
-		oEvent = null; // Left for the Garbage Collector.
+		m_pEventHandler.InsertEvent(new CParameterNotificationEvent(iParameter));
 		
 		// Write out to permanent storage
-		if(s_oParamTables.BoolParamTable[iParameter.ordinal()].persistent)
-			SaveSetting(s_oParamTables.BoolParamTable[iParameter.ordinal()].regName, bValue);
+		if(iParameter.persistent)
+			SaveSetting(iParameter.regName(), bValue);
 	}
 	
 	/**
@@ -215,15 +204,14 @@ public class CSettingsStore {
 			return;
 		
 		// Set the value
-		s_oParamTables.LongParamTable[iParameter.ordinal()].value = lValue;
+		longParamValues[iParameter.ordinal()] = lValue;
 		
 		// Initiate events for changed parameter
-		CParameterNotificationEvent oEvent = new CParameterNotificationEvent(iParameter);
-		m_pEventHandler.InsertEvent(oEvent);
+		m_pEventHandler.InsertEvent(new CParameterNotificationEvent(iParameter));
 		
 		// Write out to permanent storage
-		if(s_oParamTables.LongParamTable[iParameter.ordinal()].persistent)
-			SaveSetting(s_oParamTables.LongParamTable[iParameter.ordinal()].regName, lValue);
+		if(iParameter.persistent)
+			SaveSetting(iParameter.regName(), lValue);
 	}
 	
 	/**
@@ -237,19 +225,18 @@ public class CSettingsStore {
 	 */
 	public void SetStringParameter(Esp_parameters iParameter, String sValue) {
 		
-		if(sValue == GetStringParameter(iParameter))
+		if(sValue.equals(GetStringParameter(iParameter)))
 			return;
 		
 		// Set the value
-		s_oParamTables.StringParamTable[iParameter.ordinal()].value = sValue;
+		stringParamValues[iParameter.ordinal()] = sValue;
 		
 		// Initiate events for changed parameter
-		CParameterNotificationEvent oEvent = new CParameterNotificationEvent(iParameter);
-		m_pEventHandler.InsertEvent(oEvent);
+		m_pEventHandler.InsertEvent(new CParameterNotificationEvent(iParameter));
 		
 		// Write out to permanent storage
-		if(s_oParamTables.StringParamTable[iParameter.ordinal()].persistent)
-			SaveSetting(s_oParamTables.StringParamTable[iParameter.ordinal()].regName, sValue);
+		if(iParameter.persistent)
+			SaveSetting(iParameter.regName(), sValue);
 	}
 	
 	/**
@@ -259,9 +246,7 @@ public class CSettingsStore {
 	 * @return Value of this parameter
 	 */
 	public boolean GetBoolParameter(Ebp_parameters iParameter) {
-				
-		// Return the value
-		return s_oParamTables.BoolParamTable[iParameter.ordinal()].value;
+		return boolParamValues[iParameter.ordinal()];
 	}
 	
 	/**
@@ -271,9 +256,7 @@ public class CSettingsStore {
 	 * @return Value of this parameter
 	 */
 	public long GetLongParameter(Elp_parameters iParameter) {
-		
-		// Return the value
-		return s_oParamTables.LongParamTable[iParameter.ordinal()].value;
+		return longParamValues[iParameter.ordinal()];
 	}
 	
 	/**
@@ -283,74 +266,7 @@ public class CSettingsStore {
 	 * @return Value of this parameter
 	 */
 	public String GetStringParameter(Esp_parameters iParameter) {
-		// Return the value
-		return s_oParamTables.StringParamTable[iParameter.ordinal()].value;
-	}
-	
-	/**
-	 * Resets a given parameter to its default value, as given
-	 * by its entry in CParamTables.
-	 * 
-	 * @param iParameter Parameter to reset
-	 */
-	public void ResetParameter(EParameters iParameter) {
-		switch(GetParameterType(iParameter)) {
-		case ParamBool:
-			SetBoolParameter((Ebp_parameters)iParameter, s_oParamTables.BoolParamTable[((Ebp_parameters)iParameter).ordinal()].defaultVal);
-			break;
-		case ParamLong:
-			SetLongParameter((Elp_parameters)iParameter, s_oParamTables.LongParamTable[((Elp_parameters)iParameter).ordinal()].defaultVal);
-			break;
-		case ParamString:
-			SetStringParameter((Esp_parameters)iParameter, s_oParamTables.StringParamTable[((Esp_parameters)iParameter).ordinal()].defaultVal);
-			break;
-		}
-	}
-	
-	/**
-	 * Determines the type of a given parameter.
-	 * 
-	 * @param iParameter Parameter to query
-	 * @return 0 for boolean, 1 for long, 2 for String, 3 for invalid
-	 */
-	public int GetParameterType(EParameters iParameter)
-	{
-		if (iParameter instanceof Ebp_parameters)
-			return ParamBool;
-		if (iParameter instanceof Elp_parameters)
-			return ParamLong;
-		if (iParameter instanceof Esp_parameters)
-			return ParamString;
-		
-		return ParamInvalid;
-	}
-	
-	/**
-	 * Gets the internal name of a parameter
-	 * 
-	 * @param iParameter Parameter to query
-	 * @return Internal name
-	 */
-	public String GetParameterName(EParameters iParameter)
-	{
-		// Pull the registry name out of the correct table depending on the parameter type
-		switch (GetParameterType(iParameter))
-		{
-		case (ParamBool):
-		{
-			return s_oParamTables.BoolParamTable[((Ebp_parameters)iParameter).ordinal()].regName;
-		}
-		case (ParamLong):
-		{
-			return s_oParamTables.LongParamTable[((Elp_parameters)iParameter).ordinal()].regName;
-		}
-		case (ParamString):
-		{
-			return s_oParamTables.StringParamTable[((Esp_parameters)iParameter).ordinal()].regName;
-		}
-		};
-		
-		return "";
+		return stringParamValues[iParameter.ordinal()];
 	}
 	
 	/* CSFS: There were some deprecated functions below here, named GetBoolOption

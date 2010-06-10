@@ -116,7 +116,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * Our settings repository
 	 */
 	private CSettingsStore m_SettingsStore;
-	protected final CSettingsStore getSettingsStore() {return m_SettingsStore;}
+	public final CSettingsStore getSettingsStore() {return m_SettingsStore;}
 
 	/**
 	 * Our logging module
@@ -1027,16 +1027,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	public String GetStringParameter(Esp_parameters iParameter) {
 		return m_SettingsStore.GetStringParameter(iParameter);
-	}
-	
-	/**
-	 * Deferred to CSettingsStore
-	 * 
-	 * @see CSettingsStore
-	 * 
-	 */
-	public void ResetParameter(EParameters iParameter) {
-		m_SettingsStore.ResetParameter(iParameter);
 	}
 	
 	/**

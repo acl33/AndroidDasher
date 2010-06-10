@@ -176,28 +176,4 @@ public class CDasherComponent {
 		  m_SettingsStore.SetStringParameter(iParameter, sValue);
 	}
 
-	/**
-	 * Determines the type of some parameter; this is exactly
-	 * the same as checking whether it is an instance of
-	 * Ebp_parameters (boolean), Elp_parameters (long) or Esp_parameters (string).
-	 */
-	public int GetParameterType(EParameters iParameter) {
-		  if (m_SettingsStore != null)
-		    return m_SettingsStore.GetParameterType(iParameter);
-		  return 3; //
-	}
-	
-	/**
-	 * Retrieves the friendly name of a given parameter.
-	 * <p>Useful for dumping a complete human-readable configuration.
-	 * 
-	 * @param iParameter Parameter we wish to identify
-	 * @return Friendly name for this parameter
-	 */
-	public String GetParameterName(EParameters iParameter) {
-		  if (m_SettingsStore != null)
-		    return m_SettingsStore.GetParameterName(iParameter);
-		  return "";
-	}
-	
 }

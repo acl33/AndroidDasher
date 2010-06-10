@@ -25,6 +25,9 @@
 
 package dasher;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Interface implemented by all parameter enumerations, allowing
  * an EParameters to be passed as a generic parameter of indeterminate
@@ -32,6 +35,11 @@ package dasher;
  */
 public interface EParameters {
 
+	public static final boolean PERS=true;
+	public int key();
+	public String regName();
+	public void reset(CSettingsStore ss);
+	public static final Map<String,EParameters> BY_NAME=new HashMap<String,EParameters>();
 	
 	/* CSFS: This space intentionally left blank.
 	 * 

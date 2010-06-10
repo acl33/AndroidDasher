@@ -30,9 +30,39 @@ package dasher;
  * CParamTables for a list and definitions.
  */
 public enum Esp_parameters implements EParameters {
-	  SP_ALPHABET_ID, SP_ALPHABET_1, SP_ALPHABET_2, SP_ALPHABET_3, SP_ALPHABET_4, 
-	  SP_COLOUR_ID, SP_DEFAULT_COLOUR_ID, SP_DASHER_FONT, SP_SYSTEM_LOC, SP_USER_LOC, SP_GAME_TEXT_FILE,
-	  SP_TRAIN_FILE, SP_SOCKET_INPUT_X_LABEL, SP_SOCKET_INPUT_Y_LABEL, SP_INPUT_FILTER, SP_INPUT_DEVICE,
-	  SP_LM_HOST;
-	  
+			  SP_ALPHABET_ID("AlphabetID", PERS, "", "AlphabetID"),
+			  SP_ALPHABET_1("Alphabet1", PERS, "", "Alphabet History 1"),
+			  SP_ALPHABET_2("Alphabet2", PERS, "", "Alphabet History 2"),
+			  SP_ALPHABET_3("Alphabet3", PERS, "", "Alphabet History 3"),
+			  SP_ALPHABET_4("Alphabet4", PERS, "", "Alphabet History 4"),
+			  SP_COLOUR_ID("ColourID", PERS, "", "ColourID"), 
+			  SP_DEFAULT_COLOUR_ID("DefaultColourID", !PERS, "", "Default Colour ID (Used for auto-colour mode)"),
+			  SP_DASHER_FONT("DasherFont", PERS, "", "DasherFont"),
+			  SP_SYSTEM_LOC("SystemLocation", !PERS, "sys_", "System Directory"),
+			  SP_USER_LOC("UserLocation", !PERS, "usr_", "User Directory"),
+			  SP_GAME_TEXT_FILE("GameTextFile", !PERS, "gamemode_english_GB.txt", "File with strings to practice writing"),
+			  SP_TRAIN_FILE("TrainingFile", !PERS, "", "Training text for alphabet"),
+			  SP_SOCKET_INPUT_X_LABEL("SocketInputXLabel", PERS, "x", "Label preceding X values for network input"),
+			  SP_SOCKET_INPUT_Y_LABEL("SocketInputYLabel", PERS, "y", "Label preceding Y values for network input"),
+			  SP_INPUT_FILTER("InputFilter", PERS, "Stylus Control", "Input filter used to provide the current control mode"),
+			  SP_INPUT_DEVICE("InputDevice", PERS, "Mouse Input", "Driver for the input device"),
+			  SP_LM_HOST("LMHost", PERS, "", "Language Model Host");
+			  
+			  private Esp_parameters(String rName, boolean pers, String def, String hr) {
+					humanReadable = hr;
+					persistent = pers;
+					defaultVal = def;
+					regName = rName;
+					BY_NAME.put(regName,this);
+				}
+				
+			  private static final int SP_OFFSET = Ebp_parameters.values().length + Elp_parameters.values().length;
+			  public int key() {return ordinal()+SP_OFFSET;}
+			  public String regName() {return regName;}
+			  public void reset(CSettingsStore ss) {ss.SetStringParameter(this, defaultVal);}
+			  
+			private final String regName;
+			final boolean persistent;
+			final String defaultVal;
+			final String humanReadable;
 }

@@ -31,19 +31,61 @@ package dasher;
  */
 public enum Ebp_parameters implements EParameters {
 	
-		  BP_DRAW_MOUSE_LINE, BP_DRAW_MOUSE,
-		  BP_SHOW_SLIDER, BP_START_MOUSE,
-		  BP_START_SPACE, BP_START_STYLUS, BP_STOP_IDLE, BP_KEY_CONTROL,  BP_CONTROL_MODE, 
-		  BP_COLOUR_MODE, BP_MOUSEPOS_MODE,
-		  BP_OUTLINE_MODE, BP_PALETTE_CHANGE, BP_NUMBER_DIMENSIONS,
-		  BP_AUTOCALIBRATE, BP_DASHER_PAUSED,
-		  BP_GAME_MODE, BP_TRAINING, BP_REDRAW, BP_LM_DICTIONARY, 
-		  BP_LM_LETTER_EXCLUSION, BP_AUTO_SPEEDCONTROL, BP_CLICK_MODE, 
-		  BP_LM_ADAPTIVE, BP_BUTTONONESTATIC, BP_BUTTONONEDYNAMIC,
-		  BP_BUTTONMENU, BP_BUTTONPULSING, BP_BUTTONSTEADY, 
-		  BP_BUTTONDIRECT, BP_BUTTONFOURDIRECT, BP_BUTTONALTERNATINGDIRECT,
-		  BP_COMPASSMODE, BP_SOCKET_INPUT_ENABLE, BP_SOCKET_DEBUG, 
-		  BP_OLD_STYLE_PUSH, BP_CIRCLE_START, BP_GLOBAL_KEYBOARD, 
-		  BP_DELAY_VIEW, BP_LM_REMOTE, BP_CONNECT_LOCK
-	
+			  BP_DRAW_MOUSE_LINE("DrawMouseLine", PERS, true, "Draw Mouse Line"),
+			  BP_DRAW_MOUSE("DrawMouse", PERS, true, "Draw Mouse Position"),
+			  BP_SHOW_SLIDER("ShowSpeedSlider", PERS, true, "ShowSpeedSlider"),
+			  BP_START_MOUSE("StartOnLeft", PERS, true, "StartOnLeft"),
+			  BP_START_SPACE("StartOnSpace", PERS, false, "StartOnSpace"),
+			  BP_START_STYLUS("StartOnStylus", PERS, false, "StartOnStylus"),
+			  BP_STOP_IDLE("StopOnIdle", PERS, false, "StopOnIdle"),
+			  BP_KEY_CONTROL("KeyControl", PERS, false, "KeyControl"),
+			  BP_CONTROL_MODE("ControlMode", PERS, false, "ControlMode"),
+			  BP_COLOUR_MODE("ColourMode", PERS, true, "ColourMode"),
+			  BP_MOUSEPOS_MODE("StartOnMousePosition", PERS, false, "StartOnMousePosition"),
+			  BP_OUTLINE_MODE("OutlineBoxes", PERS, true, "OutlineBoxes"),
+			  BP_PALETTE_CHANGE("PaletteChange", PERS, true, "PaletteChange"),
+			  BP_NUMBER_DIMENSIONS("NumberDimensions", PERS, false, "NumberDimensions"),
+			  BP_AUTOCALIBRATE("Autocalibrate", PERS, true, "Autocalibrate"),
+			  BP_DASHER_PAUSED("DasherPaused", !PERS, true, "Dasher Paused"),
+			  BP_GAME_MODE("GameMode", PERS, false, "Dasher Game Mode"),
+			  BP_TRAINING("Training", !PERS, false, "Provides locking during training"),
+			  BP_REDRAW("Redraw", !PERS, false, "Force a full redraw at the next timer event"),
+			  BP_LM_DICTIONARY("Dictionary", PERS, true, "Whether the word-based language model uses a dictionary"),
+			  BP_LM_LETTER_EXCLUSION("LetterExclusion", PERS, true, "Whether to do letter exclusion in the word-based model"),
+			  BP_AUTO_SPEEDCONTROL("AutoSpeedControl", PERS, true, "AutoSpeedControl"),
+			  BP_CLICK_MODE("ClickMode", PERS, false, "Dasher Click Mode"),
+			  BP_LM_ADAPTIVE("LMAdaptive", PERS, true, "Whether language model should learn as you enter text"),
+			  BP_BUTTONONESTATIC("ButtonOneStaticMode", PERS, false, "One-button static mode"),
+			  BP_BUTTONONEDYNAMIC("ButtonOneDynamicMode", PERS, false, "One-button dynamic mode"),
+			  BP_BUTTONMENU("ButtonMenuMode", PERS, false, "Button menu mode"),
+			  BP_BUTTONPULSING("ButtonPulsingMode", PERS, false, "One-button dynamic pulsing mode"),
+			  BP_BUTTONSTEADY("ButtonSteadyMode", PERS, true, "One-button dynamic steady mode"),
+			  BP_BUTTONDIRECT("ButtonDirectMode", PERS, false, "Three-button direct mode"),
+			  BP_BUTTONFOURDIRECT("ButtonFourDirectMode", PERS, false, "Four-button direct mode"),
+			  BP_BUTTONALTERNATINGDIRECT("ButtonAlternatingDirectMode", PERS, true, "Alternating direct mode"),
+			  BP_COMPASSMODE("ButtonCompassMode", PERS, false, "Compass mode"),
+			  BP_SOCKET_INPUT_ENABLE("SocketInputEnable", PERS, false, "Read pointer coordinates from network socket instead of mouse"),
+			  BP_SOCKET_DEBUG("SocketInputDebug", PERS, false, "Print information about socket input processing to console"),
+			  BP_OLD_STYLE_PUSH("OldStylePush", PERS, false, "Old style node pushing algorithm"),
+			  BP_CIRCLE_START("CircleStart", PERS, false, "Start on circle mode"),
+			  BP_GLOBAL_KEYBOARD("GlobalKeyboard", PERS, false, "Whether to assume global control of the keyboard"),
+			  BP_DELAY_VIEW("DelayView", !PERS, false, "Delayed dynamics (for two button mode)"),
+			  BP_LM_REMOTE("RemoteLM", PERS, false, "Language model is remote and responds asynchronously."),
+			  BP_CONNECT_LOCK("Connecting", !PERS, false, "Currently waiting for a connection to a remote LM; lock Dasher.");
+
+			  private Ebp_parameters(String rName, boolean pers, boolean def, String hr) {
+				humanReadable = hr;
+				persistent = pers;
+				defaultVal = def;
+				regName = rName;
+				BY_NAME.put(regName,this);
+			}
+
+			public int key() {return ordinal();}
+			public String regName() {return regName;}
+			public void reset(CSettingsStore ss) {ss.SetBoolParameter(this, defaultVal);}
+			private final  String regName;
+			final boolean persistent;
+			final boolean defaultVal;
+			final String humanReadable;
 }
