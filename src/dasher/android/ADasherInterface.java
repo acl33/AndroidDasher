@@ -20,6 +20,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.PowerManager;
 import android.util.Log;
 
 import dasher.CAlphIO;
@@ -29,8 +30,10 @@ import dasher.CDasherInterfaceBase;
 import dasher.CDefaultFilter;
 import dasher.CEventHandler;
 import dasher.CLockEvent;
+import dasher.CParameterNotificationEvent;
 import dasher.CSettingsStore;
 import dasher.CStylusFilter;
+import dasher.Ebp_parameters;
 import dasher.Elp_parameters;
 import dasher.XMLFileParser;
 
@@ -91,19 +94,37 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		if (!ss.isEmpty()) {
 			final Sensor s = ss.get(0);
 			class TiltInput extends CDasherInput implements SensorEventListener {
-				int x,y;
+				int x,y; boolean bActive;
+				private final PowerManager.WakeLock wl = ((PowerManager)androidCtx.getSystemService(Context.POWER_SERVICE)).
+					newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK,"tilting");
+				
 				public TiltInput() {
 					super(ADasherInterface.this, getSettingsStore(), 1, "Tilt Input");
 				}
 				
-				@Override
-				public void Activate() {
-					sm.registerListener(this, s, SensorManager.SENSOR_DELAY_UI);
+				@Override public void Activate() {bActive=true; update();}
+				@Override public void Deactivate() {bActive=false; update();}
+				
+				@Override public void HandleEvent(dasher.CEvent evt) {
+					if (evt instanceof CParameterNotificationEvent &&
+							((CParameterNotificationEvent)evt).m_iParameter == Ebp_parameters.BP_DASHER_PAUSED)
+						update();
 				}
 				
-				@Override
-				public void Deactivate() {
-					sm.unregisterListener(this,s);
+				private void update() {
+					if (bActive && !GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
+						if (wl.isHeld()) {
+							return;
+						}
+						sm.registerListener(this, s, SensorManager.SENSOR_DELAY_UI);
+						wl.acquire();
+					} else {
+						if (!wl.isHeld()) {
+							return;
+						}
+						sm.unregisterListener(this,s);
+						wl.release();
+					}
 				}
 				
 				public void onAccuracyChanged(Sensor sensor, int accuracy) {}
