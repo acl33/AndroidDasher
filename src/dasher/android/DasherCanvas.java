@@ -19,7 +19,7 @@ import android.view.SurfaceHolder.Callback;
 public class DasherCanvas extends SurfaceView implements Callback {
 	private final ADasherInterface intf;
 	private final RenderTask rTh;
-    private boolean animating, bReady;
+	private boolean bReady;
     private int x,y;
     /* Desired width & height */
     private final int dw,dh;
@@ -55,12 +55,12 @@ public class DasherCanvas extends SurfaceView implements Callback {
 	
 	public void surfaceChanged(SurfaceHolder holder, int format, int width,
 			int height) {
-		Log.d("DasherIME","surfaceChanged ("+width+", "+height+")");
+		Log.d("DasherIME",this+" surfaceChanged ("+width+", "+height+")");
 		intf.enqueue(new Runnable() {
 			public void run() {
 				intf.ChangeScreen(rTh);
 				synchronized(DasherCanvas.this) {
-					if (bReady || !animating) return;
+					if (bReady) return;
 				}
 				bReady = true;
 				intf.enqueue(rTh);
@@ -74,7 +74,6 @@ public class DasherCanvas extends SurfaceView implements Callback {
 
 	public void surfaceDestroyed(SurfaceHolder holder) {
 		Log.d("DasherIME",this+" surfaceDestroyed");
-		//stopAnimating();
 		synchronized(this) {
 			//disable animation until we have another surfaceChanged
 			bReady=false;
@@ -107,27 +106,10 @@ public class DasherCanvas extends SurfaceView implements Callback {
 	}
 	
 	public void requestRender() {
-		synchronized(this) {
+		/*synchronized(this) {
 			if (animating || !bReady) return;
 		}
-		intf.enqueue(rTh);
-	}
-	
-	public void startAnimating() {
-		//or, enqueue a runnable?
-		synchronized(this) { 
-			if (animating) return;
-			animating = true;
-			if (!bReady) return; //can't do any more
-		}
-		intf.enqueue(rTh);
-	}
-	
-	public void stopAnimating() {
-		//or, enqueue a runnable?
-		synchronized(this) {
-			animating = false;
-		}
+		intf.enqueue(rTh);*/
 	}
 	
 	private class RenderTask implements Runnable,CDasherScreen {
@@ -149,7 +131,7 @@ public class DasherCanvas extends SurfaceView implements Callback {
 		
 		public void run() {
 			synchronized(DasherCanvas.this) {
-				if (!animating || !bReady) return;
+				if (!bReady) return;
 			}
 			canvas = holder.lockCanvas();
 			if (canvas==null) Log.d("DasherIME",this+" render got null canvas");

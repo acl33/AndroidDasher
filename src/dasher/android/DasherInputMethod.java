@@ -35,28 +35,11 @@ public class DasherInputMethod extends InputMethodService {
 	
 	@Override public DasherCanvas onCreateInputView() {
 		intf.Realize(this); //if already initialized by this IME instance, does nothing!
-		if (surf==null) {
-			surf = new DasherCanvas(DasherInputMethod.this, intf, 480, 600);
-			Log.d("DasherIME", this+" onCreateInputView creating surface "+surf);
-			intf.setCanvas(surf);
-		}
+		surf = new DasherCanvas(DasherInputMethod.this, intf, 480, 480);
+		Log.d("DasherIME", this+" onCreateInputView creating surface "+surf);
+		intf.setCanvas(surf);
 		return surf;
 	}
-	
-	/*private FrameLayout fl;
-	@Override public View onCreateInputView() {
-		if (fl==null) {
-			Log.d("DasherIME","onCreateInputView");
-			fl = new FrameLayout(DasherInputMethod.this);
-			fl.addView(surf = new DasherCanvas(DasherInputMethod.this, intf), new LayoutParams(480,600));
-			//LayoutParams params = new LayoutParams(480,600);
-			//surf.setLayoutParams(params);
-			touchIn.setCanvas(surf);
-		} else {
-			Log.d("DasherIME","onCreateInputView - surf exists!");
-		}
-		return fl;
-	}*/
 	
 	@Override 
 	public void onStartInput(EditorInfo attribute, boolean restarting) {
@@ -69,7 +52,7 @@ public class DasherInputMethod extends InputMethodService {
 		intf.SetInputConnection(ic);
 		updateSel(Math.max(0,initCursorPos),initNumSel,true);
 		//that'll ensure a setOffset() task is enqueued first...
-		onCreateInputView().startAnimating();
+		//onCreateInputView().startAnimating();
 		//...and then any repaint task afterwards.
 		
 		//TODO, use EditorInfo to select appropriate...language? (e.g. numbers only!).
@@ -79,7 +62,7 @@ public class DasherInputMethod extends InputMethodService {
 	@Override
 	public void onFinishInput() {
 		Log.d("DasherIME",this + " onFinishInput");
-		if (surf!=null) surf.stopAnimating(); //yeah, we can get sent onFinishInput before/without onCreate...
+		//if (surf!=null) surf.stopAnimating(); //yeah, we can get sent onFinishInput before/without onCreate...
 		intf.SetInputConnection(null);
 	}
 
@@ -129,35 +112,6 @@ public class DasherInputMethod extends InputMethodService {
 	public void onDisplayCompletions(CompletionInfo[] ci) {
 		Log.d("DasherIME","Completions: "+Arrays.toString(ci));
 	}
-	
-	@Override
-	public boolean onEvaluateFullscreenMode() {
-		setExtractViewShown(true);
-		setCandidatesViewShown(false);
-		return true;
-	}
-	
-	/*@Override
-	public boolean isExtractViewShown() {
-		boolean ret=super.isExtractViewShown();
-		Log.d("DasherIME","isExtractViewShown would return "+ret);
-		return true;
-	}*/
-	
-	/*@Override
-	public View onCreateExtractTextView() {
-		//View sup = super.onCreateExtractTextView();
-		ExtractEditText ret = new ExtractEditText(DasherInputMethod.this);
-		ret.setId(R.id.inputExtractEditText);
-		//if (sup instanceof LinearLayout) {
-		//	((LinearLayout)sup).addView(ret,new LayoutParams(LayoutParams.FILL_PARENT,LayoutParams.FILL_PARENT));
-		//	return sup;
-		//} else
-		{
-			ret.setLayoutParams(new LayoutParams(480,162));
-			return ret;
-		}
-	}*/
 		
 	private static class DasherIntfIME extends ADasherInterface
 	{
