@@ -29,6 +29,7 @@ public class DasherActivity extends PreferenceActivity {
         
         addPermittedValues(Esp_parameters.SP_INPUT_DEVICE);
         addPermittedValues(Esp_parameters.SP_INPUT_FILTER);
+        addPermittedValues(Esp_parameters.SP_ALPHABET_ID);
         
     }
     

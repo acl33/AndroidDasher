@@ -10,4 +10,7 @@
     <ListPreference
         android:key="InputDevice"
         android:title="Input method" />
+    <ListPreference
+        android:key="AlphabetID"
+        android:title="Alphabet Name" />
 </PreferenceScreen>
