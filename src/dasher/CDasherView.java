@@ -379,11 +379,13 @@ public abstract class CDasherView extends CDasherComponent {
 	 */
 	public void DasherDrawCentredRectangle(long iDasherX, long iDasherY, int iSize, int Color, boolean bDrawOutline) {
 		
-		CDasherView.Point centre = Dasher2Screen(iDasherX, iDasherY);
+		temp1[0] = iDasherX; temp1[1] = iDasherY;
+		Dasher2Screen(temp1);
 		
-		Screen().DrawRectangle(centre.x - iSize, centre.y - iSize, centre.x + iSize, centre.y + iSize, Color, bDrawOutline ? 3 : -1, 1);
+		Screen().DrawRectangle((int)temp1[0] - iSize, (int)temp1[1] - iSize, (int)temp1[0] + iSize, (int)temp1[1] + iSize, Color, bDrawOutline ? 3 : -1, 1);
 	}
 	
+	private final long[] temp1=new long[2], temp2 = new long[2];
 	/**
 	 * Draws a given string inside a specified box, the dimensions and co-ordinates
 	 * of which are given in Dasher co-ordinates.
@@ -437,21 +439,18 @@ public abstract class CDasherView extends CDasherComponent {
 		
 		// Don't draw text which will overlap with text in an ancestor.
 		
-		if(iAnchorX1 > mostleft)
-			iAnchorX1 = mostleft;
-		
-		if(iAnchorX2 > mostleft)
-			iAnchorX2 = mostleft;
+		temp1[0] = Math.min(iAnchorX1, mostleft);
+		temp2[0] = Math.min(iAnchorX2, mostleft);
 		
 		CDasherView.DRect VisRegion = VisibleRegion();
 		
-		iAnchorY1 = Math.min( VisRegion.maxY, Math.max( VisRegion.minY, iAnchorY1 ) );
-		iAnchorY2 = Math.min( VisRegion.maxY, Math.max( VisRegion.minY, iAnchorY2 ) );
+		temp1[1] = Math.min( VisRegion.maxY, Math.max( VisRegion.minY, iAnchorY1 ) );
+		temp2[1] = Math.min( VisRegion.maxY, Math.max( VisRegion.minY, iAnchorY2 ) );
 		
 		// FIXME - Truncate here before converting - otherwise we risk integer overflow in screen coordinates
 		
-		CDasherView.Point ScreenAnchor1 = Dasher2Screen(iAnchorX1, iAnchorY1);
-		CDasherView.Point ScreenAnchor2 = Dasher2Screen(iAnchorX2, iAnchorY2);
+		Dasher2Screen(temp1);
+		Dasher2Screen(temp2);
 		
 		// Truncate the ends of the anchor line to be on the screen - this
 		// prevents us from loosing characters off the top and bottom of the
@@ -462,8 +461,8 @@ public abstract class CDasherView extends CDasherComponent {
 		
 		// Actual anchor point is the midpoint of the anchor line
 		
-		int iScreenAnchorX = ((ScreenAnchor1.x + ScreenAnchor2.x) / 2);
-		int iScreenAnchorY = ((ScreenAnchor1.y + ScreenAnchor2.y) / 2);
+		int iScreenAnchorX = (int)(temp1[0] + temp2[0])>>>1;
+		int iScreenAnchorY = (int)(temp1[1] + temp2[1])>>>1;
 		
 		// Compute font size based on position
 		int Size = lpFontSize;
@@ -473,25 +472,14 @@ public abstract class CDasherView extends CDasherComponent {
 		// FIXME - this could be much more elegant, and probably needs a
 		// rethink anyway - behvaiour here is too dependent on screen size
 		
-		//long iLeftTimesFontSize = (lpMaxY) - ((iAnchorX1 + iAnchorX2)/ 2) *Size;
+		long iLeftTimesFontSize = (lpMaxY) - ((iAnchorX1 + iAnchorX2)/ 2) *Size;
 		
-		//long limit1 = (lpMaxY * 19) / 20;
-		//long limit2 = (lpMaxY * 159) / 160;
-		
-		int DistFromLeft = Dasher2Screen(0,0).x - iScreenAnchorX;
-		
-		int newlimit1 = 30;
-		int newlimit2 = 15;
-		
-		if(DistFromLeft > newlimit1) {
-			Size *= 20;
-		}
-		else if(DistFromLeft > newlimit2) { 
-			Size *= 14;
-		}
-		else {
-			Size *= 11;
-		}
+		if (iLeftTimesFontSize < (lpMaxY*19)/20)
+			Size*=20;
+		else if (iLeftTimesFontSize < (lpMaxY*159)/160)
+			Size*=14;
+		else
+			Size*=11;
 
 		int TextWidth, TextHeight;
 		
@@ -500,50 +488,39 @@ public abstract class CDasherView extends CDasherComponent {
 		TextWidth = textDimensions.x;
 		// Poistion of text box relative to anchor depends on orientation
 		
-		int newleft2 = 0;
-		int newtop2 = 0;
-		int newright2 = 0;
-		int newbottom2 = 0;
+		int newleft2,newtop2;
 		
 		switch ((int)(realOrientation)) {
 		case (Opts.ScreenOrientations.LeftToRight):
 			newleft2 = iScreenAnchorX;
 		newtop2 = iScreenAnchorY - TextHeight / 2;
-		newright2 = iScreenAnchorX + TextWidth;
-		newbottom2 = iScreenAnchorY + TextHeight / 2;
 		break;
 		case (Opts.ScreenOrientations.RightToLeft):
 			newleft2 = iScreenAnchorX - TextWidth;
 		newtop2 = iScreenAnchorY - TextHeight / 2;
-		newright2 = iScreenAnchorX;
-		newbottom2 = iScreenAnchorY + TextHeight / 2;
 		break;
 		case (Opts.ScreenOrientations.TopToBottom):
 			newleft2 = iScreenAnchorX - TextWidth / 2;
 		newtop2 = iScreenAnchorY;
-		newright2 = iScreenAnchorX + TextWidth / 2;
-		newbottom2 = iScreenAnchorY + TextHeight;
 		break;
 		case (Opts.ScreenOrientations.BottomToTop):
 			newleft2 = iScreenAnchorX - TextWidth / 2;
 		newtop2 = iScreenAnchorY - TextHeight;
-		newright2 = iScreenAnchorX + TextWidth / 2;
-		newbottom2 = iScreenAnchorY;
 		break;
 		default:
-			break;
+			throw new AssertionError();
 		}
 		
 		// Update the value of mostleft to take into account the new text
 		
 		if(bShove) {
-			CDasherView.DPoint newTopLeft;
-			CDasherView.DPoint newBottomRight;
+			temp1[0]=newleft2; temp1[1] = newtop2;
+			temp2[0]=newleft2+TextWidth; temp2[1] = newtop2+TextHeight;
 			
-			newTopLeft = Screen2Dasher(newleft2, newtop2);
-			newBottomRight = Screen2Dasher(newright2, newbottom2);
+			Screen2Dasher(temp1);
+			Screen2Dasher(temp2);
 			
-			mostleft = Math.min(newBottomRight.x, newTopLeft.x);
+			mostleft = Math.min(temp1[0], temp2[0]);
 		}
 		
 		// Actually draw the text. We use DelayDrawText as the text should
