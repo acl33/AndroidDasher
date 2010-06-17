@@ -483,6 +483,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		
 		// Delete the old model and create a new one
 		if(m_DasherModel != null) {
+			m_DasherModel.shutdown();
 			m_DasherModel.UnregisterComponent();
 		}
 		

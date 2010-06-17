@@ -378,7 +378,7 @@ public class CDasherModel extends CDasherComponent {
 	{
 		m_Root.commit();
 		
-		m_Root.DeleteNephews(whichchild);
+		m_Root.DeleteNephews(whichchild); //typically, this does nothing, as all siblings of new root are offscreen already...
 		
 		oldroots.addLast(m_Root);
 		
@@ -515,6 +515,9 @@ public class CDasherModel extends CDasherComponent {
 			/* If our internal buffer of old roots is exhausted, */
 			NewRoot = m_Root.RebuildParent();
 			if (NewRoot == null) return; // no existing parent and no way of recreating => give up
+			//RebuildParent() can create multiple generations of ((great-)*grand-)parents in one go.
+			// Add all created ancestors to the root queue, to ensure they're deleted if the model is.
+			for (CDasherNode temp = NewRoot; (temp=temp.Parent())!=null;) oldroots.addFirst(temp);
 		}
 		else {
 			NewRoot = oldroots.removeLast();
@@ -522,32 +525,30 @@ public class CDasherModel extends CDasherComponent {
 		}
 		
 		final long lNorm = GetLongParameter(Elp_parameters.LP_NORMALIZATION);
+		assert NewRoot == m_Root.Parent();
 		
-		for (CDasherNode pCurrent = m_Root; pCurrent != NewRoot; ) {
-			long upper = pCurrent.Hbnd(), lower = pCurrent.Lbnd(), iWidth = upper-lower;
-			long iRootWidth = m_Rootmax - m_Rootmin;
-			pCurrent = pCurrent.Parent();
+		long upper = m_Root.Hbnd(), lower = m_Root.Lbnd(), iWidth = upper-lower;
+		long iRootWidth = m_Rootmax - m_Rootmin;
 		
-			if ((lNorm - upper) / (double)iWidth >
-			(m_Rootmax_max - m_Rootmax) / (double)iRootWidth ||
-			lower / (double)iWidth > (m_Rootmin - m_Rootmin_min)/(double)iRootWidth) {
-				//Fail and undo root creation, new node would be too big
-				NewRoot.OrphanChild(m_Root); //ACL is this ok? Is NewRoot necessarily a parent of m_Root (subnodes!)?
-				return;
-			}
-			
-			m_Root = NewRoot;
-			
+		if ((lNorm - upper) / (double)iWidth > (m_Rootmax_max - m_Rootmax) / (double)iRootWidth ||
+				lower / (double)iWidth > (m_Rootmin - m_Rootmin_min)/(double)iRootWidth) {
+			//new node would be too big, so don't reparent.
+			// However, cache the root's parent, so (a) we don't repeatedly recreate it,
+			// (b) it'll get deleted if we clear the oldroots queue.
+			oldroots.addLast(NewRoot);
+			return;
+		}
 		
-			m_Rootmax +=  ((lNorm - upper)) * iRootWidth / iWidth;
-		
-			m_Rootmin -= lower * iRootWidth / iWidth;
-		
-			for (SGotoItem it : m_deGotoQueue) {
-				iRootWidth = it.iN2 - it.iN1;
-				it.iN2 += (lNorm - upper) * iRootWidth / iWidth;
-				it.iN1 -= lower * iRootWidth / iWidth;
-			}
+		m_Root = NewRoot;
+	
+		m_Rootmax +=  ((lNorm - upper)) * iRootWidth / iWidth;
+	
+		m_Rootmin -= lower * iRootWidth / iWidth;
+	
+		for (SGotoItem it : m_deGotoQueue) {
+			iRootWidth = it.iN2 - it.iN1;
+			it.iN2 += (lNorm - upper) * iRootWidth / iWidth;
+			it.iN1 -= lower * iRootWidth / iWidth;
 		}
 	}
 
