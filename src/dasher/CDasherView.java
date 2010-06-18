@@ -357,11 +357,13 @@ public abstract class CDasherView extends CDasherComponent {
 	 */	
 	public void DasherDrawRectangle(long iLeft, long iTop, long iRight, long iBottom, int Color, int iOutlineColour, int iThickness) {
 		
+		temp1[0] = iLeft; temp1[1] = iTop;
+		Dasher2Screen(temp1);
 		
-		CDasherView.Point topleft = Dasher2Screen(iLeft, iTop);
-		CDasherView.Point bottomright = Dasher2Screen(iRight, iBottom);
+		temp2[0] = iRight; temp2[1] = iBottom;
+		Dasher2Screen(temp2);
 		
-		Screen().DrawRectangle(topleft.x, topleft.y, bottomright.x, bottomright.y, Color, iOutlineColour, iThickness);
+		Screen().DrawRectangle((int)temp1[0], (int)temp1[1], (int)temp2[0], (int)temp2[1], Color, iOutlineColour, iThickness);
 	}
 	
 //	/ Draw a rectangle centred on a given dasher co-ordinate, but with a size specified in screen co-ordinates (used for drawing the mouse blob)
