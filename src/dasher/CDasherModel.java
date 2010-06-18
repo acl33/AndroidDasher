@@ -1049,7 +1049,11 @@ public class CDasherModel extends CDasherComponent {
 				m_pLastOutput.Seen(false);
 				m_pLastOutput.Leave();
 				m_pLastOutput = m_pLastOutput.Parent();
-				m_pLastOutput.Enter();
+				//if NewNode is null, i.e. exitting back out of root, m_pLastOutput==null now...
+				if (m_pLastOutput==null) {
+					assert NewNode==null;
+					break;
+				} else m_pLastOutput.Enter();
 			}
 		}
 	}
