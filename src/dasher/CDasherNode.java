@@ -421,7 +421,7 @@ public abstract class CDasherNode {
     public void OrphanChild(CDasherNode pChild) {
 		  assert(ChildCount() > 0);
 		  assert (pChild.Parent()==this);
-		  
+		  pChild.m_Parent = null;
 		  for(CDasherNode i : this.Children()) {
 			  if(i != pChild)
 				  i.DeleteNode();
@@ -459,6 +459,7 @@ public abstract class CDasherNode {
 		}
 		m_mChildren.clear(); // This should be enough to render them GC-able.
 		SetHasAllChildren(false);
+		m_OnlyChildRendered = null;
 	}
 
 //		 Gets the probability of this node 
