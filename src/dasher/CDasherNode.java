@@ -215,6 +215,7 @@ public abstract class CDasherNode {
 	 */
     public void DeleteNode() {
 	  Delete_children();
+	  m_Parent=null;
 	  numNodes--;
 	}
 
@@ -261,14 +262,24 @@ public abstract class CDasherNode {
 	public void absorbContext(ListIterator<Character> it) {}
 	
 	/**
-	 * Returns the size of our child list.
+	 * Returns the size of our child list. (Avoids allocating unmodifiable lists, etc.)
 	 * 
 	 * @return Size of m_mChildren.
 	 */
-	public synchronized int ChildCount() {
+	public int ChildCount() {
 	    return m_mChildren.size();
 	}
 
+	/**
+	 * Returns the <code>i</code>th child of this node, so we can iterate through
+	 * without allocating an iterator.
+	 * @param i desired index: <code>0<=i<ChildCount()</code>
+	 * @return the <code>i</code>th child node
+	 */
+	public CDasherNode ChildAtIndex(int i) {
+		return m_mChildren.get(i);
+	}
+	
 	/**
 	 * Gets this node's parent.
 	 * 
@@ -414,7 +425,6 @@ public abstract class CDasherNode {
 		  for(CDasherNode i : this.Children()) {
 			  if(i != pChild)
 				  i.DeleteNode();
-			  i.m_Parent = null;
 		  }
 		  m_mChildren.clear();
 		  SetHasAllChildren(false);

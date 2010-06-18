@@ -288,29 +288,14 @@ public class CDasherViewSquare extends CDasherView {
 		// TODO - Get sensible limits here (to allow for non-linearities)
 		CDasherView.DRect visreg = VisibleRegion();
 		
-		// TODO - use new versions of functions
-		
-		//int top = Dasher2Screen(0, y1).y;
-		//int bottom = Dasher2Screen(0, y2).y; 
-		long iSize = ymap(y2) - ymap(y1);
-		
-		// Actual height in pixels
-		int iHeight = (int)((iSize * CanvasY) / lpMaxY);
-		
-		if(iHeight <= 1 //too small to render
-		   || (y1 > visreg.maxY) || (y2 < visreg.minY)) { //entirely offscreen
-			// Node is not drawable - can be deleted straightaway...
-			Render.Delete_children();
-			return;
-		}
-		
 		//ok, render the node...
 		long iDasherSize = (y2 - y1);
 				
 		if(lpTruncation == 0) {        // Regular squares
 			DasherDrawRectangle(Math.min(iDasherSize,visreg.maxX), Math.min(y2,visreg.maxY), 0, Math.max(y1,visreg.minY), Render.m_iColour, -1, 0);
 		} else {
-			DasherTruncRect(y1, y2, iSize, Render.m_iColour);
+			//ACL did use iSize not iDasherSize - i.e., y2-y1 _after_ applying nonlinearities.
+			DasherTruncRect(y1, y2, iDasherSize, Render.m_iColour);
 		}
 		
 		//long iDasherAnchorX = (iDasherSize);
@@ -336,19 +321,24 @@ public class CDasherViewSquare extends CDasherView {
 				else Render.m_OnlyChildRendered = null;
 			}
 			/* Step 3: Draw our child nodes */
-			for(CDasherNode i : Render.Children()) {
+			for(int i=0, j=Render.ChildCount(); i<j; i++) {
+				CDasherNode ch = Render.ChildAtIndex(i);
 				
-				long newy1 = y1 + (iDasherSize * i.Lbnd()) / lpNormalisation;
-				long newy2 = y1 + (iDasherSize * i.Hbnd()) / lpNormalisation;
+				long newy1 = y1 + (iDasherSize * ch.Lbnd()) / lpNormalisation;
+				long newy2 = y1 + (iDasherSize * ch.Hbnd()) / lpNormalisation;
 				// FIXME - make the threshold a parameter
 				
-				if((newy2 - newy1 > 50)) {
-					RecursiveRender(i, newy1, newy2, mostleft, pol);
-					if (NodeFillsScreen(newy1, newy2)) {
-						Render.m_OnlyChildRendered = i;
-						break;
-					}
-				}
+				if(newy2 - newy1 > 50 //quick/approximate test it's big enough
+				   && newy1 <= visreg.maxY && newy2 >= visreg.minY //at least partly onscreen?
+				   // TODO - use new versions of coordinate conversion functions in next check (?!)
+				   && (ymap(newy2)-ymap(newy1))*CanvasY > lpMaxY) { //more than one pixel on actual screen?
+						RecursiveRender(ch, newy1, newy2, mostleft, pol);
+						if (NodeFillsScreen(newy1, newy2)) {
+							Render.m_OnlyChildRendered = ch;
+							break renderChildren; //stop looping round children
+						}
+				} else
+					ch.Delete_children(); //did not render child - too small, or entirely off-screen - collapse immediately.
 			}
 		}
 		if (GetBoolParameter(Ebp_parameters.BP_OUTLINE_MODE)
