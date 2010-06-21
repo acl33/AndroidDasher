@@ -163,7 +163,7 @@ public class CAlphabetManager<C> {
     	
     	private CAlphNode() {}
     	@Override
-    	protected void initNode(CDasherNode Parent, int iOffset, long iLbnd, long iHbnd, int colour, String label) {
+    	protected final void initNode(CDasherNode Parent, int iOffset, long iLbnd, long iHbnd, int colour, String label) {
     		throw new RuntimeException("Call version with extra iphase & context args instead");
     	}
         void initNode(CDasherNode Parent, int iOffset, int iphase,
@@ -200,9 +200,7 @@ public class CAlphabetManager<C> {
 		 * @param charsBefore the context - i.e. characters preceding this node
 		 * @return The newly created parent, which may be the root node.
 		 */
-		public CDasherNode RebuildParent() {
-			if (Parent()==null && getOffset()>=0) {
-			
+		protected void RebuildParent(int iNewOffset) {
 				/* This used to clear m_Model.strContextBuffer. Removed as per notes
 				 * at the top of CDasherInterfaceBase.
 				 */
@@ -211,12 +209,9 @@ public class CAlphabetManager<C> {
 				 * that we've backed off far enough to need to do so.
 				 */
 				
-				CAlphNode newNode = GetRoot(null, 0, 0, getOffset()-1);
-				newNode.Seen(true);
-				
-				IterateChildGroups(newNode, null, this);
-			}
-			return Parent();
+			CAlphNode newNode = GetRoot(null, 0, 0, iNewOffset);
+			newNode.Seen(true);
+			IterateChildGroups(newNode, null, this);
 		}
     
 		protected abstract CGroupNode rebuildGroup(CAlphNode parent, SGroupInfo group, long iLbnd, long iHbnd);
@@ -229,7 +224,7 @@ public class CAlphabetManager<C> {
     	private CSymbolNode() {}
     	
     	@Override
-    	void initNode(CDasherNode Parent, int iOffset, int iphase, long ilbnd, long ihbnd, int Colour, C context, String label) {
+    	final void initNode(CDasherNode Parent, int iOffset, int iphase, long ilbnd, long ihbnd, int Colour, C context, String label) {
     		throw new RuntimeException("Use (CDasherNode, int, int, long, long, C) instead");
     	}
     	void initNode(CDasherNode Parent, int iOffset, int symbol, int iphase, long ilbnd, long ihbnd, C context) {
@@ -323,10 +318,17 @@ public class CAlphabetManager<C> {
 				//else - do we do anything? should mean root nodes ok...
 			}
 		}
-
+        
+        @Override
+        public CDasherNode RebuildParent() {
+	        if (Parent()==null && getOffset()>=0) RebuildParent(getOffset()-1);
+			return Parent();
+	    }
+        
 		public CGroupNode rebuildGroup(CAlphNode parent, SGroupInfo group, long iLbnd, long iHbnd) {
 			CGroupNode ret = CAlphabetManager.this.mkGroup(parent, group, iLbnd, iHbnd);
 			if (group.iStart <= m_Symbol && group.iEnd > m_Symbol) {
+				ret.Seen(true);
 				//created group node should contain this symbol
 				IterateChildGroups(ret, group, this);
 			}
@@ -353,7 +355,7 @@ public class CAlphabetManager<C> {
     protected class CGroupNode extends CAlphNode {
     	private CGroupNode() {}
     	@Override
-    	void initNode(CDasherNode Parent, int iOffset, int iphase, long ilbnd, long ihbnd, int Colour, C context, String label) {
+    	final void initNode(CDasherNode Parent, int iOffset, int iphase, long ilbnd, long ihbnd, int Colour, C context, String label) {
     		throw new RuntimeException("Use (CDasherNode, int, int, long, long, C) instead");
     	}
     	
@@ -381,10 +383,8 @@ public class CAlphabetManager<C> {
     	
     	@Override
     	public CDasherNode RebuildParent() {
-    		//a "root node" which did not insert a symbol, has/had no parent
-    		// (an alph node with no preceding characters should - namely, a root!)
-    		if (m_Group==null) return null;
-    		return super.RebuildParent();
+    		if (Parent()==null && m_Group!=null) RebuildParent(getOffset());
+			return Parent();
     	}
     	
     	@Override
@@ -413,6 +413,7 @@ public class CAlphabetManager<C> {
 			CGroupNode ret=CAlphabetManager.this.mkGroup(parent, group, iLbnd, iHbnd);
 			if (group.iStart <= m_Group.iStart && group.iEnd >= m_Group.iEnd) {
 			    //created group node should contain this one
+				ret.Seen(true);
 			    IterateChildGroups(ret,group,this);
 			  }
 			return ret;
