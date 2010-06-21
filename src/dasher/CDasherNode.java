@@ -430,9 +430,8 @@ public abstract class CDasherNode {
 	 */
 	public void Delete_children() {
 		
-		for(CDasherNode i : this.Children()) {
-			 i.DeleteNode();
-		}
+		for(int i=0, j=ChildCount(); i<j; i++)
+			 ChildAtIndex(i).DeleteNode();
 		m_mChildren.clear(); // This should be enough to render them GC-able.
 		m_OnlyChildRendered = null;
 	}
