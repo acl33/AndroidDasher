@@ -481,8 +481,6 @@ public class CAlphabetManager<C> {
     	    }
     	    assert Node.Children().get(Node.ChildCount()-1)==pNewChild;
     	  }
-
-    	  Node.SetHasAllChildren(true);
     }
     
     CDasherNode mkSymbol(CAlphNode parent, int sym, long iLbnd, long iHbnd) {

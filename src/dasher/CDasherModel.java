@@ -1115,15 +1115,8 @@ public class CDasherModel extends CDasherComponent {
 	 */
 	protected void Push_Node(CDasherNode Node) {
 		
-		if(Node.HasAllChildren()) {
-			assert(Node.ChildCount() > 0);
-			return;
-		}
-		
-		Node.Delete_children();
-		
-		Node.PopulateChildren();
-		Node.SetHasAllChildren(true);
+		if(Node.ChildCount() == 0)
+			Node.PopulateChildren();
 	}
 	
 	/**

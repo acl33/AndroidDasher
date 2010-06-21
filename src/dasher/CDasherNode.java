@@ -78,11 +78,6 @@ public abstract class CDasherNode {
 	private final ArrayList<CDasherNode> m_mChildren = new ArrayList<CDasherNode>();
 	
 	/**
-	 * Flag indicating whether all of this node's children are present
-	 */
-	protected boolean m_bHasAllChildren;
-
-	/**
 	 * Parent Node
 	 */
 	private CDasherNode m_Parent;
@@ -342,24 +337,6 @@ public abstract class CDasherNode {
 	public int Colour() {
 	    return m_iColour;
 	} 
-
-	/**
-	 * Checks whether all of this Node's children exist at present
-	 * 
-	 * @return m_bHasAllChildren
-	 */
-    public boolean HasAllChildren() {
-	    return m_bHasAllChildren;
-	}
-	 
-    /**
-     * Sets the HasAllChildren flag
-     *
-     * @param val new value
-     */
-    public void SetHasAllChildren(boolean val) {
-	    m_bHasAllChildren = val;
-	}
     
     /**
      * Gets the probability associated with this node's most
@@ -427,7 +404,6 @@ public abstract class CDasherNode {
 				  i.DeleteNode();
 		  }
 		  m_mChildren.clear();
-		  SetHasAllChildren(false);
 		  DeleteNode();
 	}
 
@@ -458,7 +434,6 @@ public abstract class CDasherNode {
 			 i.DeleteNode();
 		}
 		m_mChildren.clear(); // This should be enough to render them GC-able.
-		SetHasAllChildren(false);
 		m_OnlyChildRendered = null;
 	}
 
