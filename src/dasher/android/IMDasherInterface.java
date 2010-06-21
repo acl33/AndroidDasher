@@ -38,6 +38,12 @@ class IMDasherInterface extends ADasherInterface
 		super.Realize(ctx);
 	}
 
+	@Override public void setOffset(int iNewOffset, boolean bForce) {
+		if (iNewOffset == lastCursorPos-1 && !bForce) return;
+		lastCursorPos = iNewOffset+1;
+		super.setOffset(iNewOffset, bForce);
+	}
+	
 	@Override
 	public ListIterator<Character> getContext(final int iOffset) {
 		if (ic==null) return Collections.<Character>emptyList().listIterator();
@@ -109,16 +115,17 @@ class IMDasherInterface extends ADasherInterface
 			CEditEvent evt = (CEditEvent)e;
 			if (evt.m_iEditType==1) {
 				if (numSelectedChars>0) {
-					Log.d("DasherIME",androidCtx+" replacing "+numSelectedChars+" following characters with "+evt.m_sText+" - ic "+ic);
+					Log.d("DasherIME",androidCtx+" deleting selection of "+numSelectedChars);
 					ic.deleteSurroundingText(0, numSelectedChars);
 					numSelectedChars=0;
-				} else {
-					Log.d("DasherIME", androidCtx+" entering "+evt.m_sText+" - ic "+ic);
 				}
 				ic.commitText(evt.m_sText, 1); //position cursor just after
+				lastCursorPos+=evt.m_sText.length();
+				Log.d("DasherIME",androidCtx+" entering "+evt.m_sText+" to give "+ic.getTextBeforeCursor(5, 0));
 			} else if (evt.m_iEditType==2) {
-				Log.d("DasherIME", androidCtx+" deleting "+evt.m_sText+" - ic "+ic);
 				ic.deleteSurroundingText(evt.m_sText.length(), 0);
+				lastCursorPos-=evt.m_sText.length();
+				Log.d("DasherIME", androidCtx+" deleting "+evt.m_sText+" to give "+ic.getTextBeforeCursor(5, 0));
 			}
 		}
 	}
@@ -158,7 +165,6 @@ class IMDasherInterface extends ADasherInterface
 				this.nPos=Integer.MIN_VALUE;
 				this.bStarting = false;
 			}
-			IMDasherInterface.this.lastCursorPos = nPos;
 			IMDasherInterface.this.numSelectedChars = nSel;
 			IMDasherInterface.this.setOffset(nPos-1, bStarting);
 		}

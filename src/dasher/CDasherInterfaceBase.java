@@ -921,21 +921,17 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	}
 	
 	/**
-	 * Attempts to retrieve a fresh context by dispatching an
-	 * EditContextEvent, which has a field to return a new context
-	 * if anybody hearing the event chose to submit one.
-	 * <p>
-	 * If bForceStart is true, or we received a non-empty context,
-	 * the Model is fed the new Context using SetContext and is
-	 * then paused.
-	 * <p>
-	 * Finally there is a mandatory screen redraw.
+	 * Wraps setOffset() on the Model, which retrieves a fresh context and
+	 * rebuilds the Dashernode tree, unless the model is already at the right offset.
+	 * This CDasherInterfaceBase methods serves only to additionally pause Dasher,
+	 * write out the new context to the training file, and redraw the screen. (Note,
+	 * these actions will be performed anyway even if the model is already at the
+	 * right offset - subclasses may wish to override and prevent this.)
 	 * 
 	 * @param bForceStart Should we rebuild the context even if none is submitted?
 	 */
 	public void setOffset(int iOffset, boolean bForce) {
 		if (m_DasherModel==null) return; //hmmm. does this ever happen?
-		if (iOffset == m_DasherModel.GetOffset() && !bForce) return;
 		/* CSFS: This used to clear m_DasherModel.strContextBuffer,
 		 * which has been removed per the notes at the top of the file.
 		 */
