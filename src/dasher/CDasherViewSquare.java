@@ -44,17 +44,17 @@ public class CDasherViewSquare extends CDasherView {
 	/**
 	 * Compression factor
 	 */
-	protected long m_Y1;
+	protected final long m_Y1;
 	
 	/**
 	 * Y co-ordinate above which to apply compression
 	 */
-	protected long m_Y2;
+	protected final long m_Y2;
 	
 	/**
 	 * Y co-ordinate below which to apply compression
 	 */
-	protected long m_Y3;
+	protected final long m_Y3;
 		
 	/**
 	 * Converts a y co-ordinate according to this schema
@@ -160,18 +160,13 @@ public class CDasherViewSquare extends CDasherView {
 	public CDasherViewSquare(CEventHandler EventHandler, CSettingsStore SettingsStore, CDasherScreen DasherScreen)  {
 		
 		super(EventHandler, SettingsStore, DasherScreen);
+		m_Y1 = 4;
+		m_Y2 = (long)(0.95 * lpMaxY);
+		m_Y3 = (long)(0.05 * lpMaxY);
 		
 		m_DelayDraw = new CDelayedDraw();
 		ChangeScreen(DasherScreen);
 		
-		double dY1 = 0.25;
-		double dY2 = 0.95;
-		double dY3 = 0.05;
-		
-		m_Y2 = (long)(dY2 * lpMaxY);
-		m_Y3 = (long)(dY3 * lpMaxY);
-		m_Y1 = (long)(1.0 / dY1);
-	
 		lpTruncation = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_TRUNCATION);
 		lpTruncationType = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_TRUNCATIONTYPE);
 		lpNormalisation = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_NORMALIZATION);
@@ -520,6 +515,13 @@ public class CDasherViewSquare extends CDasherView {
 	 * be re-run any time the Screen's height or width are liable
 	 * to have changed, or if we wish to change the size of the
 	 * Dasher world's co-ordinate space.
+	 * 
+	 * Also computes the screen coordinates of the crosshair - with the vertical bar at LP_OX 
+	 * (and the horizontal bar halfway up the screen).
+	 * The horizontal bar is hard coded to run from 12/14(sx)
+	 * to 17/14(sx). This will cause trouble if sx is zero, and
+	 * there will be issues if sx is small since we're working
+	 * with integers, not floating point
 	 */
 	public void SetScaleFactor()
 	{
@@ -576,8 +578,21 @@ public class CDasherViewSquare extends CDasherView {
 		    m_dXMappingLinearScaleFactor = Math.min(1.0,0.9 * dScaleFactorX / dScaleFactorY);
 		    temp+=" => Xscale "+m_dXMappingLinearScaleFactor;
 		}
-		android.util.Log.d("DasherIME",temp+", m_iX"+ m_iScaleFactorX+" m_iY"+m_iScaleFactorY);
+		android.util.Log.d("DasherIME",temp+", m_iX "+ m_iScaleFactorX+" m_iY "+m_iScaleFactorY);
 		m_iCenterX *= m_dXMappingLinearScaleFactor;
+		
+		// Vertical bar of crosshair
+
+		CDasherView.DRect visreg = VisibleRegion();
+		long sx = GetLongParameter(Elp_parameters.LP_OX);
+
+		cross_y[0] = Dasher2Screen(sx, visreg.minY);
+		cross_y[1] = Dasher2Screen(sx, visreg.maxY);
+		
+		//Horizontal bar
+
+		cross_x[0] = Dasher2Screen(12 * sx / 14, lpMaxY/2);
+		cross_x[1] = Dasher2Screen(17*sx/14, lpMaxY/2);
 	}
 	
 	/**
@@ -725,41 +740,16 @@ public class CDasherViewSquare extends CDasherView {
 	/// Draw the crosshair
 
 	/**
-	 * Draws the Crosshair, with the vertical bar at LP_OX and 
-	 * the horizontal bar halfway up the screen.
-	 * <p>
-	 * The horizontal bar is hard coded to run from 12/14(sx)
-	 * to 17/14(sx). This will cause trouble if sx is zero, and
-	 * there will be issues if sx is small since we're working
-	 * with integers, not floating point.
-	 * <p>
+	 * Draws the Crosshair, as computed in {@link #SetScaleFactor()}
 	 */
 	private void Crosshair() {
-				// Vertical bar of crosshair
-
-		CDasherView.DRect visreg = VisibleRegion();
-		long sx = GetLongParameter(Elp_parameters.LP_OX);
-		
-		cx[1] = cx[0] = sx;
-		cy[0] = visreg.minY;
-
-		//cx[1] = cx[0];
-		cy[1] = visreg.maxY;
-
-		DasherPolyline(cx, cy, 2, 1, GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 5 : -1);
-		
-		// Horizontal bar of crosshair
-
-		cx[0] = 12 * sx / 14;
-		cy[1] = cy[0] = lpMaxY / 2;
-
-		cx[1] = 17 * sx / 14;
-		//cy[1] = lpMaxY / 2;
-
-		DasherPolyline(cx, cy, 2, 1, GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 5 : -1);
+		int iColour = GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 5 : -1;
+		Screen().Polyline(cross_y, 1, iColour);
+		Screen().Polyline(cross_x, 1, iColour);
 	}
-	private final long[] cx=new long[2],cy=new long[2];
-
+	/** Cache screen coordinates of the vertical & horizontal lines forming the crosshair */
+	private final Point[] cross_y = new Point[2], cross_x = new Point[2];
+	
 	/**
 	 * Reverse the x co-ordinate nonlinearity.
 	 * <p>
