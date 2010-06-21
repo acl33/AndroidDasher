@@ -27,6 +27,8 @@ package dasher;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 /**	
  * Dasher views represent the visualisation of a Dasher model on the screen.
@@ -212,6 +214,7 @@ public abstract class CDasherView extends CDasherComponent {
 	 */
 	public void ChangeScreen(CDasherScreen NewScreen) {
 		m_Screen = NewScreen;
+		textSizes.clear();
 	}
 	
 	/**
@@ -358,6 +361,15 @@ public abstract class CDasherView extends CDasherComponent {
 		Screen().DrawRectangle((int)temp1[0] - iSize, (int)temp1[1] - iSize, (int)temp1[0] + iSize, (int)temp1[1] + iSize, Color, bDrawOutline ? 3 : -1, 1);
 	}
 	
+	private final Map<Integer,Map<String,CDasherView.Point>> textSizes = new HashMap<Integer,Map<String,CDasherView.Point>>();
+	
+	private CDasherView.Point ScreenTextSize(String sText, int iSize) {
+		Map<String,CDasherView.Point> strings = textSizes.get(iSize);
+		if (strings == null) textSizes.put(iSize, strings = new HashMap<String, Point>());
+		Point p = strings.get(sText);
+		if (p==null) strings.put(sText, p = Screen().TextSize(sText, iSize));
+		return p;
+	}
 	private final long[] temp1=new long[2], temp2 = new long[2];
 	/**
 	 * Draws a given string inside a specified box, the dimensions and co-ordinates
@@ -456,7 +468,7 @@ public abstract class CDasherView extends CDasherComponent {
 
 		int TextWidth, TextHeight;
 		
-		CDasherView.Point textDimensions = Screen().TextSize(sDisplayText, Size);
+		CDasherView.Point textDimensions = ScreenTextSize(sDisplayText, Size);
 		TextHeight = textDimensions.y;
 		TextWidth = textDimensions.x;
 		// Poistion of text box relative to anchor depends on orientation
