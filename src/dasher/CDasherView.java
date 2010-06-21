@@ -215,35 +215,6 @@ public abstract class CDasherView extends CDasherComponent {
 	}
 	
 	/**
-	 * Deferred to m_Input.
-	 * 
-	 * @see CDasherInput
-	 * @return Number of co-ordinates, or 0 if there is no input device.
-	 */
-	public int GetCoordinateCount() {
-		// TODO: Do we really need support for co-ordinate counts other than 2?
-		if(m_Input != null)
-			return m_Input.GetCoordinateCount();
-			else
-				return 0;
-	}
-	
-	/**
-	 * Deferred to m_Input
-	 * 
-	 * @param Coordinates Array to fill with co-ordinates
-	 * @return 0 if the returned co-ordinates are screen co-ordinates,
-	 * 1 if Dasher co-ordinates. 0 will also be returned if there
-	 * is currently no input device. 
-	 */
-	public int GetCoordinates(long[] Coordinates) {
-		if(m_Input != null)
-			return m_Input.GetCoordinates(Coordinates);
-		else
-			return 0;
-	}
-	
-	/**
 	 * Determines whether the node falling between two specified
 	 * y co-ordinates entirely covers the screen.
 	 * <p>
@@ -575,10 +546,10 @@ public abstract class CDasherView extends CDasherComponent {
 	 * @throw {@link ArrayIndexOutOfBoundsException} if the supplied array has <2 elements
 	 */
 	public void getInputDasherCoords(long[] result) {
-		if (inputCoords==null || inputCoords.length != GetCoordinateCount())
-			inputCoords = new long[GetCoordinateCount()];
+		if (inputCoords==null || inputCoords.length != m_Input.GetCoordinateCount())
+			inputCoords = new long[m_Input.GetCoordinateCount()];
 		
-		int iType = (GetCoordinates(inputCoords));
+		int iType = (m_Input.GetCoordinates(inputCoords));
 		
 		
 		if(inputCoords.length == 1) {
