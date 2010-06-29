@@ -627,104 +627,6 @@ public class CDasherModel extends CDasherComponent {
 	}
 	
 	/**
-	 * Simple struct for returning min/max pairs.
-	 */
-	class GNRCReturn {
-		/**
-		 * New max
-		 */
-		long iNewMin;
-		/**
-		 * New min
-		 */
-		long iNewMax;
-	}
-	
-	/**
-	 * Calculate the new co-ordinates for the root node after a single
-	 * update step. For further information, see Doc/geometry.tex.
-	 * 
-	 * @param Mousex x mouse co-ordinate measured right to left.
-     * @param Mousey y mouse co-ordinate measured top to bottom.
-     * @return New root co-ordinates.
-	
-	 */
-	protected GNRCReturn Get_new_root_coords(long Mousex, long Mousey) {
-	  // Comments refer to the code immedialtely before them
-
-	  if(Mousex <= 0) {
-	    Mousex = 1;
-	  }
-
-	  // Avoid Mousex=0, as this corresponds to infinite zoom
-
-	  // If Mousex is too large we risk overflow errors, so make limit it
-	  // (this is a somewhat empirical limit - at some point we should
-	  // probably do it a little more scientifically)
-
-	  if(Mousex > 60000000)
-	    Mousex = 60000000;
-
-	  // Cache some results so we don't do a huge number of parameter lookups
-
-	  long iMaxY = (GetLongParameter(Elp_parameters.LP_MAX_Y));
-	  long iOX = (GetLongParameter(Elp_parameters.LP_OX));
-	  long iOY = (GetLongParameter(Elp_parameters.LP_OY));
-
-	  /* CSFS: In the original C++ iTargetMin and iTargetMax were, apparently
-	   * intentionally, ints and not longs. I've changed this since it seems they may
-	   * be liable to overflow if simply assigned the values given.
-	   */
-	  
-	  long iTargetMin = (Mousey - (iMaxY * Mousex) / (2 * iOX));
-	  long iTargetMax = (Mousey + (iMaxY * Mousex) / (2 * iOY));
-
-	  // Calculate what the extremes of the viewport will be when the
-	  // point under the cursor is at the cross-hair. This is where 
-	  // we want to be in iSteps updates
-
-	  int iSteps = m_fr.Steps();
-
-	  assert(iSteps > 0);
-
-	  // iSteps is the number of update steps we need to get the point
-	  // under the cursor over to the cross hair. Calculated in order to
-	  // keep a constant bit-rate.
-
-	  
-	  long iNewTargetMin = (iTargetMin * iMaxY / (iMaxY + (iSteps - 1) * (iTargetMax - iTargetMin)));
-
-	  long iNewTargetMax = ((iTargetMax * iSteps - iTargetMin * (iSteps - 1)) * iMaxY) / (iMaxY + (iSteps - 1) * (iTargetMax - iTargetMin));
-
-	  iTargetMin = iNewTargetMin;
-	  iTargetMax = iNewTargetMax;
-
-	  // Calculate the new values of iTargetMin and iTargetMax required to
-	  // perform a single update step. Note that the slightly awkward
-	  // expressions are in order to reproduce the behaviour of the old
-	  // algorithm
-
-	  long iMinSize = (m_fr.MinSize(iMaxY));
-
-	  // Calculate the minimum size of the viewport corresponding to the
-	  // maximum zoom.
-
-	  if((iTargetMax - iTargetMin) < iMinSize) {
-	    iNewTargetMin = iTargetMin * (iMaxY - iMinSize) / (iMaxY - (iTargetMax - iTargetMin));
-	    iNewTargetMax = iNewTargetMin + iMinSize;
-
-	    iTargetMin = iNewTargetMin;
-	    iTargetMax = iNewTargetMax;
-	  }
-
-	  GNRCReturn retval = new GNRCReturn();
-	  
-	  retval.iNewMin = (((m_Rootmin - iTargetMin) * GetLongParameter(Elp_parameters.LP_MAX_Y)) / (iTargetMax - iTargetMin));
-	  retval.iNewMax = (((m_Rootmax - iTargetMax) * GetLongParameter(Elp_parameters.LP_MAX_Y)) / (iTargetMax - iTargetMin) + GetLongParameter(Elp_parameters.LP_MAX_Y));
-	  return retval;
-	}
-	
-	/**
 	 * Performs a single update of the model based on a given
 	 * mouse position and the time elpased since the last
 	 * update took place.
@@ -754,7 +656,6 @@ public class CDasherModel extends CDasherComponent {
 			long miMousey, 
 			long Time, 
 			ArrayList<CSymbolProb> pAdded)	{
-
 		/* CSFS: There used to be an extra parameter here called pNumDeleted
 		 * which was an int * which looked as if it was intended to return the
 		 * number of deleted nodes to the calling routine; however, every
@@ -766,10 +667,65 @@ public class CDasherModel extends CDasherComponent {
 //		Clear out parameters that might get passed in to track user activity
 		if (pAdded != null)	pAdded.clear();
 			
-		GNRCReturn retval = Get_new_root_coords(miMousex, miMousey);
 		if(GetBoolParameter(Ebp_parameters.BP_OLD_STYLE_PUSH))
 			OldPush(miMousex, miMousey);
-		NewGoTo(retval.iNewMin, retval.iNewMax);
+		
+		//ACL I've inlined Get_new_root_coords here, so we don't have to allocate a temporary object to return two values...
+
+		// Avoid Mousex=0, as this corresponds to infinite zoom
+		if(miMousex <= 0) miMousex = 1;
+
+		// If Mousex is too large we risk overflow errors, so make limit it
+		// (this is a somewhat empirical limit - at some point we should
+		// probably do it a little more scientifically)
+		if(miMousex > 60000000) miMousex = 60000000;
+
+		// Cache some results so we don't do a huge number of parameter lookups
+		long iMaxY = (GetLongParameter(Elp_parameters.LP_MAX_Y));
+		long iOX = (GetLongParameter(Elp_parameters.LP_OX));
+		long iOY = (GetLongParameter(Elp_parameters.LP_OY));
+
+		// Calculate what the extremes of the viewport will be when the
+		// point under the cursor is at the cross-hair. This is where 
+		// we want to be in iSteps updates
+		/* CSFS: In the original C++ iTargetMin and iTargetMax were, apparently
+		 * intentionally, ints and not longs. I've changed this since it seems they may
+		 * be liable to overflow if simply assigned the values given.
+		 */		  
+		long iTargetMin = (miMousey - (iMaxY * miMousex) / (2 * iOX));
+		long iTargetMax = (miMousey + (iMaxY * miMousex) / (2 * iOY));
+
+
+		// iSteps is the number of update steps we need to get the point
+		// under the cursor over to the cross hair. Calculated in order to
+		// keep a constant bit-rate.
+		int iSteps = m_fr.Steps();
+		assert(iSteps > 0);
+		
+		// Calculate the new values of iTargetMin and iTargetMax required to
+		// perform a single update step. Note that the slightly awkward
+		// expressions are in order to reproduce the behaviour of the old
+		// algorithm
+		long iNewTargetMin = (iTargetMin * iMaxY / (iMaxY + (iSteps - 1) * (iTargetMax - iTargetMin)));
+		long iNewTargetMax = ((iTargetMax * iSteps - iTargetMin * (iSteps - 1)) * iMaxY) / (iMaxY + (iSteps - 1) * (iTargetMax - iTargetMin));
+		iTargetMin = iNewTargetMin;
+		iTargetMax = iNewTargetMax;
+
+		// Calculate the minimum size of the viewport corresponding to the
+		// maximum zoom.
+		long iMinSize = (m_fr.MinSize(iMaxY));
+
+		if((iTargetMax - iTargetMin) < iMinSize) {
+		    iNewTargetMin = iTargetMin * (iMaxY - iMinSize) / (iMaxY - (iTargetMax - iTargetMin));
+		    iNewTargetMax = iNewTargetMin + iMinSize;
+
+		    iTargetMin = iNewTargetMin;
+		    iTargetMax = iNewTargetMax;
+		}
+
+		//finally, update the rootnode bounds to put iTargetMin/iTargetMax at (0,LP_MAX_Y).
+		NewGoTo((((m_Rootmin - iTargetMin) * GetLongParameter(Elp_parameters.LP_MAX_Y)) / (iTargetMax - iTargetMin)),
+				(((m_Rootmax - iTargetMax) * GetLongParameter(Elp_parameters.LP_MAX_Y)) / (iTargetMax - iTargetMin) + GetLongParameter(Elp_parameters.LP_MAX_Y)));
 	}
 	
 	public boolean nextScheduledStep(long time, ArrayList<CSymbolProb> vAdded) {
@@ -858,100 +814,6 @@ public class CDasherModel extends CDasherComponent {
 			}
 		}
 	}
-	
-	/*
-	class PNGCReturn {
-		int iSteps;
-		long o1;
-		long o2;
-		long n1;
-		long n2;
-		double originalRetval;
-	}*/
-	
-//	public PNGCReturn Plan_new_goto_coords(int iRxnew, long mousey)
-	
-	/* CSFS: Here we have another class which uses its arguments as output.
-	 * As per usual when it's more than one item, I use a small class to return values.
-	 * The variable names are the same as they were in the old method prototype.
-	 * Potential problem: it's possible they may carry values when submitted to the
-	 * routine which are important; however, looking at it I'm fairly sure they're all
-	 * written before they're read.
-	 */
-	
-/*	{	
-		
-		final int ZOOMDENOM = (1<<10);
-		final int STEPDENOM = 64;
-		PNGCReturn retval = new PNGCReturn(); // create class to return multiple values.
-		
-		m_Stepnum = (int)GetLongParameter(Elp_parameters.LP_ZOOMSTEPS);
-		int iRxnew_dup = iRxnew;
-		// note -- iRxnew is the zoom factor  in units of ZOOMDENOM
-		retval.o1 = m_Rootmin;
-		retval.o2 = m_Rootmax;
-		assert(iRxnew > 0);
-		if (iRxnew < ZOOMDENOM && m_Rootmax< GetLongParameter(Elp_parameters.LP_MAX_Y) && m_Rootmin>0 ) {
-			// refuse to zoom backwards if the entire root node is visible.
-			retval.iSteps = 0 ;
-			retval.n1 = m_Rootmin;
-			retval.n2 = m_Rootmax;
-		} 
-		else {
-			long above=(mousey-retval.o1);
-			long below=(retval.o2-mousey);
-			
-			long miNewrootzoom=GetLongParameter(Elp_parameters.LP_MAX_Y)/2 ;
-			long newRootmax=miNewrootzoom+(below*iRxnew/ZOOMDENOM); // is there a risk of overflow in this multiply?
-			long newRootmin=miNewrootzoom-(above*iRxnew/ZOOMDENOM);
-			
-			retval.n1 = newRootmin;
-			retval.n2 = newRootmax;
-			
-			retval.iSteps = 1;
-			
-			// We might be moving at zoomfactor one vertically, in which case the below invention won't
-			// come up with more than one step.  Look for a mousey difference and use an iSteps concordant
-			// to that if it would be larger than the iSteps created by taking the log of the zoomfactor. 
-			
-			/* CSFS: Changed 'distance' to a long as it didn't seem safe to be casting
-			 * longs to ints and simply hoping they fit.
-			 */
-			
-			/*long distance = mousey - (GetLongParameter(Elp_parameters.LP_MAX_Y)/2);
-			
-			double s = (Math.log(2.0) * 2 / Math.log( (STEPDENOM*1.0)/(m_Stepnum*1.0)) ) / 4096;
-			
-			double alpha = 2 * (2 * s);
-			int alternateSteps = (int)(alpha * Math.abs(distance));
-			
-			// Take log of iRxnew to base ( STEPDENOM / STEPNUM ):
-			if ( STEPDENOM > m_Stepnum && m_Stepnum > 0 ) { // check that the following loop will terminate.
-				//cout << "iRxnew is " << iRxnew << " and ZOOMDENOM is" << ZOOMDENOM << endl;
-				if ( iRxnew > ZOOMDENOM ) {
-					while ( iRxnew > ZOOMDENOM ) {
-						retval.iSteps += 1;
-						iRxnew = iRxnew * m_Stepnum / STEPDENOM;
-					}
-				} else {
-					while ( iRxnew < ZOOMDENOM ) {
-						retval.iSteps += 1;
-						iRxnew = iRxnew * STEPDENOM / m_Stepnum;
-					}
-				}
-			}
-			
-			// Done taking log of iRxnew. 
-			if (alternateSteps > retval.iSteps) {
-				retval.iSteps = alternateSteps;
-			}
-		}
-		
-		double iRxnew_ratio = (double) iRxnew_dup / ZOOMDENOM;
-		double iRxnew_log = Math.log(iRxnew_ratio);
-		retval.originalRetval = iRxnew_log;
-		return retval;
-	}*/
 	
 	/**
 	 * Changes the state of the Model updating the values of
@@ -1137,7 +999,7 @@ public class CDasherModel extends CDasherComponent {
 	 * ExpansionPolicy to determine which CDasherNodes to expand or collapse in each frame.
 	 * Reused between frames to save on allocation.
 	 */
-	private ExpansionPolicy pol = new BudgettingPolicy(1000);
+	private ExpansionPolicy pol = new BudgettingPolicy(1500);
 	/**
 	 * If the view reports that our current root node isn't
 	 * visible, calls Reparent_root; if only one child of the
