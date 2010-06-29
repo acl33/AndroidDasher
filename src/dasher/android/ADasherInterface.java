@@ -87,7 +87,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	
 	@Override
 	public void CreateModules() {
-		RegisterModule(new CStylusFilter(this, getSettingsStore()));
+		RegisterModule(setDefaultInputFilter(new CStylusFilter(this, getSettingsStore())));
 		RegisterModule(new CDefaultFilter(this, getSettingsStore(), 14, "Normal Control"));
 		final SensorManager sm = (SensorManager)androidCtx.getSystemService(Context.SENSOR_SERVICE);
 		List<Sensor> ss = sm.getSensorList(Sensor.TYPE_ACCELEROMETER);
@@ -155,7 +155,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			};
 			RegisterModule(new TiltInput());
 		}
-		RegisterModule(new CDasherInput(this, getSettingsStore(), 0, "Mouse Input") {
+		RegisterModule(setDefaultInput(new CDasherInput(this, getSettingsStore(), 0, "Touch Input") {
 			
 			@Override
 			public int GetCoordinates(long[] Coordinates) {
@@ -168,7 +168,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 				return 2;
 			}
 		
-		});
+		}));
 	}
 	
 	@Override

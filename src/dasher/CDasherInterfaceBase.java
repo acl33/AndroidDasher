@@ -580,7 +580,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * @see CModuleManager
 	 *
 	 */	
-	public void CreateInput() {
+	private void CreateInput() {
 		
 		// FIXME - this shouldn't be the model used here - we should just change a parameter and work from the appropriate listener
 		
@@ -589,6 +589,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		}
 		
 		m_Input = (CDasherInput)GetModuleByName(GetStringParameter(Esp_parameters.SP_INPUT_DEVICE));
+		if (m_Input==null) m_Input = m_DefaultInput;
 		
 		if(m_Input != null) {
 			m_Input.Activate();
@@ -1104,14 +1105,14 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * Unref'd first.
 	 *
 	 */
-	public void CreateInputFilter()
+	private void CreateInputFilter()
 	{
 		if(m_InputFilter != null) {
 			m_InputFilter.Deactivate();
 		}
 		
 		m_InputFilter = (CInputFilter)GetModuleByName(GetStringParameter(Esp_parameters.SP_INPUT_FILTER));
-		
+		if (m_InputFilter == null) m_InputFilter = m_DefaultInputFilter;
 		if(m_InputFilter != null) {
 			m_InputFilter.Activate();
 		}
@@ -1147,8 +1148,9 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	/**
 	 * Manually registers a number of input filters.
 	 * <p>
-	 * At present this registers only Normal Control and Click Mode,
-	 * but as an when others are implemented will register these also.
+	 * At present this registers only Normal Control and Click Mode, and sets
+	 * Normal Control as the default.
+	 * As and when others are implemented, will register these also.
 	 * Subclasses can & should override if they want anything different
 	 * or extra.
 	 * <p>
@@ -1161,7 +1163,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 *
 	 */
 	protected void CreateModules() {
-		RegisterModule(new CDefaultFilter(this, m_SettingsStore, 3, "Normal Control"));
+		RegisterModule(setDefaultInputFilter(new CDefaultFilter(this, m_SettingsStore, 3, "Normal Control")));
 		//RegisterModule(new COneDimensionalFilter(this, m_SettingsStore, this, m_DasherModel));
 		//RegisterModule(new CEyetrackerFilter(this, m_SettingsStore, this, m_DasherModel));
 		RegisterModule(new CClickFilter(this, m_SettingsStore));
@@ -1281,6 +1283,38 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	public InputStream getResourceStream(String filename) {
 		return null;
+	}
+	
+	/**
+	 * Handle to the default filter to use, in the case that the
+	 * SP_INPUT_FILTER setting does not identify an alternative.
+	 */
+	private CInputFilter m_DefaultInputFilter;
+	
+	/**
+	 * Sets the default filter, for when SP_INPUT_FILTER does not identify one;
+	 * most likely, subclasses should call this in {@link #CreateModules()}.
+	 * @param defaultInputFilter the filter to use if no other can be identified.
+	 * @return the filter passed in
+	 */
+	public CInputFilter setDefaultInputFilter(CInputFilter defaultInputFilter) {
+		return m_DefaultInputFilter = defaultInputFilter;
+	}
+	
+	/**
+	 * Handle to the default input device to use, in the case that the
+	 * SP_INPUT_DEVICE setting does not identify an alternative.
+	 */
+	private CDasherInput m_DefaultInput;
+	
+	/**
+	 * Sets the default input device, for when SP_INPUT_DEVICE does not identify one;
+	 * most likely, subclasses should call this in {@link #CreateModules()}.
+	 * @param defaultInput the device to use if no other can be identified
+	 * @return the device passed in
+	 */
+	public CDasherInput setDefaultInput(CDasherInput defaultInput) {
+		return m_DefaultInput = defaultInput;	
 	}
 	
 }
