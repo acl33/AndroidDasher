@@ -277,12 +277,13 @@ public abstract class CDasherView extends CDasherComponent {
 	 */
 	public void DasherPolyline(long[] x, long[] y, int n, int iWidth, int iColour) {
 		
-		CDasherView.Point[] ScreenPoints = new CDasherView.Point[n];
-		
-		for(int i = (0); i < n; ++i)
-			ScreenPoints[i] = Dasher2Screen(x[i], y[i]);
-		
-		Screen().Polyline(ScreenPoints, iWidth, iColour);
+		int[] xs=new int[x.length], ys=new int[y.length];
+		for(int i = (0); i < n; ++i) {
+			temp1[0]=x[i]; temp1[1]=y[i];
+			Dasher2Screen(temp1);
+			xs[i]=(int)temp1[0]; ys[i]=(int)temp1[1];
+		}
+		Screen().Polyline(xs, ys, iWidth, iColour);
 	}
 	
 //	Draw a filled polygon specified in Dasher co-ordinates
@@ -338,27 +339,6 @@ public abstract class CDasherView extends CDasherComponent {
 		Dasher2Screen(temp2);
 		
 		Screen().DrawRectangle((int)temp1[0], (int)temp1[1], (int)temp2[0], (int)temp2[1], Color, iOutlineColour, iThickness);
-	}
-	
-//	/ Draw a rectangle centred on a given dasher co-ordinate, but with a size specified in screen co-ordinates (used for drawing the mouse blob)
-	
-	/**
-	 * Draws a square with a given centre in Dasher co-ordinates
-	 * and a given side-length in pixels (screen co-ordinates).
-	 * 
-	 * @param iDasherX Centre point x co-ordinate
-	 * @param iDasherY Centre point y co-ordinate
-	 * @param iSize Side length in pixels
-	 * @param Color Fill colour index
-	 * @param ColorScheme Colour scheme (usually ignored now in favour of colour index)
-	 * @param bDrawOutline Whether to draw a hairline black outline
-	 */
-	public void DasherDrawCentredRectangle(long iDasherX, long iDasherY, int iSize, int Color, boolean bDrawOutline) {
-		
-		temp1[0] = iDasherX; temp1[1] = iDasherY;
-		Dasher2Screen(temp1);
-		
-		Screen().DrawRectangle((int)temp1[0] - iSize, (int)temp1[1] - iSize, (int)temp1[0] + iSize, (int)temp1[1] + iSize, Color, bDrawOutline ? 3 : -1, 1);
 	}
 	
 	private final Map<Integer,Map<String,CDasherView.Point>> textSizes = new HashMap<Integer,Map<String,CDasherView.Point>>();

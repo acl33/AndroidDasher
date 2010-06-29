@@ -93,10 +93,13 @@ public class CDefaultFilter extends CInputFilter {
 		boolean bDidSomething = (false);
 		
 		if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
+			temp[0]=lastInputCoords[0];
+			temp[1]=lastInputCoords[1];
+			View.Dasher2Screen(temp);
 			if(GetBoolParameter(Ebp_parameters.BP_DRAW_MOUSE)) {
 				// Draw a small box at the current mouse position.
-				View.DasherDrawCentredRectangle(lastInputCoords[0], lastInputCoords[1], 5,
-								GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 2 : 1, false);
+				View.Screen().DrawRectangle((int)temp[0]-5,(int)temp[1]-5,(int)temp[0]+5,(int)temp[1]+5,
+								GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 2 : 1, -1, 1);
 				bDidSomething = true;
 			}
 			
@@ -104,21 +107,21 @@ public class CDefaultFilter extends CInputFilter {
 				/**
 				 * Draws a line from the origin (LP_OX, LP_OY) to the current
 				 * mouse position.
-				 * 
-				 * @param View View to which this line should be drawn.
 				 */
+				// End of line is the mouse cursor location...(set above)
+				mouseX[1] = (int)temp[0];
+				mouseY[1] = (int)temp[1];
+				
 				//Start of line is the crosshair location
-				
-				mouseX[0] = GetLongParameter(Elp_parameters.LP_OX);
-				mouseY[0] = GetLongParameter(Elp_parameters.LP_OY);
-				
-				// End of line is the mouse cursor location...
-				
-				mouseX[1] = lastInputCoords[0];
-				mouseY[1] = lastInputCoords[1];
+				//bah. Do we really have to do this every time? Would need notifying of screen changes...???
+				temp[0] = GetLongParameter(Elp_parameters.LP_OX);
+				temp[1] = GetLongParameter(Elp_parameters.LP_OY);
+				View.Dasher2Screen(temp);
+				mouseX[0] = (int)temp[0];
+				mouseY[0] = (int)temp[1];
 				
 				// Actually plot the line
-				View.DasherPolyline(mouseX, mouseY, 2, (int)GetLongParameter(Elp_parameters.LP_LINE_WIDTH), GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 1 : -1);
+				View.Screen().Polyline(mouseX, mouseY, (int)GetLongParameter(Elp_parameters.LP_LINE_WIDTH), GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 1 : -1);
 
 				bDidSomething = true;
 			}
@@ -239,12 +242,6 @@ public class CDefaultFilter extends CInputFilter {
 			// CSFS: Disabled for now, one is enough for testing purposes, if even that is necessary.
 	}
 	
-	private static final long[] mouseX=new long[2],mouseY=new long[2];
-	/*
-	public void CDefaultFilter::ApplyTransform(myint &iDasherX, myint &iDasherY) {
-	}
-	
-	public void CDefaultFilter::ApplyAutoCalibration(myint &iDasherX, myint &iDasherY, bool bUpdate) {
-	}
-	*/
+	private final int[] mouseX=new int[2],mouseY=new int[2];
+	private final long[] temp=new long[2];
 }
