@@ -16,13 +16,15 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.SurfaceHolder.Callback;
 
-public class DasherCanvas extends SurfaceView implements Callback {
+public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen {
 	private final ADasherInterface intf;
-	private final RenderTask rTh;
-	private boolean bReady;
-    private int x,y;
-    /* Desired width & height */
+	private final SurfaceHolder holder;
+    /** Desired width & height */
     private final int dw,dh;
+	private boolean bReady;
+	
+	/** coordinates of last touch */
+	private int x,y;
     
 	public DasherCanvas(Context context, ADasherInterface intf, int dw, int dh) {
 		super(context);
@@ -30,9 +32,8 @@ public class DasherCanvas extends SurfaceView implements Callback {
 		this.intf=intf;
 		this.dw=dw;
 		this.dh=dh;
-		SurfaceHolder holder = getHolder();
+		holder = getHolder();
 		holder.addCallback(this);
-		rTh=new RenderTask(holder);
 	}
 
 	protected void onMeasure(int widthMS, int heightMS) {
@@ -58,12 +59,8 @@ public class DasherCanvas extends SurfaceView implements Callback {
 		Log.d("DasherIME",this+" surfaceChanged ("+width+", "+height+")");
 		intf.enqueue(new Runnable() {
 			public void run() {
-				intf.ChangeScreen(rTh);
-				synchronized(DasherCanvas.this) {
-					if (bReady) return;
-				}
+				intf.setCanvas(DasherCanvas.this);
 				bReady = true;
-				intf.enqueue(rTh);
 			}
 		});
 	}
@@ -74,10 +71,13 @@ public class DasherCanvas extends SurfaceView implements Callback {
 
 	public void surfaceDestroyed(SurfaceHolder holder) {
 		Log.d("DasherIME",this+" surfaceDestroyed");
-		synchronized(this) {
-			//disable animation until we have another surfaceChanged
-			bReady=false;
-		}
+		intf.enqueue(new Runnable() {
+			public void run() {
+				//disable animation until we have another surfaceChanged
+				bReady=false;
+				intf.setCanvas(null);
+			}
+		});
 	}
 	
 	@Override
@@ -105,105 +105,93 @@ public class DasherCanvas extends SurfaceView implements Callback {
 		coords[1]=y;
 	}
 	
-	public void requestRender() {
-		/*synchronized(this) {
-			if (animating || !bReady) return;
-		}
-		intf.enqueue(rTh);*/
-	}
+	private Canvas canvas;
+	private CCustomColours colours;
 	
-	private class RenderTask implements Runnable,CDasherScreen {
-		private final SurfaceHolder holder;
-		private Canvas canvas;
-		private CCustomColours colours;
-		
-		/** Single Paint we'll use for everything - i.e. by changing
-		 * all its parameters for each primitive.
-		 * TODO: think about having multiple Paint objects caching different
-		 * sets of parameters... 
-		 */
-		private Paint p = new Paint();
-		/** Use a single Rect object for every rectangle too, avoiding allocation...*/
-		private Rect r = new Rect();
-		private RenderTask(SurfaceHolder holder) {
-			this.holder=holder;
-		}
-		
-		public void run() {
-			synchronized(DasherCanvas.this) {
-				if (!bReady) return;
-			}
-			canvas = holder.lockCanvas();
-			if (canvas==null) Log.d("DasherIME",this+" render got null canvas");
+	/** Single Paint we'll use for everything - i.e. by changing
+	 * all its parameters for each primitive.
+	 * TODO: think about having multiple Paint objects caching different
+	 * sets of parameters... 
+	 */
+	private Paint p = new Paint();
+	/** Use a single Rect object for every rectangle too, avoiding allocation...*/
+	private Rect r = new Rect();
+	
+	
+	public void renderFrame() {
+		if (!bReady) return;
+		canvas = holder.lockCanvas();
+		//after a surfaceDestroyed(), renderFrame() can be called once more before we setCanvas(null) to stop it...
+		// in which case, canvas==null and we won't be able to draw anything. But let's at least not NullPtrEx!
+		if (canvas!=null) { 
 			intf.NewFrame(System.currentTimeMillis());
 			holder.unlockCanvasAndPost(canvas);
 			canvas=null;
-			intf.enqueue(this);
-		}
-		
-		public void Blank() {
-			canvas.drawARGB(255, 255, 255, 255);
-		}
-		public void DrawCircle(int iCX, int iCY, int iR, int iColour,
-				boolean bFill) {
-			p.setARGB(255, colours.GetRed(iColour), colours.GetGreen(iColour), colours.GetBlue(iColour));
-			p.setStyle(bFill ? Style.FILL_AND_STROKE : Style.STROKE);
-			canvas.drawCircle(iCX, iCY, iR, p);
-		}
-		public void DrawRectangle(int x1, int y1, int x2, int y2,
-				int iFillColour, int iOutlineColour,
-				int iThickness) {
-			r.left = x1; r.right = x2;
-			r.top = y1; r.bottom = y2;
-			if (iFillColour != -1) {
-				p.setARGB(255, colours.GetRed(iFillColour), colours.GetGreen(iFillColour), colours.GetBlue(iFillColour));
-				p.setStyle(Style.FILL);
-				canvas.drawRect(r, p);
-			}
-			if (iThickness>0) {
-				if (iOutlineColour==-1) iOutlineColour = 3; //TODO hardcoded default
-				p.setARGB(255, colours.GetRed(iOutlineColour), colours.GetGreen(iOutlineColour), colours.GetBlue(iOutlineColour));
-				p.setStyle(Style.STROKE);
-				p.setStrokeWidth(iThickness); 
-				canvas.drawRect(r,p);
-			}
-		}
-		public void DrawString(String string, int x1, int y1, long Size) {
-			p.setTextSize(Size);
-			p.setARGB(255, 0, 0, 0);
-			p.setStyle(Style.FILL_AND_STROKE);
-			canvas.drawText(string, x1, y1, p);
-		}
-		
-		public int GetHeight() { 
-			return DasherCanvas.this.getHeight();
-		}
-		public int GetWidth() {
-			return DasherCanvas.this.getWidth();
-		}
-		public void Polygon(Point[] Points, int fillColour, int iOutlineColour,
-				int iWidth) {
-			// TODO Auto-generated method stub
-			
-		}
-		public void Polyline(Point[] Points, int iWidth, int iColour) {
-			p.setStrokeWidth(iWidth);
-			p.setARGB(255, colours.GetRed(iColour), colours.GetGreen(iColour), colours.GetBlue(iColour));
-			for (int i = 0; i < Points.length-1; i++) {
-				canvas.drawLine(Points[i].x, Points[i].y, Points[i+1].x, Points[i+1].y, p);
-			}
-		}
-		public void SetColourScheme(CCustomColours colours) {
-			this.colours = colours;
-		}
-		public Point TextSize(String string, int iSize) {
-			p.setTextSize(iSize);
-			p.getTextBounds(string, 0, string.length(), r);
-			assert (r.top == 0);
-			assert (r.left == 0);
-			return new Point(r.right, r.bottom);// - r.left, r.bottom - r.top);
 		}
 		
 	}
-
+	
+	public void Blank() {
+		canvas.drawARGB(255, 255, 255, 255);
+	}
+	public void DrawCircle(int iCX, int iCY, int iR, int iColour,
+			boolean bFill) {
+		p.setARGB(255, colours.GetRed(iColour), colours.GetGreen(iColour), colours.GetBlue(iColour));
+		p.setStyle(bFill ? Style.FILL_AND_STROKE : Style.STROKE);
+		canvas.drawCircle(iCX, iCY, iR, p);
+	}
+	public void DrawRectangle(int x1, int y1, int x2, int y2,
+			int iFillColour, int iOutlineColour,
+			int iThickness) {
+		r.left = x1; r.right = x2;
+		r.top = y1; r.bottom = y2;
+		if (iFillColour != -1) {
+			p.setARGB(255, colours.GetRed(iFillColour), colours.GetGreen(iFillColour), colours.GetBlue(iFillColour));
+			p.setStyle(Style.FILL);
+			canvas.drawRect(r, p);
+		}
+		if (iThickness>0) {
+			if (iOutlineColour==-1) iOutlineColour = 3; //TODO hardcoded default
+			p.setARGB(255, colours.GetRed(iOutlineColour), colours.GetGreen(iOutlineColour), colours.GetBlue(iOutlineColour));
+			p.setStyle(Style.STROKE);
+			p.setStrokeWidth(iThickness); 
+			canvas.drawRect(r,p);
+		}
+	}
+	public void DrawString(String string, int x1, int y1, long Size) {
+		p.setTextSize(Size);
+		p.setARGB(255, 0, 0, 0);
+		p.setStyle(Style.FILL_AND_STROKE);
+		canvas.drawText(string, x1, y1, p);
+	}
+	
+	public int GetHeight() { 
+		return DasherCanvas.this.getHeight();
+	}
+	public int GetWidth() {
+		return DasherCanvas.this.getWidth();
+	}
+	public void Polygon(Point[] Points, int fillColour, int iOutlineColour,
+			int iWidth) {
+		// TODO Auto-generated method stub
+		
+	}
+	public void Polyline(Point[] Points, int iWidth, int iColour) {
+		p.setStrokeWidth(iWidth);
+		p.setARGB(255, colours.GetRed(iColour), colours.GetGreen(iColour), colours.GetBlue(iColour));
+		for (int i = 0; i < Points.length-1; i++) {
+			canvas.drawLine(Points[i].x, Points[i].y, Points[i+1].x, Points[i+1].y, p);
+		}
+	}
+	public void SetColourScheme(CCustomColours colours) {
+		this.colours = colours;
+	}
+	public Point TextSize(String string, int iSize) {
+		p.setTextSize(iSize);
+		p.getTextBounds(string, 0, string.length(), r);
+		assert (r.top == 0);
+		assert (r.left == 0);
+		return new Point(r.right, r.bottom);// - r.left, r.bottom - r.top);
+	}
+	
 }

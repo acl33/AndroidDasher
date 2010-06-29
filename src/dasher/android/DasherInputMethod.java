@@ -27,7 +27,6 @@ public class DasherInputMethod extends InputMethodService {
 		IMDasherInterface.INSTANCE.Realize(this); //if already initialized by this IME instance, does nothing!
 		surf = new DasherCanvas(DasherInputMethod.this, IMDasherInterface.INSTANCE, 480, 480);
 		Log.d("DasherIME", this+" onCreateInputView creating surface "+surf);
-		IMDasherInterface.INSTANCE.setCanvas(surf);
 		return surf;
 	}
 	

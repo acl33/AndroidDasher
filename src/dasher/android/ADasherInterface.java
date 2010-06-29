@@ -28,6 +28,7 @@ import dasher.CColourIO;
 import dasher.CDasherInput;
 import dasher.CDasherInterfaceBase;
 import dasher.CDefaultFilter;
+import dasher.CEvent;
 import dasher.CEventHandler;
 import dasher.CLockEvent;
 import dasher.CParameterNotificationEvent;
@@ -42,6 +43,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	private final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<Runnable>();
 	private Thread taskThread;
 	private DasherCanvas surf;
+	private boolean m_bRedrawRequested;
 	
 	public void enqueue(Runnable r) {tasks.add(r);}
 	
@@ -55,15 +57,23 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		if (taskThread!=null) return;
 		taskThread = new Thread() {
 			public void run() {
-				try {
-					while (true) tasks.take().run();
-				} catch (InterruptedException e) {
-					//we are interrupted when the DasherInterface is shutting down.
-					//When this happens, finish all tasks currently on the queue, and terminate.
-					Queue<Runnable> remaining = new LinkedList<Runnable>();
-					tasks.drainTo(remaining);
-					while (!remaining.isEmpty())
-						remaining.remove().run();
+				Queue<Runnable> frameTasks = new LinkedList<Runnable>();
+				while (true) {
+					if (surf!=null && (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) || m_bRedrawRequested)) {
+						m_bRedrawRequested = false;
+						surf.renderFrame();
+						tasks.drainTo(frameTasks);
+						while (!frameTasks.isEmpty())
+							frameTasks.remove().run();
+					} else {
+						try {
+							tasks.take().run();
+						} catch (InterruptedException e) {
+							//we are interrupted if ever BP_DASHER_PAUSED is cleared
+							// (to tell us to start rendering!)
+							// - so loop round
+						}
+					}
 				}
 			}
 		};
@@ -73,17 +83,33 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	}
 	
 	@Override
-	public void Redraw(boolean bChanged) {
-		if (surf!=null) surf.requestRender();
+	public void Redraw(final boolean bChanged) {
+		if (Thread.currentThread()==taskThread)
+			m_bRedrawRequested=true;
+		else
+			enqueue(new Runnable() {
+				public void run() {
+					Redraw(bChanged);
+				}
+			});
 	}
 	
 	@Override
+	public void InsertEvent(CEvent evt) {
+		super.InsertEvent(evt);
+		if (evt instanceof CParameterNotificationEvent
+				&& ((CParameterNotificationEvent)evt).m_iParameter == Ebp_parameters.BP_DASHER_PAUSED
+				&& !GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
+			taskThread.interrupt();
+	}
+	
+	/*@Override
 	public void StartShutdown() {
 		if (taskThread == null) throw new IllegalStateException("Already started shutdown, or never Realize()d!");
 		taskThread.interrupt();
 		taskThread = null;
 		super.StartShutdown();
-	}
+	}*/
 	
 	@Override
 	public void CreateModules() {
@@ -189,6 +215,8 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	
 	public void setCanvas(DasherCanvas surf) {
 		this.surf=surf;
+		if (m_DasherScreen==null && surf!=null)
+			ChangeScreen(surf);
 	}
 
 	private void ScanXMLFiles(XMLFileParser parser, String prefix) {
