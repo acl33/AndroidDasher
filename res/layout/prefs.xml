@@ -4,6 +4,12 @@
     <CheckBoxPreference
 	android:key="AutoSpeedControl"
 	android:title="Auto speed control"/>
+    <CheckBoxPreference
+        android:key="RemapXTreme"
+        android:title="Remap top/bottom edges"/>
+    <CheckBoxPreference
+        android:key="FullSpeedOnly"
+        android:title="Full speed ahead/back at all times"/>
     <ListPreference
 	android:key="InputFilter"
 	android:title="Control style" />

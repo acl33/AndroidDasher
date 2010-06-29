@@ -153,7 +153,7 @@ public class CDefaultFilter extends CInputFilter {
 		boolean bDidSomething;
 		if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
 			m_DasherView.getInputDasherCoords(lastInputCoords);
-			
+			ApplyTransform(m_DasherView, lastInputCoords);
 			m_DasherModel.oneStepTowards(lastInputCoords[0],lastInputCoords[1], Time, null);
 		
 			m_AutoSpeedControl.SpeedControl(lastInputCoords[0], lastInputCoords[1], m_DasherModel.Framerate(), m_DasherView);
@@ -166,6 +166,53 @@ public class CDefaultFilter extends CInputFilter {
 			m_StartHandler.Timer(Time, m_DasherView, m_DasherModel);
 		}
 		return bDidSomething;
+	}
+	
+	private static final double REPULSION_PARAM=0.5;
+
+	/** Modify the input coordinates according to any desired remapping scheme.
+	 * Subclasses may override to change the remapping; the default implementation:
+	 * <ol>
+	 * <li> _iff_ BP_SATURATE_X is true, sets x to either 0 or the view's
+	 * maximum visible x coordinate ({@link CDasherView#VisibleRegion()},
+	 * according to which side of the crosshair it is on;
+	 * <li> applies the eyetracker-remapping from C++ Dasher
+	 * _iff_ BP_COMPRESS_XTREME is set. (This compresses the y coordinate at
+	 * the extremes of the viewport, and also reduces the maximum x at extreme y
+	 * values, so a movement towards a corner instead becomes up/down translation.)
+	 * (Subclasses may override to change remapping.)
+	 * </ol>
+	 * @param inputCoords dasher co-ordinates of input
+	 */
+	protected void ApplyTransform(CDasherView pView, long[] coords) {
+		if (GetBoolParameter(Ebp_parameters.BP_SATURATE_X)) {
+			if (coords[0] < GetLongParameter(Elp_parameters.LP_OX))
+				coords[0] = 0;
+			else coords[0] = pView.VisibleRegion().maxX;
+		}
+		if (GetBoolParameter(Ebp_parameters.BP_REMAP_XTREME)) {
+			// Y co-ordinate...
+			long dasherOY=GetLongParameter(Elp_parameters.LP_OY); 
+			double double_y = ((coords[1]-dasherOY)/(double)(dasherOY) ); // Fraction above the crosshair
+		  
+			coords[1] = (long)(dasherOY * (1.0 + double_y + (double_y*double_y*double_y * REPULSION_PARAM )));
+		  
+			// X co-ordinate...  
+		 	coords[0] = Math.max(coords[0],(long)(GetLongParameter(Elp_parameters.LP_OX) * xmax(double_y)));
+		}
+	}
+
+	private static final int A=1, B=1, C=100;
+	
+	private double xmax(double y) {
+		// DJCM -- define a function xmax(y) thus:
+		// xmax(y) = a*[exp(b*y*y)-1] 
+		// then:  if(x<xmax(y) [if the mouse is to the RIGHT of the line xmax(y)]
+		// set x=xmax(y).  But set xmax=c if(xmax>c).
+		// I would set a=1, b=1, c=16, to start with. 
+		  
+		return Math.min(C,A * (Math.exp(B * y * y) - 1));
+		//cout << "xmax = " << xmax << endl;
 	}
 	
 	/**

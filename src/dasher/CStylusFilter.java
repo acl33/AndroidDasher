@@ -36,6 +36,7 @@ public class CStylusFilter extends CDefaultFilter {
             if (m_View!=null &&
                 (iTime - m_iKeyDownTime < GetLongParameter(Elp_parameters.LP_TAP_TIME))) {
             	m_View.getInputDasherCoords(lastInputCoords);
+    			ApplyClickTransform(m_View, lastInputCoords);
     			model.ScheduleZoom(lastInputCoords[0],lastInputCoords[1]);
     			//leave unpaused
             } else {
@@ -63,5 +64,15 @@ public class CStylusFilter extends CDefaultFilter {
         }
         //no zoom was scheduled.
         return super.Timer(iTime, view, model);
+    }
+    /**
+     * Called to apply any coordinate transform required for
+     * <em>click</em> coords (i.e. for a scheduled zoom, rather
+     * than continuous movement towards.)
+     * <p>The default is to do nothing, regardless of {@link #ApplyTransform(CDasherView, long[])};
+     * subclasses may override to provide different behaviour.
+     * @param dasherCoords x&amp;y dasher coordinates which will be target of zoom.
+     */
+    protected void ApplyClickTransform(CDasherView pView, long[] dasherCoords) {
     }
 }

@@ -813,7 +813,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * at present there is only one, it is ignored for now. 
 	 *
 	 */
-	public void ChangeView() {
+	private void ChangeView() {
 		// TODO: Actually respond to LP_VIEW_ID parameter (although there is only one view at the moment)
 		
 		if(m_DasherScreen != null && m_DasherModel != null) 

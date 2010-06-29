@@ -30,7 +30,8 @@ package dasher;
  * CParamTables for a list and definitions.
  */
 public enum Ebp_parameters implements EParameters {
-	
+			  BP_REMAP_XTREME("RemapXtreme", PERS, false, "Remal y & limit x at top/bottom extremes"),
+			  BP_SATURATE_X("FullSpeedOnly", PERS, false, "Full speed ahead/backwards only"),
 			  BP_DRAW_MOUSE_LINE("DrawMouseLine", PERS, true, "Draw Mouse Line"),
 			  BP_DRAW_MOUSE("DrawMouse", PERS, true, "Draw Mouse Position"),
 			  BP_SHOW_SLIDER("ShowSpeedSlider", PERS, true, "ShowSpeedSlider"),
