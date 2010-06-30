@@ -1,15 +1,64 @@
 <PreferenceScreen
 	xmlns:android="http://schemas.android.com/apk/res/android"
-        android:key="root_prefs">
+  android:key="root_prefs">
+  
     <CheckBoxPreference
-	android:key="AutoSpeedControl"
-	android:title="Auto speed control"/>
-    
+      android:key="AutoSpeedControl"
+      android:title="Auto speed control"/>
     
     <ListPreference
-        android:key="AlphabetID"
-        android:title="Alphabet Name" />
+      android:key="AlphabetID"
+      android:title="Alphabet Name"/>
 
-<CheckBoxPreference android:key="AndroidTouch" android:title="Touch Input"></CheckBoxPreference>
-<CheckBoxPreference android:key="AndroidTilt" android:title="Tilt Input"></CheckBoxPreference>
+    <CheckBoxPreference
+      android:key="RemapXtreme"
+      android:title="Remap X coords at extreme Y"/>
+      
+    <PreferenceScreen
+      android:key="AndroidTilt"
+      android:title="Tilt Settings"
+      android:dependency="AndroidTilt">
+        <CheckBoxPreference
+          android:key="AndroidTilt2D"
+          android:title="2D (X &amp; Y)"
+          android:summaryOn="Forwards/backwards and up/down using 2 tilt axes" 
+          android:summaryOff="Up/down tilting steers in a complete circle"/>
+            <CheckBoxPreference
+              android:key="FullSpeedOnly"
+              android:title="Full-speed ahead/back"
+              android:dependency="AndroidTilt2D"
+              android:summary="Always go ahead/back as if phone tilted to one extreme"/>
+        <CheckBoxPreference
+          android:key="AndroidTiltHoldToGo"
+          android:title="Hold finger to go"/>
+            <CheckBoxPreference
+              android:key="AndroidTiltUsesTouchX"
+              android:title="X Co-ordinate from touch"
+              android:dependency="AndroidTiltHoldToGo"/>
+                <CheckBoxPreference
+                  android:key="DoubleXCoords"
+                  android:title="Touch on left half only"
+                  android:dependency="AndroidTiltUsesTouchX"
+                  android:summary="Treats any touch as being twice as far to the right" />
+    </PreferenceScreen>
+
+    <PreferenceScreen
+      android:key="AndroidTouch"
+      android:title="Touch Settings"
+      android:dependency="AndroidTouch">
+        <CheckBoxPreference
+          android:key="DoubleXCoords"
+          android:title="Touch on left half only"
+          android:disableDependentsState="true"
+          android:summary="Treats any touch as being twice as far to the right"/>
+        <CheckBoxPreference
+          android:key="FullSpeedOnly"
+          android:title="Full-speed ahead/back"
+          android:summary="Treat any touch as being at closest right/left edge of screen"
+          android:dependency="DoubleXCoords"/>
+        <CheckBoxPreference
+          android:key="AndroidTouchUsesTiltX"
+          android:title="X Co-ordinate from tilting"
+          android:dependency="DoubleXCoords"/>
+    </PreferenceScreen>
 </PreferenceScreen>
