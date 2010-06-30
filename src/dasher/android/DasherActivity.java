@@ -3,19 +3,16 @@ package dasher.android;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import dasher.Esp_parameters;
-import android.app.Activity;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.RectF;
-import android.graphics.Paint.Style;
 import android.os.Bundle;
+import android.preference.CheckBoxPreference;
 import android.preference.ListPreference;
+import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.util.Log;
-import android.view.View;
+import dasher.Esp_parameters;
 
 public class DasherActivity extends PreferenceActivity {
+  public static final String EYETRACKER_NAME = "Tap-to-start w/ remapping";
 	private ADasherInterface intf;
 	private DasherCanvas surf;
     /** Called when the activity is first created. */
@@ -27,10 +24,26 @@ public class DasherActivity extends PreferenceActivity {
         
         IMDasherInterface.INSTANCE.Realize(this);
         
-        addPermittedValues(Esp_parameters.SP_INPUT_DEVICE);
-        addPermittedValues(Esp_parameters.SP_INPUT_FILTER);
+        final CheckBoxPreference tilt = (CheckBoxPreference)getPreferenceScreen().findPreference("AndroidTilt");
+        final CheckBoxPreference touch =(CheckBoxPreference)getPreferenceScreen().findPreference("AndroidTouch");
+        Preference.OnPreferenceChangeListener chg = new Preference.OnPreferenceChangeListener() {
+        	public boolean onPreferenceChange(Preference p, Object value) {
+        		if (!((Boolean)value).booleanValue()) return false; //disallow deactivation 
+        		if (p==tilt) {
+        			touch.setChecked(false);
+        			IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_DEVICE,"Tilt Input");
+        			IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_FILTER,EYETRACKER_NAME);
+        		} else {
+        			tilt.setChecked(false);
+        			IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_DEVICE,"Touch Input");
+        			IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_FILTER,"Stylus Control");
+        		}
+        		return true; //...and set.
+        	}
+        };
+        tilt.setOnPreferenceChangeListener(chg);
+        touch.setOnPreferenceChangeListener(chg);
         addPermittedValues(Esp_parameters.SP_ALPHABET_ID);
-        
     }
     
     private void addPermittedValues(Esp_parameters param) {
