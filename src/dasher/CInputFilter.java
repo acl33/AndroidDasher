@@ -56,7 +56,7 @@ package dasher;
  * Input filters may also interact with the main Dasher interface,
  * typically to start and stop Dasher in response to key presses.
  */
-public class CInputFilter extends CDasherModule {
+public abstract class CInputFilter extends CDasherModule {
 	
 	/**
 	 * Interface which this InputFilter may control
@@ -82,11 +82,6 @@ public class CInputFilter extends CDasherModule {
     }
 	
 	/**
-	 * Ignores all events; to be overridden by subclasses if desired.
-	 */
-	public void HandleEvent(CEvent Event) {};
-	
-	/**
 	 * Should draw any decorations applicable to this filter.
 	 * <p>
 	 * For example, DefaultFilter might draw a line indicating
@@ -109,10 +104,12 @@ public class CInputFilter extends CDasherModule {
 	 * 
 	 * @param Time System time at which the key event took place, as a unix timestamp.
 	 * @param iId ID of the key pressed (see DasherInterfaceBase.KeyDown for a list)
-	 * @param Model DasherModel which may be modified in response to this keypress
+	 * @param pView View in which co-ordinates may be transformed
+	 * @param pInput Current input device from which coordinates may be obtained
+	 * @param pModel Model which we may manipulate in response to this event
 	 */
-	public void KeyDown(long Time, int iId, CDasherModel Model) {};
-	
+	public void KeyDown(long Time, int iId, CDasherView pView, CDasherInput pInput, CDasherModel Model) {};
+
 	/**
 	 * Notifies the filter of a key-up event at a given time,
 	 * and allows it to make changes to the Model but not the View
@@ -122,9 +119,11 @@ public class CInputFilter extends CDasherModule {
 	 * 
 	 * @param Time System time at which the key event took place, as a unix timestamp.
 	 * @param iId ID of the key pressed (see DasherInterfaceBase.KeyDown for a list)
-	 * @param Model DasherModel which may be modified in response to this keypress
-	 */
-	public void KeyUp(long Time, int iId, CDasherModel Model) {};
+	 * @param pView View in which co-ordinates may be transformed
+	 * @param pInput Current input device from which coordinates may be obtained
+	 * @param pModel Model which we may manipulate in response to this event
+	 * 	 */
+	public void KeyUp(long Time, int iId, CDasherView pView, CDasherInput pInput, CDasherModel Model) {};
 	
 	/**
 	 * Requests that the input filter should modify the indicated Model.
@@ -137,11 +136,12 @@ public class CInputFilter extends CDasherModule {
 	 * See DefaultFilter for a typical example of a Timer method.
 	 * 
 	 * @param Time System time as a unix timestamp
-	 * @param m_DasherView View against which co-ordinates should be resolved
-	 * @param m_DasherModel Model which we may manipulate in response to this event
+	 * @param pView View in which co-ordinates may be transformed
+	 * @param pInput Current input device from which coordinates may be obtained
+	 * @param pModel Model which we may manipulate in response to this event
 	 * @return True if the model was changed, false otherwise.
 	 */
-	public boolean Timer(long Time, CDasherView m_DasherView, CDasherModel m_DasherModel) { return false; };
+	public abstract boolean Timer(long Time, CDasherView pView, CDasherInput pInput, CDasherModel pModel);
 	
 	/**
 	 * Activates this filter; now is the time to start helper threads,

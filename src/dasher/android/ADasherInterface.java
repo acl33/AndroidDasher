@@ -23,20 +23,7 @@ import android.hardware.SensorManager;
 import android.os.PowerManager;
 import android.util.Log;
 
-import dasher.CAlphIO;
-import dasher.CColourIO;
-import dasher.CDasherInput;
-import dasher.CDasherInterfaceBase;
-import dasher.CDefaultFilter;
-import dasher.CEvent;
-import dasher.CEventHandler;
-import dasher.CLockEvent;
-import dasher.CParameterNotificationEvent;
-import dasher.CSettingsStore;
-import dasher.CStylusFilter;
-import dasher.Ebp_parameters;
-import dasher.Elp_parameters;
-import dasher.XMLFileParser;
+import dasher.*;
 
 public abstract class ADasherInterface extends CDasherInterfaceBase {
 	protected Context androidCtx;
@@ -170,13 +157,9 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 				}
 
 				@Override
-				public int GetCoordinateCount() {return 2;}
-
-				@Override
-				public int GetCoordinates(long[] Coordinates) {
+				public void GetScreenCoords(CDasherView pView,long[] Coordinates) {
 					Coordinates[0] = x;
 					Coordinates[1] = y;
-					return 0;
 				}
 			};
 			RegisterModule(new TiltInput());
@@ -184,14 +167,8 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		RegisterModule(setDefaultInput(new CDasherInput(this, getSettingsStore(), 0, "Touch Input") {
 			
 			@Override
-			public int GetCoordinates(long[] Coordinates) {
+			public void GetScreenCoords(CDasherView pView,long[] Coordinates) {
 				surf.GetCoordinates(Coordinates);
-				return 0; //screen coords
-			}
-				
-			@Override
-			public int GetCoordinateCount() {
-				return 2;
 			}
 		
 		}));

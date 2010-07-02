@@ -594,9 +594,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		if(m_Input != null) {
 			m_Input.Activate();
 		}
-		
-		if(m_DasherView != null)
-			m_DasherView.SetInput(m_Input);
 	}
 	
 	/**
@@ -630,7 +627,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 					int iNumDeleted = 0;
 					
 					if(m_InputFilter != null) {
-						bChanged = m_InputFilter.Timer(iTime, m_DasherView, m_DasherModel); // FIXME - need logging stuff here
+						bChanged = m_InputFilter.Timer(iTime, m_DasherView, m_Input, m_DasherModel); // FIXME - need logging stuff here
 					}
 					
 					if (iNumDeleted > 0)
@@ -641,7 +638,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 				}
 				else {
 					if(m_InputFilter != null) {
-						bChanged = m_InputFilter.Timer(iTime, m_DasherView, m_DasherModel);
+						bChanged = m_InputFilter.Timer(iTime, m_DasherView, m_Input, m_DasherModel);
 					}
 				}
 				
@@ -816,14 +813,8 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	private void ChangeView() {
 		// TODO: Actually respond to LP_VIEW_ID parameter (although there is only one view at the moment)
 		
-		if(m_DasherScreen != null && m_DasherModel != null) 
-		{
-			m_DasherView = null;
+		if(m_DasherScreen != null && m_DasherModel != null) {
 			m_DasherView = new CDasherViewSquare(this, m_SettingsStore, m_DasherScreen);
-			
-			
-			if (m_Input != null)
-				m_DasherView.SetInput(m_Input);
 		}
 	}
 	
@@ -1062,7 +1053,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	public void KeyDown(long iTime, int iId) {
 		if(m_InputFilter != null && !GetBoolParameter(Ebp_parameters.BP_TRAINING)) {
-			m_InputFilter.KeyDown(iTime, iId, m_DasherModel);
+			m_InputFilter.KeyDown(iTime, iId, m_DasherView, m_Input, m_DasherModel);
 		}
 	}
 	
@@ -1091,7 +1082,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	public void KeyUp(long iTime, int iId) {
 		if(m_InputFilter != null && !GetBoolParameter(Ebp_parameters.BP_TRAINING)) {
-			m_InputFilter.KeyUp(iTime, iId, m_DasherModel);
+			m_InputFilter.KeyUp(iTime, iId, m_DasherView, m_Input, m_DasherModel);
 		}
 	}
 	

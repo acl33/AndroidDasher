@@ -11,8 +11,7 @@ package dasher;
  */
 public class CStylusFilter extends CDefaultFilter {
     private long m_iKeyDownTime;
-    private CDasherView m_View;
-
+    
     public CStylusFilter(CDasherInterfaceBase iface, CSettingsStore store) {
         this(iface,store,15,"Stylus Control");
     }
@@ -22,7 +21,7 @@ public class CStylusFilter extends CDefaultFilter {
     }
     
     @Override
-    public void KeyDown(long iTime, int keyId, CDasherModel model) {
+    public void KeyDown(long iTime, int keyId, CDasherView pView, CDasherInput pInput, CDasherModel model) {
         if (keyId == 100) {
             model.clearScheduledSteps();
             m_Interface.Unpause(iTime);
@@ -31,12 +30,11 @@ public class CStylusFilter extends CDefaultFilter {
     }
 
     @Override
-    public void KeyUp(long iTime, int keyId, CDasherModel model) {
+    public void KeyUp(long iTime, int keyId, CDasherView pView, CDasherInput pInput, CDasherModel model) {
         if(keyId == 100) {
-            if (m_View!=null &&
-                (iTime - m_iKeyDownTime < GetLongParameter(Elp_parameters.LP_TAP_TIME))) {
-            	m_View.getInputDasherCoords(lastInputCoords);
-    			ApplyClickTransform(m_View, lastInputCoords);
+            if ((iTime - m_iKeyDownTime < GetLongParameter(Elp_parameters.LP_TAP_TIME))) {
+            	pInput.GetDasherCoords(pView, lastInputCoords);
+    			ApplyClickTransform(pView, lastInputCoords);
     			model.ScheduleZoom(lastInputCoords[0],lastInputCoords[1]);
     			//leave unpaused
             } else {
@@ -46,8 +44,7 @@ public class CStylusFilter extends CDefaultFilter {
     }
     
     @Override
-    public boolean Timer(long iTime, CDasherView view, CDasherModel model) {
-        m_View = view;
+    public boolean Timer(long iTime, CDasherView view, CDasherInput pInput, CDasherModel model) {
         if (model.nextScheduledStep(iTime, null)) {
             //continued scheduled zoom - must have been in middle
             // (and thus not cleared by subsequent click)
@@ -63,7 +60,7 @@ public class CStylusFilter extends CDefaultFilter {
             //which we're not using anyway.
         }
         //no zoom was scheduled.
-        return super.Timer(iTime, view, model);
+        return super.Timer(iTime, view, pInput, model);
     }
     /**
      * Called to apply any coordinate transform required for

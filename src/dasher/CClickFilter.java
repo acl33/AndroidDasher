@@ -44,11 +44,6 @@ package dasher;
 public class CClickFilter extends CInputFilter {
 
 	/**
-	 * Current DasherView, to be used in determining mouse co-ordinates.
-	 */
-	private CDasherView DasherView;
-	
-	/**
 	 * Sole constructor. Calls the CInputFilter constructor with a type of 7,
 	 * an ID of 1, and the name <i>Click Mode</i>.
 	 * 
@@ -58,17 +53,6 @@ public class CClickFilter extends CInputFilter {
 	 */
 	public CClickFilter(CDasherInterfaceBase iface, CSettingsStore SettingsStore) {
 	  super(iface, SettingsStore, 7, "Click Mode");
-	  DasherView = null;
-	}
-
-	/**
-	 * This filter does not decorate the view.
-	 * 
-	 * @param View Unused, may be null.
-	 * @return False, indicating no work done.
-	 */
-	public boolean DecorateView(CDasherView View) {
-	  return false;
 	}
 
 	/**
@@ -79,13 +63,12 @@ public class CClickFilter extends CInputFilter {
 	 * clicked a new destination), nothing is done.
 	 * 
 	 * @param Time Current system time as a Unix timestamp
-	 * @param m_DasherView View to be used for co-ordinate transforms
-	 * @param m_DasherModel Model which will be instructed to advance a frame
+	 * @param pView View to be used for co-ordinate transforms
+	 * @param pInput current input device from which to obtain coordinates
+	 * @param pModel Model which will be instructed to advance a frame
 	 * @return True if the model has changed, false otherwise. 
 	 */
-	public boolean Timer(long Time, CDasherView m_DasherView, CDasherModel m_DasherModel) {
-	  // FIXME - REALLY, REALLY horrible - bleh
-	  DasherView = m_DasherView;
+	@Override public boolean Timer(long Time, CDasherView pView, CDasherInput pInput, CDasherModel m_DasherModel) {
 	  if (m_DasherModel.nextScheduledStep(Time, null)) {
 		  //no steps scheduled. Reached a pause...
 		  assert (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED));
@@ -95,7 +78,7 @@ public class CClickFilter extends CInputFilter {
 	  assert (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED));
 	  if (m_DasherModel.ScheduledSteps() == 0) {
 		  //that was last scheduled step. Pause...
-		  m_DasherModel.CheckForNewRoot(DasherView);
+		  m_DasherModel.CheckForNewRoot(pView);
 		  SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
 	  }
 	  return true;
@@ -111,26 +94,15 @@ public class CClickFilter extends CInputFilter {
 	 * @param iId Key/button identifier.
 	 * @param Model DasherModel which should be zoomed in response to clicks.
 	 */
-	public void KeyDown(long iTime, int iId, CDasherModel Model) {
+	@Override public void KeyDown(long iTime, int iId, CDasherView pView, CDasherInput pInput, CDasherModel Model) {
 
 	  switch(iId) {
 	  case 100: // Mouse clicks
-	    if(DasherView != null) {
-	      SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, false);
-	    	
-	      CDasherView.DPoint retval = DasherView.getInputDasherCoords();
-	      Model.ScheduleZoom(retval.x, retval.y);
-	    }
+	    pInput.GetDasherCoords(pView,inputCoords);
+	    Model.ScheduleZoom(inputCoords[0],inputCoords[1]);
 	    break;
 	  }
 	}
+	private final long[] inputCoords = new long[2];  
 
-	/**
-	 * This class ignores all events.
-	 * 
-	 * @param Event Event to be processed.
-	 */
-	public void HandleEvent(CEvent Event) {
-	}
-	
 }

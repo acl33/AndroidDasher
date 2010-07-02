@@ -76,10 +76,11 @@ public abstract class CStartHandler extends CDasherComponent {
 	 * state for now and drawn at the next call to DecorateView.
 	 * 
 	 * @param iTime Current system time as a unix timestamp
-	 * @param m_DasherView View which we may use for co-ordinate transforms and to get input co-ordinates
-	 * @param m_DasherModel Model which may be modified if we wish
+	 * @param pView View which we may use for co-ordinate transforms
+	 * @param pInput Current input device from which to get input co-ordinates
+	 * @param pModel Model which may be modified if we wish
 	 */
-	public abstract void Timer(long iTime, CDasherView m_DasherView, CDasherModel m_DasherModel);
+	public abstract void Timer(long iTime, CDasherView pView, CDasherInput pInput, CDasherModel pModel);
 
 	/**
 	 * Event handler

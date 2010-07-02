@@ -56,34 +56,32 @@ abstract public class CDasherInput extends CDasherModule {
 	}
 	
 	/**
-	 * Sets the maximum co-ordinates which the device should
-	 * return. These are given as Dasher-world co-ordinates and
-	 * should be translated if necessary.
-	 * 
-	 * @param iDasherMax Array of desired number of maximum co-ordinates.
+	 * Gets the current position of the input in Dasher coordinates.
+	 * Default implementation is to call {@link #GetScreenCoords(CDasherView, long[])}, and then
+	 * transform the coordinates using {@link CDasherView#Screen2Dasher(long[])}; subclasses <em>must</em>
+	 * override at least one of this and {@link #GetScreenCoords(CDasherView, long[])}.
+	 * @param pView View which may be used for coordinate transforms
+	 * @param coords 2-element array into which to write coordinates
+	 * (for 1-dimensional inputs, suggest fixing x=0). 
 	 */
-	public void SetMaxCoordinates(long[] iDasherMax) {}
+	public void GetDasherCoords(CDasherView pView, long[] coords) {
+		GetScreenCoords(pView, coords);
+		pView.Screen2Dasher(coords);
+	}
 	
 	/**
-	 * Called to request that the device report the current co-ordinates.
-	 * 
-	 * @param Coordinates Array of desired number of elements to fill with current co-ordinates
-	 * @return 0 if those reported are screen co-ordinates, or 1 if they are Dasher world co-ordinates.
+	 * Gets the current position of the input in screen coordinates.
+	 * Default implementation is to call {@link #GetDasherCoords(CDasherView, long[])}, and then
+	 * transform the coordinates using {@link CDasherView#Dasher2Screen(long[])}; subclasses <em>must</em>
+	 * override at least one of this and {@link #GetDasherCoords(CDasherView, long[])}.
+	 * @param pView View which may be used for coordinate transforms
+	 * @param coords 2-element array into which to write coordinates
+	 * (for 1-dimensional inputs, suggest fixing x=0). 
 	 */
-	public abstract int GetCoordinates(long[] Coordinates);
-	
-	/// Get the number of co-ordinates that this device supplies
-	///
-
-	/**
-	 * Gets the number of co-ordinates this device returns.
-	 * <p>
-	 * At present, only 1- and 2-axis devices are accepted, but
-	 * this may be easily upgraded in the future.
-	 * 
-	 * @return Number of co-ordinates supplied by this device.
-	 */
-	public abstract int GetCoordinateCount();
+	public void GetScreenCoords(CDasherView pView, long[] coords) {
+		GetDasherCoords(pView, coords);
+		pView.Dasher2Screen(coords);
+	}
 	
 	/**
 	 * Activates the input device. If threads must be started

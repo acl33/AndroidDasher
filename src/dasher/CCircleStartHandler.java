@@ -113,17 +113,15 @@ public class CCircleStartHandler extends CStartHandler{
 	 * @param m_DasherView View against which co-ordinate transforms should be performed.
 	 * @param m_DasherModel Model to which commands should be passed.
 	 */
-	public void Timer(long iTime, CDasherView m_DasherView, CDasherModel m_DasherModel) {
+	@Override public void Timer(long iTime, CDasherView m_DasherView, CDasherInput pInput, CDasherModel m_DasherModel) {
 
-		CDasherView.DPoint dashXY = m_DasherView.getInputDasherCoords();
-		
 		CDasherView.Point C = m_DasherView.Dasher2Screen(2048, 2048);
 		
-		CDasherView.Point Cursor = m_DasherView.Dasher2Screen(dashXY.x, dashXY.y);
+		pInput.GetScreenCoords(m_DasherView,coords);
 		
 		double dR;
 		
-		dR = Math.sqrt(Math.pow((double)(C.x - Cursor.x), 2.0) + Math.pow((double)(C.y - Cursor.y), 2.0));
+		dR = Math.sqrt(Math.pow((double)(C.x - coords[0]), 2.0) + Math.pow((double)(C.y - coords[1]), 2.0));
 		
 		int iNewStatus = 0;
 		
@@ -205,6 +203,8 @@ public class CCircleStartHandler extends CStartHandler{
 		m_iStatus = iNewStatus;
 		
 	}
+	
+	private final long[] coords = new long[2];
 	
 	/**
 	 * Responds to events:

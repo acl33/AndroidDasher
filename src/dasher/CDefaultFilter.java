@@ -149,21 +149,21 @@ public class CDefaultFilter extends CInputFilter {
 	 * @param m_DasherModel Model to alter using these co-ordinates
 	 * @return True if the model has been changed, false if not.
 	 */
-	public boolean Timer(long Time, CDasherView m_DasherView, CDasherModel m_DasherModel) {
+	@Override public boolean Timer(long Time, CDasherView pView, CDasherInput pInput, CDasherModel m_DasherModel) {
 		boolean bDidSomething;
 		if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
-			m_DasherView.getInputDasherCoords(lastInputCoords);
-			ApplyTransform(m_DasherView, lastInputCoords);
+			pInput.GetDasherCoords(pView,lastInputCoords);
+			ApplyTransform(pView, lastInputCoords);
 			m_DasherModel.oneStepTowards(lastInputCoords[0],lastInputCoords[1], Time, null);
 		
-			m_AutoSpeedControl.SpeedControl(lastInputCoords[0], lastInputCoords[1], m_DasherModel.Framerate(), m_DasherView);
+			m_AutoSpeedControl.SpeedControl(lastInputCoords[0], lastInputCoords[1], m_DasherModel.Framerate(), pView);
 			
 			bDidSomething = true;
 		} else {
 			bDidSomething = false;
 		}
 		if(m_StartHandler != null) {
-			m_StartHandler.Timer(Time, m_DasherView, m_DasherModel);
+			m_StartHandler.Timer(Time, pView, pInput, m_DasherModel);
 		}
 		return bDidSomething;
 	}
@@ -227,7 +227,7 @@ public class CDefaultFilter extends CInputFilter {
 	 * @param iId Key identifier
 	 * @param Model Ignored by this filter
 	 */
-	public void KeyDown(long iTime, int iId, CDasherModel Model) {
+	@Override public void KeyDown(long iTime, int iId, CDasherView pView, CDasherInput pInput, CDasherModel Model) {
 		
 		switch(iId) {
 		case 0: // Start on space
@@ -278,7 +278,7 @@ public class CDefaultFilter extends CInputFilter {
 	 * there is commented code in the source which would instantiate
 	 * this in response to BP_MOUSEPOS_MODE also.
 	 */
-	public void CreateStartHandler() {
+	protected void CreateStartHandler() {
 				
 		if(GetBoolParameter(Ebp_parameters.BP_CIRCLE_START)) {
 			m_StartHandler = new CCircleStartHandler(m_EventHandler, m_SettingsStore, m_Interface);

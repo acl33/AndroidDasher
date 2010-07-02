@@ -121,11 +121,6 @@ public abstract class CDasherView extends CDasherComponent {
 	protected CDasherScreen m_Screen;
 	
 	/**
-	 * Current input device
-	 */
-	protected CDasherInput m_Input;
-	
-	/**
 	 * Delayed drawing helper. This allows us to draw Strings
 	 * at the natural time, with the helper storing them and
 	 * actually drawing all strings last.
@@ -171,7 +166,6 @@ public abstract class CDasherView extends CDasherComponent {
 	public CDasherView(CEventHandler EventHandler, CSettingsStore SettingsStore, CDasherScreen DasherScreen) {
 		super(EventHandler, SettingsStore);
 		m_Screen = DasherScreen;
-		m_Input = null;
 		
 		lpMaxY = SettingsStore.GetLongParameter(Elp_parameters.LP_MAX_Y);
 		realOrientation = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_REAL_ORIENTATION);
@@ -229,37 +223,6 @@ public abstract class CDasherView extends CDasherComponent {
 	 * @return True if that range covers the screen, false otherwise.
 	 */
 	public abstract boolean NodeFillsScreen(long y1, long y2);
-	
-	/**
-	 * Sets our current reference input device and informs the
-	 * new device of our maximal co-ordinates.
-	 * <p>
-	 * The input device will not be dereferenced or deleted, as
-	 * the caller may be intending for the input device to
-	 * switch frequently without destroying one which is 
-	 * nominally out of use.
-	 * 
-	 * @param Input New input device
-	 */
-	public void SetInput(CDasherInput Input) {
-		// TODO: Is it sensible to make this responsible for the input
-		// device - I guess it makes sense for now
-		
-		// Don't delete the old input class; whoever is calling this method
-		// might want to keep several Input class instances around and
-		// change which one is currently driving dasher without deleting any
-		
-		m_Input = Input;
-		
-		// Tell the new object about maximum values
-		
-		long[] iMaxCoordinates = new long[2];
-		
-		iMaxCoordinates[0] = lpMaxY;
-		iMaxCoordinates[1] = lpMaxY;
-		
-		m_Input.SetMaxCoordinates(iMaxCoordinates);
-	}
 	
 	/**
 	 * Draws a polyline given a series of points in Dasher space.
@@ -513,54 +476,7 @@ public abstract class CDasherView extends CDasherComponent {
 	 * @param pol ExpansionPalicy to push all nodes onto (expandable or collapsible)
 	 */
 	public abstract void Render(CDasherNode Root, long iRootMin, long iRootMax, ExpansionPolicy pol);
-	
-	/**
-	 * Gets the point in the Dasher world currently pointed
-	 * to by our input device. Convenience function wrapping
-	 * {@link #getInputDasherCoords(long[])} but with extra
-	 * allocation.
-	 * @return a new DPoint object containing the location (in Dasher co-ords)
-	 */
-	public DPoint getInputDasherCoords() {
-		
-		long[] temp = new long[2];
-		getInputDasherCoords(temp);
-		return new DPoint(temp[0],temp[1]);
-	}
-	
-	/**
-	 * Gets where our input device is currently pointing in Dasher space.
-	 * <p>
-	 * Internally this boils down to calling GetCoordinates
-	 * and then feeding the results through Screen2Dasher
-	 * if appropriate.
-	 * @param result array to fill with coordinates (must have >=2 elements)
-	 * @throw {@link ArrayIndexOutOfBoundsException} if the supplied array has <2 elements
-	 */
-	public void getInputDasherCoords(long[] result) {
-		if (inputCoords==null || inputCoords.length != m_Input.GetCoordinateCount())
-			inputCoords = new long[m_Input.GetCoordinateCount()];
-		
-		int iType = (m_Input.GetCoordinates(inputCoords));
-		
-		
-		if(inputCoords.length == 1) {
-			result[0] = 0;
-			result[1] = inputCoords[0];
-		}
-		else {
-			result[0] = inputCoords[0];
-			result[1] = inputCoords[1];
-		}
-
-		// Convert the input co-ordinates to dasher co-ordinates
-		if (iType==0) Screen2Dasher(result); else if (iType!=1) throw new AssertionError();
-	}
-	/** Temporary array used for e.g. input coordinates (cache to avoid reallocating) */ 
-	private long[] inputCoords;
-	
-//	TODO: Autocalibration should be in the eyetracker filter class
-		
+			
 	/**
 	 * Convert a given screen co-ordinate to dasher co-ordinates. 
 	 * (Wraps {@link #Screen2Dasher(long[])}).
