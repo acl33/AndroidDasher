@@ -21,6 +21,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.PowerManager;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
 import dasher.*;
@@ -106,8 +107,9 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		List<Sensor> ss = sm.getSensorList(Sensor.TYPE_ACCELEROMETER);
 		if (!ss.isEmpty()) {
 			final Sensor s = ss.get(0);
+			//is its own class in order to extend DasherInput _and_ implement SensorEventListener...
 			class TiltInput extends CDasherInput implements SensorEventListener {
-				int x,y; boolean bActive;
+				float fx,fy; boolean bActive;
 				private final PowerManager.WakeLock wl = ((PowerManager)androidCtx.getSystemService(Context.POWER_SERVICE)).
 					newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK,"tilting");
 				
@@ -150,16 +152,14 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 						sb.append(i==0 ? "{" : ",").append(vals[i]);
 					sb.append("}");
 					android.util.Log.d("DasherIME","Got rotation "+sb);*/
-					float sx = (vals[0]-1.0f)/-2.0f;
-					x = (int)(m_DasherScreen.GetWidth() * Math.max(0.0f, Math.min(1.0f,sx)));
-					float sy = ((vals[1]-1.0f)/8.0f);
-					y = (int)(m_DasherScreen.GetHeight() * Math.max(0.0f,Math.min(1.0f,sy)));
+					fx = Math.max(0.0f, Math.min(1.0f, (vals[0]-1.0f)/-2.0f));
+					fy = Math.max(0.0f, Math.min(1.0f, (vals[1]-1.0f)/8.0f));
 				}
 
 				@Override
 				public void GetScreenCoords(CDasherView pView,long[] Coordinates) {
-					Coordinates[0] = x;
-					Coordinates[1] = y;
+					Coordinates[0] = (int)(fx * pView.Screen().GetWidth());
+					Coordinates[1] = (int)(fy * pView.Screen().GetHeight());
 				}
 			};
 			RegisterModule(new TiltInput());
@@ -169,6 +169,24 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			@Override
 			public void GetScreenCoords(CDasherView pView,long[] Coordinates) {
 				surf.GetCoordinates(Coordinates);
+				if (PreferenceManager.getDefaultSharedPreferences(androidCtx).getBoolean("AndroidDoubleX", false)) {
+					switch ((int)GetLongParameter(Elp_parameters.LP_REAL_ORIENTATION)) {
+					case Opts.ScreenOrientations.LeftToRight:
+						Coordinates[0] = Math.min(Coordinates[0]*2,surf.getWidth());
+						break;
+					case Opts.ScreenOrientations.RightToLeft:
+						Coordinates[0] = Math.max(0, 2*Coordinates[0]-surf.getWidth());
+						break;
+					case Opts.ScreenOrientations.TopToBottom:
+						Coordinates[1] = Math.min(Coordinates[1]*2,surf.getHeight());
+						break;
+					case Opts.ScreenOrientations.BottomToTop:
+						Coordinates[1] = Math.max(0,2*Coordinates[1]-surf.getHeight());
+						break;
+					default:
+						throw new AssertionError();
+					}
+				}
 			}
 		
 		}));

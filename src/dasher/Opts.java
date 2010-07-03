@@ -45,7 +45,7 @@ public class Opts {
 	 * option means that the Alphabet's preferred orientation
 	 * is used.
 	 */
-	class ScreenOrientations {
+	public static class ScreenOrientations {
 		public static final int Alphabet = -2; 
 		public static final int LeftToRight = 0;
 		public static final int RightToLeft = 1;

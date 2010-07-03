@@ -36,10 +36,10 @@
               android:title="X Co-ordinate from touch"
               android:dependency="AndroidTiltHoldToGo"/>
                 <CheckBoxPreference
-                  android:key="DoubleXCoords"
+                  android:key="AndroidDoubleX"
                   android:title="Touch on left half only"
                   android:dependency="AndroidTiltUsesTouchX"
-                  android:summary="Treats any touch as being twice as far to the right" />
+                  android:summary="Treats any touch as being twice as far to the right"/>
     </PreferenceScreen>
 
     <PreferenceScreen
@@ -47,7 +47,7 @@
       android:title="Touch Settings"
       android:dependency="AndroidTouch">
         <CheckBoxPreference
-          android:key="DoubleXCoords"
+          android:key="AndroidDoubleX"
           android:title="Touch on left half only"
           android:disableDependentsState="true"
           android:summary="Treats any touch as being twice as far to the right"/>
@@ -55,10 +55,10 @@
           android:key="FullSpeedOnly"
           android:title="Full-speed ahead/back"
           android:summary="Treat any touch as being at closest right/left edge of screen"
-          android:dependency="DoubleXCoords"/>
+          android:dependency="AndroidDoubleX"/>
         <CheckBoxPreference
           android:key="AndroidTouchUsesTiltX"
           android:title="X Co-ordinate from tilting"
-          android:dependency="DoubleXCoords"/>
+          android:dependency="AndroidDoubleX"/>
     </PreferenceScreen>
 </PreferenceScreen>
