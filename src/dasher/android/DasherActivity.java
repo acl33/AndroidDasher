@@ -34,12 +34,12 @@ public class DasherActivity extends PreferenceActivity {
         			tiltCheckBox().setChecked(true);
         			touchCheckBox().setChecked(false);
         			IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_DEVICE,"Tilt Input");
-        			IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_FILTER,EYETRACKER_NAME);
+        			IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_FILTER,"Android Tilt Control");
         		} else {
         			tiltCheckBox().setChecked(false);
         			touchCheckBox().setChecked(true);
         			IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_DEVICE,"Touch Input");
-        			IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_FILTER,"Stylus Control");
+        			IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_FILTER,"Android Touch Control");
         		}
         		return false; //Not handled - want ordinary behaviour (popup) to happen next!
         	}

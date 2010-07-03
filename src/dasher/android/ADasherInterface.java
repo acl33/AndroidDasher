@@ -101,75 +101,14 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	
 	@Override
 	public void CreateModules() {
-		RegisterModule(setDefaultInputFilter(new CStylusFilter(this, getSettingsStore())));
-		RegisterModule(new CDefaultFilter(this, getSettingsStore(), 14, "Normal Control"));
-		final SensorManager sm = (SensorManager)androidCtx.getSystemService(Context.SENSOR_SERVICE);
-		List<Sensor> ss = sm.getSensorList(Sensor.TYPE_ACCELEROMETER);
-		if (!ss.isEmpty()) {
-			final Sensor s = ss.get(0);
-			//is its own class in order to extend DasherInput _and_ implement SensorEventListener...
-			class TiltInput extends CDasherInput implements SensorEventListener {
-				float fx,fy; boolean bActive;
-				private final PowerManager.WakeLock wl = ((PowerManager)androidCtx.getSystemService(Context.POWER_SERVICE)).
-					newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK,"tilting");
-				
-				public TiltInput() {
-					super(ADasherInterface.this, getSettingsStore(), 1, "Tilt Input");
-				}
-				
-				@Override public void Activate() {bActive=true; update();}
-				@Override public void Deactivate() {bActive=false; update();}
-				
-				@Override public void HandleEvent(dasher.CEvent evt) {
-					if (evt instanceof CParameterNotificationEvent &&
-							((CParameterNotificationEvent)evt).m_iParameter == Ebp_parameters.BP_DASHER_PAUSED)
-						update();
-				}
-				
-				private void update() {
-					if (bActive && !GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
-						if (wl.isHeld()) {
-							return;
-						}
-						sm.registerListener(this, s, SensorManager.SENSOR_DELAY_UI);
-						wl.acquire();
-					} else {
-						if (!wl.isHeld()) {
-							return;
-						}
-						sm.unregisterListener(this,s);
-						wl.release();
-					}
-				}
-				
-				public void onAccuracyChanged(Sensor sensor, int accuracy) {}
-
-				public void onSensorChanged(SensorEvent event) {
-					if (m_DasherScreen==null) return;
-					float[] vals=event.values;
-					/*StringBuilder sb=new StringBuilder();
-					for (int i=0; i<vals.length; i++)
-						sb.append(i==0 ? "{" : ",").append(vals[i]);
-					sb.append("}");
-					android.util.Log.d("DasherIME","Got rotation "+sb);*/
-					fx = Math.max(0.0f, Math.min(1.0f, (vals[0]-1.0f)/-2.0f));
-					fy = Math.max(0.0f, Math.min(1.0f, (vals[1]-1.0f)/8.0f));
-				}
-
-				@Override
-				public void GetScreenCoords(CDasherView pView,long[] Coordinates) {
-					Coordinates[0] = (int)(fx * pView.Screen().GetWidth());
-					Coordinates[1] = (int)(fy * pView.Screen().GetHeight());
-				}
-			};
-			RegisterModule(new TiltInput());
-		}
-		RegisterModule(setDefaultInput(new CDasherInput(this, getSettingsStore(), 0, "Touch Input") {
-			
+		final SharedPreferences prefs=PreferenceManager.getDefaultSharedPreferences(androidCtx);
+		final TiltInput tilt=TiltInput.MAKE(androidCtx, this, getSettingsStore());
+		if (tilt!=null) RegisterModule(tilt);
+		final CDasherInput touch =new CDasherInput(this, getSettingsStore(), 0, "Touch Input") {
 			@Override
 			public void GetScreenCoords(CDasherView pView,long[] Coordinates) {
 				surf.GetCoordinates(Coordinates);
-				if (PreferenceManager.getDefaultSharedPreferences(androidCtx).getBoolean("AndroidDoubleX", false)) {
+				if (prefs.getBoolean("AndroidDoubleX", false)) {
 					switch ((int)GetLongParameter(Elp_parameters.LP_REAL_ORIENTATION)) {
 					case Opts.ScreenOrientations.LeftToRight:
 						Coordinates[0] = Math.min(Coordinates[0]*2,surf.getWidth());
@@ -188,8 +127,106 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 					}
 				}
 			}
-		
+		};
+		RegisterModule(setDefaultInput(touch));
+		RegisterModule(setDefaultInputFilter(new CStylusFilter(this, getSettingsStore(), 16, "Android Touch Control") {
+			/** A special CDasherInput that reads touch coordinates from the screen/DasherCanvas,
+			 * but does <em>not</em> double the x coordinate even if the AndroidDoubleX preference
+			 * is true. (Used for clicks, as opposed to drags)
+			 */
+			private final CDasherInput undoubledTouch = new CDasherInput(ADasherInterface.this,getSettingsStore(), -1, "Unregistered Input Device") {
+				@Override public void GetScreenCoords(CDasherView pView, long[] coords) {
+					CDasherScreen screen = pView.Screen();
+					((DasherCanvas)screen).GetCoordinates(coords);
+				}
+			};
+						
+			@Override public void ApplyTransform(CDasherView pView, long[] coords) {
+				if (PreferenceManager.getDefaultSharedPreferences(androidCtx).getBoolean("AndroidTouchUsesTiltX",false)) {
+					long iDasherY=coords[1];
+					tilt.GetDasherCoords(pView, coords);
+					coords[1]=iDasherY;
+				}
+				super.ApplyTransform(pView, coords);
+			}
+			
+			@Override public void KeyDown(long iTime, int iID, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
+				super.KeyDown(iTime, iID, pView, undoubledTouch, pModel);
+			}
+
+			private boolean bActive;
+			@Override public void Activate() {bActive=true;}
+			@Override public void Deactivate() {bActive=false;}
+			@Override public void HandleEvent(CEvent evt) {
+				if (evt instanceof CParameterNotificationEvent && ((CParameterNotificationEvent)evt).m_iParameter==Ebp_parameters.BP_DASHER_PAUSED && bActive) {
+					if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) && prefs.getBoolean("AndroidTouchUsesTiltX", false))
+						tilt.Activate();
+					else
+						tilt.Deactivate();
+				}
+			}
+
 		}));
+		RegisterModule(new CDefaultFilter(this, getSettingsStore(), 14, "Android Tilt Control") {
+			private void Apply1DTransform(CDasherView pView, long[] coords) {
+				// The distance between the Y coordinate and the centreline in pixels
+				final long disty=GetLongParameter(Elp_parameters.LP_OY)-coords[1];
+				  
+				final long circlesize = (long)(GetLongParameter(Elp_parameters.LP_MAX_Y)*(1.0-coords[0]/(double)pView.VisibleRegion().maxX)/2.5);
+				final long yforwardrange = (GetLongParameter(Elp_parameters.LP_MAX_Y)*5)/16;
+				final long yfullrange = GetLongParameter(Elp_parameters.LP_MAX_Y)/2;
+				  
+				double x,y; //0,0=on crosshair; positive=forwards/up...	
+				
+				if (disty<=yforwardrange && disty>=-yforwardrange) {
+					//go forwards!
+					final double angle=((disty*3.14159/2)/(double)yforwardrange);
+					x=Math.cos(angle);
+					y=-Math.sin(angle);
+				} else if (disty<=yfullrange && disty>=-yfullrange) {
+					final long ybackrange = yfullrange-yforwardrange;
+					final long ellipse_eccentricity=6;
+					//backwards, off bottom or top...
+					final double yb = (Math.abs(disty)-yforwardrange)/(double)ybackrange;
+					final double angle=(yb*3.14159)*(yb+(1-yb)*(ybackrange/(double)yforwardrange/ellipse_eccentricity));
+				    
+				    x=-Math.sin(angle)*ellipse_eccentricity/2.0;
+				    y=(1.0+Math.cos(angle))/2.0;
+				    if (disty>yforwardrange) y=-y; //backwards off top
+				} else {
+					//off limits, go nowhere
+					x=0; y=0;
+				} 
+				coords[0] = GetLongParameter(Elp_parameters.LP_OX)-(long)(x*circlesize);
+				coords[1] = GetLongParameter(Elp_parameters.LP_OY)+(long)(y*circlesize);
+			}
+			@Override public void ApplyTransform(CDasherView pView, long[] coords) {
+				if (prefs.getBoolean("AndroidTiltHoldToGo", false) && prefs.getBoolean("AndroidTiltUsesTouchX", false)) {
+					long iDasherY=coords[1];
+					touch.GetDasherCoords(pView, coords);
+					coords[1]=iDasherY;
+				}
+				if (prefs.getBoolean("AndroidTilt2D", true))
+					super.ApplyTransform(pView, coords);
+				else
+					Apply1DTransform(pView, coords);
+			}
+			
+			@Override public void KeyDown(long iTime, int iID, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
+				if (iID==100 && prefs.getBoolean("AndroidTiltHoldToGo", false))
+					m_Interface.Unpause(iTime);
+				else
+					super.KeyDown(iTime, iID, pView, pInput, pModel);
+			}
+			
+			@Override public void KeyUp(long iTime, int iID, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
+				if (iID==100 && prefs.getBoolean("AndroidTiltHoldToGo", false))
+					m_Interface.PauseAt(0,0);
+				else
+					super.KeyUp(iTime, iID, pView, pInput, pModel);
+			}
+		});
+
 	}
 	
 	@Override
