@@ -13,7 +13,17 @@
     <CheckBoxPreference
       android:key="RemapXtreme"
       android:title="Remap X coords at extreme Y"/>
-      
+  
+    <CheckBoxPreference
+      android:key="FullSpeedOnly"
+      android:title="Full-speed ahead/back"
+      android:summary="Always go towards whichever left/right edge is closest"/>
+    
+    <CheckBoxPreference
+      android:key="AndroidDoubleX"
+      android:title="Touch on left half only"
+      android:summary="Treats any touch as being twice as far to the right"/>
+         
     <PreferenceScreen
       android:key="AndroidTilt"
       android:title="Tilt Settings"
@@ -23,11 +33,6 @@
           android:title="2D (X &amp; Y)"
           android:summaryOn="Forwards/backwards and up/down using 2 tilt axes" 
           android:summaryOff="Up/down tilting steers in a complete circle"/>
-            <CheckBoxPreference
-              android:key="FullSpeedOnly"
-              android:title="Full-speed ahead/back"
-              android:dependency="AndroidTilt2D"
-              android:summary="Always go ahead/back as if phone tilted to one extreme"/>
         <CheckBoxPreference
           android:key="AndroidTiltHoldToGo"
           android:title="Hold finger to go"/>
@@ -35,11 +40,6 @@
               android:key="AndroidTiltUsesTouchX"
               android:title="X Co-ordinate from touch"
               android:dependency="AndroidTiltHoldToGo"/>
-                <CheckBoxPreference
-                  android:key="AndroidDoubleX"
-                  android:title="Touch on left half only"
-                  android:dependency="AndroidTiltUsesTouchX"
-                  android:summary="Treats any touch as being twice as far to the right"/>
     </PreferenceScreen>
 
     <PreferenceScreen
@@ -47,18 +47,7 @@
       android:title="Touch Settings"
       android:dependency="AndroidTouch">
         <CheckBoxPreference
-          android:key="AndroidDoubleX"
-          android:title="Touch on left half only"
-          android:disableDependentsState="true"
-          android:summary="Treats any touch as being twice as far to the right"/>
-        <CheckBoxPreference
-          android:key="FullSpeedOnly"
-          android:title="Full-speed ahead/back"
-          android:summary="Treat any touch as being at closest right/left edge of screen"
-          android:dependency="AndroidDoubleX"/>
-        <CheckBoxPreference
           android:key="AndroidTouchUsesTiltX"
-          android:title="X Co-ordinate from tilting"
-          android:dependency="AndroidDoubleX"/>
+          android:title="X Co-ordinate from tilting"/>
     </PreferenceScreen>
 </PreferenceScreen>
