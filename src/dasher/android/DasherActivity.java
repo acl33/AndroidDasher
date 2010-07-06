@@ -9,13 +9,9 @@ import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceScreen;
 import android.util.Log;
-import android.widget.CheckBox;
-import dasher.Elp_parameters;
 import dasher.Esp_parameters;
 
 public class DasherActivity extends PreferenceActivity {
-  public static final String EYETRACKER_NAME = "Tap-to-start w/ remapping";
-  
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -23,31 +19,19 @@ public class DasherActivity extends PreferenceActivity {
         super.onCreate(savedInstanceState);
         addPreferencesFromResource(R.layout.prefs);
         
-        IMDasherInterface.INSTANCE.Realize(this);
-        
-        final PreferenceScreen tiltScr = (PreferenceScreen)getPreferenceScreen().findPreference("AndroidTilt");
-        tiltScr.setWidgetLayoutResource(R.layout.checkbox_tilt);
-        final PreferenceScreen touchScr = (PreferenceScreen)getPreferenceScreen().findPreference("AndroidTouch");
-        touchScr.setWidgetLayoutResource(R.layout.checkbox_touch);
-        Preference.OnPreferenceClickListener clk = new Preference.OnPreferenceClickListener() {
-        	public boolean onPreferenceClick(Preference p) {
-        		Log.d("DasherPrefs","OnClick "+p);
-        		if (p==tiltScr) {
-        			tiltCheckBox().setChecked(true);
-        			touchCheckBox().setChecked(false);
-        			IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_DEVICE,"Tilt Input");
-        			IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_FILTER,"Android Tilt Control");
-        		} else {
-        			tiltCheckBox().setChecked(false);
-        			touchCheckBox().setChecked(true);
-        			IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_DEVICE,"Touch Input");
-        			IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_FILTER,"Android Touch Control");
-        		}
-        		return false; //Not handled - want ordinary behaviour (popup) to happen next!
+        Preference.OnPreferenceClickListener lstnr = new Preference.OnPreferenceClickListener() {
+        	public boolean onPreferenceClick(Preference pref) {
+        		IMCheckBox.set(pref.getKey());
+        		return false; //allow normal click action to occur too
         	}
         };
-        tiltScr.setOnPreferenceClickListener(clk);
-        touchScr.setOnPreferenceClickListener(clk);
+        ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidTilt"))
+        	.setOnPreferenceClickListener(lstnr);
+        
+        ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidTouch"))
+        	.setOnPreferenceClickListener(lstnr);
+        
+        IMDasherInterface.INSTANCE.Realize(this);
         
         addPermittedValues(Esp_parameters.SP_ALPHABET_ID);
     }
@@ -70,24 +54,6 @@ public class DasherActivity extends PreferenceActivity {
     	Log.d("DasherIME","Activity onDestroy");
     	super.onDestroy();
     	//intf.StartShutdown();
-    }
-    
-    /**Cache components retrieved by findViewById*/
-    private CheckBox m_tilt,m_touch;
-    /** Get the tilt/touch checkbox - done lazily, as I'm not sure when Preferences inflate their widget layout resources...*/
-    private CheckBox tiltCheckBox() {
-    	if (m_tilt==null) {
-    		m_tilt = (CheckBox)DasherActivity.this.findViewById(R.id.checkbox_tilt);
-    		Log.d("DasherPrefs","findViewById("+R.id.checkbox_tilt+") returned "+m_tilt);
-    	}
-    	return m_tilt;
-    }
-    private CheckBox touchCheckBox() {
-    	if (m_touch==null) {
-    		m_touch = (CheckBox)DasherActivity.this.findViewById(R.id.checkbox_touch);
-    		Log.d("DasherPrefs","findViewById("+R.id.checkbox_touch+") returned "+m_touch);
-    	}
-    	return m_touch;
     }
     
 }
