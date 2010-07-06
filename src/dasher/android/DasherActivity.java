@@ -10,6 +10,7 @@ import android.preference.PreferenceActivity;
 import android.preference.PreferenceScreen;
 import android.util.Log;
 import android.widget.CheckBox;
+import dasher.Elp_parameters;
 import dasher.Esp_parameters;
 
 public class DasherActivity extends PreferenceActivity {
@@ -30,6 +31,7 @@ public class DasherActivity extends PreferenceActivity {
         touchScr.setWidgetLayoutResource(R.layout.checkbox_touch);
         Preference.OnPreferenceClickListener clk = new Preference.OnPreferenceClickListener() {
         	public boolean onPreferenceClick(Preference p) {
+        		Log.d("DasherPrefs","OnClick "+p);
         		if (p==tiltScr) {
         			tiltCheckBox().setChecked(true);
         			touchCheckBox().setChecked(false);
@@ -74,13 +76,17 @@ public class DasherActivity extends PreferenceActivity {
     private CheckBox m_tilt,m_touch;
     /** Get the tilt/touch checkbox - done lazily, as I'm not sure when Preferences inflate their widget layout resources...*/
     private CheckBox tiltCheckBox() {
-    	if (m_tilt==null)
+    	if (m_tilt==null) {
     		m_tilt = (CheckBox)DasherActivity.this.findViewById(R.id.checkbox_tilt);
+    		Log.d("DasherPrefs","findViewById("+R.id.checkbox_tilt+") returned "+m_tilt);
+    	}
     	return m_tilt;
     }
     private CheckBox touchCheckBox() {
-    	if (m_touch==null)
+    	if (m_touch==null) {
     		m_touch = (CheckBox)DasherActivity.this.findViewById(R.id.checkbox_touch);
+    		Log.d("DasherPrefs","findViewById("+R.id.checkbox_touch+") returned "+m_touch);
+    	}
     	return m_touch;
     }
     

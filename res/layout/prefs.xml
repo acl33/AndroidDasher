@@ -1,38 +1,53 @@
 <PreferenceScreen
-	xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:android="http://schemas.android.com/apk/res/android"
   android:key="root_prefs">
   
-    <CheckBoxPreference
-      android:key="AutoSpeedControl"
-      android:title="Auto speed control"/>
+  	<dasher.android.SeekBarPreference
+  	  android:key="MaxBitRateTimes100"
+  	  android:title="Max speed"
+      android:summary="Max rate of data entry in bits/sec"
+      android:text="bps"
+      android:max="1200" min="10" divisor="100"/>
     
+    <PreferenceScreen
+      android:title="Display Settings">
+    	
+	    <dasher.android.SeekBarPreference
+	      android:key="NodeBudget"
+	      android:title="Node budget"
+	      android:summary="Higher = more detail; lower = faster"
+	      android:max="10000" min="400"/>
+	      
+	     <dasher.android.SeekBarPreference
+	       android:key="NonLinearX"
+	       android:title="X Non-linearity"
+	       android:summary="Log compress left of crosshair"
+	       android:max="10"/>
+	     
+		<dasher.android.SeekBarPreference
+		  android:key="DasherFontSize"
+		  android:title="Font Size"
+		  android:summary="Small / medium / large"
+		  min="1" android:max="3"/>
+		  
+		<dasher.android.SeekBarPreference
+		  android:key="MarginWidth"
+		  android:title="Margin Width"
+		  min="100" android:max="1000"/>
+	</PreferenceScreen>
+
     <ListPreference
       android:key="AlphabetID"
       android:title="Alphabet Name"/>
 
-    <CheckBoxPreference
-      android:key="RemapXtreme"
-      android:title="Remap X coords at extreme Y"/>
-  
-    <CheckBoxPreference
-      android:key="FullSpeedOnly"
-      android:title="Full-speed ahead/back"
-      android:summary="Always go towards whichever left/right edge is closest"/>
-    
-    <CheckBoxPreference
-      android:key="AndroidDoubleX"
-      android:title="Touch on left half only"
-      android:summary="Treats any touch as being twice as far to the right"/>
-         
     <PreferenceScreen
       android:key="AndroidTilt"
-      android:title="Tilt Settings"
-      android:dependency="AndroidTilt">
+      android:title="Tilt Control">
         <CheckBoxPreference
           android:key="AndroidTilt2D"
           android:title="2D (X &amp; Y)"
-          android:summaryOn="Forwards/backwards and up/down using 2 tilt axes" 
-          android:summaryOff="Up/down tilting steers in a complete circle"/>
+          android:summaryOn="Fwd/back &amp; up/down using 2 tilt axes" 
+          android:summaryOff="Tilt up/down to go in a complete circle"/>
         <CheckBoxPreference
           android:key="AndroidTiltHoldToGo"
           android:title="Hold finger to go"/>
@@ -44,10 +59,37 @@
 
     <PreferenceScreen
       android:key="AndroidTouch"
-      android:title="Touch Settings"
-      android:dependency="AndroidTouch">
+      android:title="Touch Control">
         <CheckBoxPreference
           android:key="AndroidTouchUsesTiltX"
           android:title="X Co-ordinate from tilting"/>
+        <dasher.android.SeekBarPreference
+          android:key="TapTime"
+          android:title="Max time for 'tap'"
+          android:summary="Anything longer counts as drag"
+          android:max="1000" min="10"
+          text="ms"/>
+        <dasher.android.SeekBarPreference
+          android:key="Zoomsteps"
+          android:title="Frames for tap"
+          android:max="64" min="8"/>
     </PreferenceScreen>
+    
+    <PreferenceScreen
+      android:title="General Input Settings">
+        <CheckBoxPreference
+      	  android:key="AutoSpeedControl"
+      	  android:title="Auto speed control"/>
+    	<CheckBoxPreference
+      	  android:key="RemapXtreme"
+      	  android:title="Remap X coords at extreme Y"/> 
+	    <CheckBoxPreference
+	      android:key="FullSpeedOnly"
+	      android:title="Full-speed ahead/back"
+	      android:summary="Always target closest left/right edge"/>
+	    <CheckBoxPreference
+	      android:key="AndroidDoubleX"
+	      android:title="Touch on left half only"
+	      android:summary="As if finger were twice as far to the right"/>
+	</PreferenceScreen>
 </PreferenceScreen>

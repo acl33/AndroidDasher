@@ -39,7 +39,7 @@ public enum Elp_parameters implements EParameters {
 	  LP_UNIFORM("UniformTimes1000", PERS, 50, "UniformTimes1000"),
 	  LP_YSCALE("YScaling", PERS, 0, "YScaling"),
 	  LP_MOUSEPOSDIST("MousePositionBoxDistance", PERS, 50, "MousePositionBoxDistance"),
-	  LP_STOP_IDLETIME("StopIdleTime", PERS, 1000, "StopIdleTime" ),
+	  //LP_STOP_IDLETIME("StopIdleTime", PERS, 1000, "StopIdleTime" ),
 	  LP_TRUNCATION("Truncation", PERS, 0, "Truncation"),
 	  LP_TRUNCATIONTYPE("TruncationType", PERS, 0, "TruncationType"),
 	  LP_LM_MAX_ORDER("LMMaxOrder", PERS, 5, "LMMaxOrder"),
@@ -47,35 +47,36 @@ public enum Elp_parameters implements EParameters {
 	  LP_LM_UPDATE_EXCLUSION("LMUpdateExclusion", PERS, 1, "LMUpdateExclusion"),
 	  LP_LM_ALPHA("LMAlpha", PERS, 49, "LMAlpha"),
 	  LP_LM_BETA("LMBeta", PERS, 77, "LMBeta"),
-	  LP_LM_MIXTURE("LMMixture", PERS, 50, "LMMixture"),
+	  //LP_LM_MIXTURE("LMMixture", PERS, 50, "LMMixture"),
 	  LP_MOUSE_POS_BOX("MousePosBox", !PERS, -1, "Mouse Position Box Indicator"),
 	  LP_NORMALIZATION("Normalization", !PERS, 1 << 16, "Interval for child nodes"),
 	  LP_LINE_WIDTH("LineWidth", PERS, 1, "Width to draw crosshair and mouse line"),
-	  LP_LM_WORD_ALPHA("WordAlpha", PERS, 50, "Alpha value for word-based model"),
+	  //LP_LM_WORD_ALPHA("WordAlpha", PERS, 50, "Alpha value for word-based model"),
 	  LP_USER_LOG_LEVEL_MASK("UserLogLevelMask", PERS, 0, "Controls level of user logging, 0 = none, 1 = short, 2 = detailed, 3 = both"),
 	  LP_SPEED_DIVISOR("SpeedDivisor", !PERS, 100, "Factor by which to slow down (multiplied by 100)"),
 	  LP_ZOOMSTEPS("Zoomsteps", PERS, 32, "Integerised ratio of zoom size for click/button mode, denom 64."),
-	  LP_B("ButtonMenuBoxes", PERS, 4, "Number of boxes for button menu mode"),
+	  /*LP_B("ButtonMenuBoxes", PERS, 4, "Number of boxes for button menu mode"),
 	  LP_S("ButtonMenuSafety", PERS, 25, "Safety parameter for button mode, in percent."),
 	  LP_Z("ButtonMenuBackwardsBox", PERS, 1, "Number of back-up boxes for button menu mode"),
 	  LP_R("ButtonModeNonuniformity", PERS, 0, "Button mode box non-uniformity"),
-	  LP_RIGHTZOOM("ButtonCompassModeRightZoom", PERS, 5120, "Zoomfactor (*1024) for compass mode"),
+	  LP_RIGHTZOOM("ButtonCompassModeRightZoom", PERS, 5120, "Zoomfactor (*1024) for compass mode"),*/
 	  LP_BOOSTFACTOR("BoostFactor", !PERS, 100, "Boost/brake factor (multiplied by 100)"),
 	  LP_AUTOSPEED_SENSITIVITY("AutospeedSensitivity", PERS, 100, "Sensitivity of automatic speed control (percent)"),
-	  LP_SOCKET_PORT("SocketPort", PERS, 20320, "UDP/TCP socket to use for network socket input"),
+	  /*LP_SOCKET_PORT("SocketPort", PERS, 20320, "UDP/TCP socket to use for network socket input"),
 	  LP_SOCKET_INPUT_X_MIN("SocketInputXMinTimes1000", PERS, 0, "Bottom of range of X values expected from network input"),
 	  LP_SOCKET_INPUT_X_MAX("SocketInputXMaxTimes1000", PERS, 1000, "Top of range of X values expected from network input"),
 	  LP_SOCKET_INPUT_Y_MIN("SocketInputYMinTimes1000", PERS, 0, "Bottom of range of Y values expected from network input"),
-	  LP_SOCKET_INPUT_Y_MAX("SocketInputYMaxTimes1000", PERS, 1000, "Top of range of Y values expected from network input"),
+	  LP_SOCKET_INPUT_Y_MAX("SocketInputYMaxTimes1000", PERS, 1000, "Top of range of Y values expected from network input"),*/
 	  LP_OX("OX", PERS, 2048, "X coordinate of crosshair"),
 	  LP_OY("OY", PERS, 2048, "Y coordinate of crosshair"),
 	  LP_MAX_Y("MaxY", PERS, 4096, "Maximum Y coordinate"),
-	  LP_INPUT_FILTER("InputFilterID", PERS, 3, "Module ID of input filter"),
+	  //LP_INPUT_FILTER("InputFilterID", PERS, 3, "Module ID of input filter"),
 	  LP_CIRCLE_PERCENT("CirclePercent", PERS, 10, "Percentage of nominal vertical range to use for radius of start circle"),
 	  LP_TWO_BUTTON_OFFSET("TwoButtonOffset", PERS, 1024, "Offset for two button dynamic mode"),
 	  LP_TAP_TIME("TapTime", PERS, 100, "Max time for tap in Stylus Mode"),
 	  LP_NON_LINEAR_X("NonLinearX", PERS, 8, "Nonlinear compression of X-axis (0 = none, higher = more extreme)"),
-	  LP_DASHER_MARGIN("MarginWidth", PERS, 400, "Width of RHS margin (in Dasher co-ords)");
+	  LP_DASHER_MARGIN("MarginWidth", PERS, 400, "Width of RHS margin (in Dasher co-ords)"),
+	  LP_NODE_BUDGET("NodeBudget", PERS, 1200, "Target number of node objects");
 		  
 		  private Elp_parameters(String rName, boolean pers, long def, String hr) {
 				humanReadable = hr;
@@ -93,6 +94,6 @@ public enum Elp_parameters implements EParameters {
 			private final String regName;
 			
 			final boolean persistent;
-			final long defaultVal;
+			public final long defaultVal;
 			final String humanReadable;
 }

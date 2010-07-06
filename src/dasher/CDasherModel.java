@@ -298,6 +298,7 @@ public class CDasherModel extends CDasherComponent {
 	computeNormFactor();
 	
 	if (pUserLog != null) pUserLog.SetAlphabetPtr(alphabet);
+	HandleEvent(new CParameterNotificationEvent(Elp_parameters.LP_NODE_BUDGET));
 	}
 	
 	public int TrainStream(InputStream FileIn, int iTotalBytes, int iOffset,
@@ -345,6 +346,8 @@ public class CDasherModel extends CDasherComponent {
 				else
 					SetLongParameter(Elp_parameters.LP_REAL_ORIENTATION, GetLongParameter(Elp_parameters.LP_ORIENTATION));
 				m_DasherInterface.Redraw(true);
+			} else if (Evt.m_iParameter == Elp_parameters.LP_NODE_BUDGET) {
+				pol = new BudgettingPolicy((int)GetLongParameter(Elp_parameters.LP_NODE_BUDGET));
 			}
 			
 			
@@ -999,7 +1002,7 @@ public class CDasherModel extends CDasherComponent {
 	 * ExpansionPolicy to determine which CDasherNodes to expand or collapse in each frame.
 	 * Reused between frames to save on allocation.
 	 */
-	private ExpansionPolicy pol = new BudgettingPolicy(1500);
+	private ExpansionPolicy pol;
 	/**
 	 * If the view reports that our current root node isn't
 	 * visible, calls Reparent_root; if only one child of the
