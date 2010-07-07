@@ -16,13 +16,12 @@ public class IMCheckBox extends CheckBox {
 	private static final String androidns="http://schemas.android.com/apk/res/android";
 	public static final String SETTING = "AndroidInputMethod";
 	private static final Set<WeakReference<IMCheckBox>> BOXES = new HashSet<WeakReference<IMCheckBox>>();
-	final String key;
-	final String inputDevice;
-	final String inputFilter;
+	private final String key;
+	private final String inputDevice;
+	private final String inputFilter;
 	public IMCheckBox(Context ctx, AttributeSet attrs) {
 		super(ctx,attrs);
 		key = attrs.getAttributeValue(androidns, "key");
-		android.util.Log.d("DasherPrefs","Created checkbox w/id "+getId()+", "+key);
 		inputDevice = attrs.getAttributeValue(null,"inputDevice");
 		inputFilter = attrs.getAttributeValue(null,"inputFilter");
 		BOXES.add(new WeakReference<IMCheckBox>(this));

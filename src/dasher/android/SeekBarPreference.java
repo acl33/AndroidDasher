@@ -11,7 +11,6 @@ import android.content.Context;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
 import android.preference.DialogPreference;
 import android.preference.PreferenceManager;
 import android.widget.SeekBar;
@@ -78,25 +77,23 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
     mSeekBar.setMax(lMax-lMin);
     mSeekBar.setProgress((int)(lValue-lMin));
   }
-  @Override
-  protected void onSetInitialValue(boolean restore, Object defaultValue)  
-  {
-	  //android.util.Log.d("DasherPrefs",mTitle+" onSetInitialValue("+restore+","+defaultValue+")",new Exception());
+  
+  @Override protected void onSetInitialValue(boolean restore, Object defaultValue) {
     super.onSetInitialValue(restore, defaultValue);
-    if (restore) 
+    if (restore)  //"use settings store" - defaultValue==null !
       lValue = getPersistedLong(lDef);
-    else 
+    else  //"don't use settings store" - there's a default here instead
       lValue = ((Number)defaultValue).longValue();
   }
   
-  public void onProgressChanged(SeekBar seek, int value, boolean fromTouch)
-  {
+  public void onProgressChanged(SeekBar seek, int value, boolean fromTouch) {
     String t = String.valueOf((value+lMin)/(double)lDiv);
     mValueText.setText(mSuffix == null ? t : t.concat(mSuffix));
     persistLong(lValue = (value+lMin));
     callChangeListener(new Integer(value));
     setTitle(mTitle+": "+t);
   }
+  
   public void onStartTrackingTouch(SeekBar seek) {}
   public void onStopTrackingTouch(SeekBar seek) {}
 
@@ -110,5 +107,6 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
     if (mSeekBar != null)
       mSeekBar.setProgress((int)(progress-lMin)); 
   }
+  
   public long getProgress() { return lValue; }
 }
