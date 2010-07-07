@@ -59,7 +59,7 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 		Log.d("DasherIME",this+" surfaceChanged ("+width+", "+height+")");
 		intf.enqueue(new Runnable() {
 			public void run() {
-				intf.setCanvas(DasherCanvas.this);
+				intf.ChangeScreen(DasherCanvas.this);
 				bReady = true;
 			}
 		});
@@ -75,7 +75,7 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 			public void run() {
 				//disable animation until we have another surfaceChanged
 				bReady=false;
-				intf.setCanvas(null);
+				intf.ChangeScreen(null);
 			}
 		});
 	}
@@ -113,13 +113,16 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 	 * TODO: think about having multiple Paint objects caching different
 	 * sets of parameters... 
 	 */
-	private Paint p = new Paint();
+	private final Paint p = new Paint();
 	/** Use a single Rect object for every rectangle too, avoiding allocation...*/
-	private Rect r = new Rect();
+	private final Rect r = new Rect();
 	
 	
 	public void renderFrame() {
-		if (!bReady) return;
+		if (!bReady) {
+			Log.d("DasherIME","renderFrame but canvas "+this+" not ready...?");
+			return;
+		}
 		canvas = holder.lockCanvas();
 		//after a surfaceDestroyed(), renderFrame() can be called once more before we setCanvas(null) to stop it...
 		// in which case, canvas==null and we won't be able to draw anything. But let's at least not NullPtrEx!
@@ -128,7 +131,6 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 			holder.unlockCanvasAndPost(canvas);
 			canvas=null;
 		}
-		
 	}
 	
 	public void Blank() {

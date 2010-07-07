@@ -30,7 +30,6 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	protected Context androidCtx;
 	private final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<Runnable>();
 	private Thread taskThread;
-	private DasherCanvas surf;
 	private boolean m_bRedrawRequested;
 	
 	public void enqueue(Runnable r) {tasks.add(r);}
@@ -47,9 +46,9 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			public void run() {
 				Queue<Runnable> frameTasks = new LinkedList<Runnable>();
 				while (true) {
-					if (surf!=null && (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) || m_bRedrawRequested)) {
+					if (m_DasherScreen!=null && (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) || m_bRedrawRequested)) {
 						m_bRedrawRequested = false;
-						surf.renderFrame();
+						((DasherCanvas)m_DasherScreen).renderFrame();
 						tasks.drainTo(frameTasks);
 						while (!frameTasks.isEmpty())
 							frameTasks.remove().run();
@@ -107,6 +106,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		final CDasherInput touch =new CDasherInput(this, getSettingsStore(), 0, "Touch Input") {
 			@Override
 			public void GetScreenCoords(CDasherView pView,long[] Coordinates) {
+				DasherCanvas surf = (DasherCanvas)m_DasherScreen;
 				surf.GetCoordinates(Coordinates);
 				if (prefs.getBoolean("AndroidDoubleX", false)) {
 					switch ((int)GetLongParameter(Elp_parameters.LP_REAL_ORIENTATION)) {
@@ -245,10 +245,17 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		ScanXMLFiles(alphIO,"alphabet");
 	}
 	
-	public void setCanvas(DasherCanvas surf) {
-		this.surf=surf;
-		if (m_DasherScreen==null && surf!=null)
-			ChangeScreen(surf);
+	@Override public void ChangeScreen(CDasherScreen surf) {
+		if (surf==null) {
+			m_DasherScreen=null;
+			// this is used as a sentinel to avoid rendering etc.
+			// We do not (and cannot) call super.ChangeScreen(null),
+			// or construct a View around a null screen, so for now - we don't!
+		} else if (surf instanceof DasherCanvas) {
+			if (surf!=m_DasherScreen)
+				super.ChangeScreen(surf);
+		} else
+			throw new IllegalArgumentException(surf+" is not a DasherCanvas!");
 	}
 
 	private void ScanXMLFiles(XMLFileParser parser, String prefix) {
