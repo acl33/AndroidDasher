@@ -48,12 +48,6 @@ public class CStylusFilter extends CDefaultFilter {
         if (model.nextScheduledStep(iTime, null)) {
             //continued scheduled zoom - must have been in middle
             // (and thus not cleared by subsequent click)
-            if (model.ScheduledSteps()==0) {
-                //just finished. Pause (mouse not held down, or schedule
-                //would have been cleared already)
-                model.CheckForNewRoot(view);
-                SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
-            }
             return true;
             //note that this skips the rest of CDefaultFilter::Timer;
             //however, given we're paused, this is only the Start Handler,

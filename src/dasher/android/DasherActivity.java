@@ -31,6 +31,12 @@ public class DasherActivity extends PreferenceActivity {
         ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidTouch"))
         	.setOnPreferenceClickListener(lstnr);
         
+        ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidDirect"))
+    		.setOnPreferenceClickListener(lstnr);
+        
+        ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidScan"))
+		.setOnPreferenceClickListener(lstnr);
+    
         IMDasherInterface.INSTANCE.Realize(this);
         
         addPermittedValues(Esp_parameters.SP_ALPHABET_ID);

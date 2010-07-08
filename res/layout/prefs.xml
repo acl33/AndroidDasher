@@ -76,6 +76,34 @@
           android:title="Frames for tap"
           android:max="64" min="8"/>
     </PreferenceScreen>
+
+    <PreferenceScreen
+      android:key="AndroidDirect"
+      android:title="Direct Mode"
+      android:widgetLayout="@layout/checkbox_direct">
+        <dasher.android.SeekBarPreference
+          android:key="ButtonMenuBoxes"
+          android:title="Number of (forward) boxes"
+          android:max="9" min="2" />
+        <dasher.android.SeekBarPreference
+          android:key="ButtonMenuSafety"
+          android:title="Safety margin (%? Dasher Y?)"
+          android:max="256" min="0"/>
+        <dasher.android.SeekBarPreference
+          android:key="ButtonModeNonuniformity"
+          android:title="Nonuniformity of box sizes"
+          android:max="89" min="-89"/>
+    </PreferenceScreen>
+
+    <PreferenceScreen
+      android:key="AndroidScan"
+      android:title="Scanning Menu"
+      android:widgetLayout="@layout/checkbox_scan">
+        <dasher.android.SeekBarPreference
+          android:key="ButtonScanTime"
+          android:title="Scanning Time"
+          android:max="1000" min="0" />
+    </PreferenceScreen>
     
     <PreferenceScreen
       android:title="General Input Settings">

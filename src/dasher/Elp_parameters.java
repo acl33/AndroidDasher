@@ -55,10 +55,10 @@ public enum Elp_parameters implements EParameters {
 	  LP_USER_LOG_LEVEL_MASK("UserLogLevelMask", PERS, 0, "Controls level of user logging, 0 = none, 1 = short, 2 = detailed, 3 = both"),
 	  LP_SPEED_DIVISOR("SpeedDivisor", !PERS, 100, "Factor by which to slow down (multiplied by 100)"),
 	  LP_ZOOMSTEPS("Zoomsteps", PERS, 32, "Integerised ratio of zoom size for click/button mode, denom 64."),
-	  /*LP_B("ButtonMenuBoxes", PERS, 4, "Number of boxes for button menu mode"),
+	  LP_B("ButtonMenuBoxes", PERS, 4, "Number of boxes for button menu mode"),
 	  LP_S("ButtonMenuSafety", PERS, 25, "Safety parameter for button mode, in percent."),
-	  LP_Z("ButtonMenuBackwardsBox", PERS, 1, "Number of back-up boxes for button menu mode"),
 	  LP_R("ButtonModeNonuniformity", PERS, 0, "Button mode box non-uniformity"),
+	  /*LP_Z("ButtonMenuBackwardsBox", PERS, 1, "Number of back-up boxes for button menu mode"),
 	  LP_RIGHTZOOM("ButtonCompassModeRightZoom", PERS, 5120, "Zoomfactor (*1024) for compass mode"),*/
 	  LP_BOOSTFACTOR("BoostFactor", !PERS, 100, "Boost/brake factor (multiplied by 100)"),
 	  LP_AUTOSPEED_SENSITIVITY("AutospeedSensitivity", PERS, 100, "Sensitivity of automatic speed control (percent)"),
@@ -76,7 +76,8 @@ public enum Elp_parameters implements EParameters {
 	  LP_TAP_TIME("TapTime", PERS, 100, "Max time for tap in Stylus Mode"),
 	  LP_NON_LINEAR_X("NonLinearX", PERS, 8, "Nonlinear compression of X-axis (0 = none, higher = more extreme)"),
 	  LP_DASHER_MARGIN("MarginWidth", PERS, 400, "Width of RHS margin (in Dasher co-ords)"),
-	  LP_NODE_BUDGET("NodeBudget", PERS, 1200, "Target number of node objects");
+	  LP_NODE_BUDGET("NodeBudget", PERS, 1200, "Target number of node objects"),
+	  LP_BUTTON_SCAN_TIME("ButtonScanTime", PERS, 0, "Scanning interval in button mode (0 = don't scan)");
 		  
 		  private Elp_parameters(String rName, boolean pers, long def, String hr) {
 				humanReadable = hr;

@@ -184,10 +184,6 @@ public class CDasherModel extends CDasherComponent {
 		 * Co-ordinate 2
 		 */
 		public long iN2;
-		/**
-		 * 2 if this is the last point in a sequence, 1 if not.
-		 */
-		public int iStyle;
 	}
 	
 	private CDasherNode m_pLastOutput;
@@ -736,6 +732,11 @@ public class CDasherModel extends CDasherComponent {
 		if (m_deGotoQueue.size() == 0) return false;
 		SGotoItem next = m_deGotoQueue.removeFirst();
 		NewGoTo(next.iN1, next.iN2);
+		if (ScheduledSteps()==0) {
+            //just finished. Pause (mouse not held down, or schedule
+            //would have been cleared already)
+            SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
+        }
 		return true;
 	}
 	
@@ -1087,30 +1088,24 @@ public class CDasherModel extends CDasherComponent {
 		// Takes dasher co-ordinates and 'schedules' a zoom to that location
 		// by storing a sequence of moves in 'm_deGotoQueue'
 		
-		/* CSFS: In a few locations here there were implicit casts
-		 * where an integer/long is multiplied by some double
-		 * and then is implictly cast back to int/long. I've made
-		 * these explicit and again hope this is what's intended...
-		 */
-		
 		// TODO: What is the following line for?
-		if (dasherx < 2) { dasherx = 100; }
+		//if (dasherx < 2) { dasherx = 100; }
+		//ACL I don't know, so I'm going with:
+		if (dasherx < 2) dasherx = 2;
 		
 		double dCFactor = CorrectionFactor(dasherx, dashery);
 		
-		int iSteps = (int)(GetLongParameter(Elp_parameters.LP_ZOOMSTEPS) * dCFactor);
-		long n1, n2, iTarget1, iTarget2;
+		final int iSteps = (int)(GetLongParameter(Elp_parameters.LP_ZOOMSTEPS) * dCFactor);
 			
-		iTarget1 = dashery - dasherx;
-		iTarget2 = dashery + dasherx;
+		final long iTarget1 = dashery - dasherx,
+			iTarget2 = dashery + dasherx;
 		
 		double dZ = 4096 / (double)(iTarget2 - iTarget1);
 		
-		n1 = (long)((m_Rootmin - iTarget1) * dZ);
-		n2 = (long)((m_Rootmax - iTarget2) * dZ + 4096);
+		final long n1 = (long)((m_Rootmin - iTarget1) * dZ),
+			n2 = (long)((m_Rootmax - iTarget2) * dZ + 4096);
 		
 		m_deGotoQueue.clear();
-		
 		
 		for(int s = 1; s < iSteps; ++s) {
 			// use simple linear interpolation. Really should do logarithmic interpolation, but
@@ -1119,7 +1114,6 @@ public class CDasherModel extends CDasherComponent {
 			
 			sNewItem.iN1 = (s * n1 + (iSteps-s) * m_Rootmin) / iSteps;
 			sNewItem.iN2 = (s * n2 + (iSteps-s) * m_Rootmax) / iSteps;
-			sNewItem.iStyle = 1;
 			
 			m_deGotoQueue.addLast(sNewItem);
 		} 
@@ -1128,11 +1122,10 @@ public class CDasherModel extends CDasherComponent {
 		
 		sNewItem.iN1 = n1;
 		sNewItem.iN2 = n2;
-		sNewItem.iStyle = 2;
 		
 		m_deGotoQueue.addLast(sNewItem);
 		
-		/* CSFS: Swapped push_back for addLast in both cases */
+		SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, false);
 	}
 	
 	/**
