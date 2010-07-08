@@ -37,6 +37,9 @@ public class DasherActivity extends PreferenceActivity {
         ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidScan"))
 		.setOnPreferenceClickListener(lstnr);
     
+        ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidCompass"))
+		.setOnPreferenceClickListener(lstnr);
+    
         IMDasherInterface.INSTANCE.Realize(this);
         
         addPermittedValues(Esp_parameters.SP_ALPHABET_ID);

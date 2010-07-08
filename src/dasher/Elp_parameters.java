@@ -58,8 +58,8 @@ public enum Elp_parameters implements EParameters {
 	  LP_B("ButtonMenuBoxes", PERS, 4, "Number of boxes for button menu mode"),
 	  LP_S("ButtonMenuSafety", PERS, 25, "Safety parameter for button mode, in percent."),
 	  LP_R("ButtonModeNonuniformity", PERS, 0, "Button mode box non-uniformity"),
-	  /*LP_Z("ButtonMenuBackwardsBox", PERS, 1, "Number of back-up boxes for button menu mode"),
-	  LP_RIGHTZOOM("ButtonCompassModeRightZoom", PERS, 5120, "Zoomfactor (*1024) for compass mode"),*/
+	  //LP_Z("ButtonMenuBackwardsBox", PERS, 1, "Number of back-up boxes for button menu mode"),
+	  LP_RIGHTZOOM("ButtonCompassModeRightZoom", PERS, 5120, "Zoomfactor (*1024) for compass mode"),
 	  LP_BOOSTFACTOR("BoostFactor", !PERS, 100, "Boost/brake factor (multiplied by 100)"),
 	  LP_AUTOSPEED_SENSITIVITY("AutospeedSensitivity", PERS, 100, "Sensitivity of automatic speed control (percent)"),
 	  /*LP_SOCKET_PORT("SocketPort", PERS, 20320, "UDP/TCP socket to use for network socket input"),

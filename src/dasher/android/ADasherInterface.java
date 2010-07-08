@@ -228,6 +228,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		});
 		RegisterModule(new CButtonMode(this, getSettingsStore(), false, 12, "Direct Mode"));
 		RegisterModule(new CButtonMode(this, getSettingsStore(), true, 11, "Scanning Menu Mode"));
+		RegisterModule(new CCompassMode(this,getSettingsStore()));
 	}
 	
 	@Override

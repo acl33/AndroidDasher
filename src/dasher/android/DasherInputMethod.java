@@ -3,7 +3,9 @@ package dasher.android;
 import java.util.Arrays;
 
 import android.inputmethodservice.InputMethodService;
+import android.preference.PreferenceManager;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.EditorInfo;
@@ -47,6 +49,26 @@ public class DasherInputMethod extends InputMethodService {
 		//TODO, use EditorInfo to select appropriate...language? (e.g. numbers only!).
 		// Passwords???
 	}
+	
+	@Override public boolean onKeyUp(int keyCode, KeyEvent event) {
+		if (PreferenceManager.getDefaultSharedPreferences(this).getString(IMCheckBox.SETTING, "").equals("AndroidCompass")
+				&& keyCode>=19 && keyCode<=22) {
+			int key = ((keyCode-18)*2) % 5; //2,4,1,3
+			IMDasherInterface.INSTANCE.KeyUp(System.currentTimeMillis(), key);
+			return true; //handled
+		}
+		return super.onKeyUp(keyCode, event);
+	}			
+	
+	@Override public boolean onKeyDown(int keyCode, KeyEvent event) {
+		if (PreferenceManager.getDefaultSharedPreferences(this).getString(IMCheckBox.SETTING, "").equals("AndroidCompass")
+				&& keyCode>=19 && keyCode<=22) {
+			int key = ((keyCode-18)*2) % 5; //2,4,1,3
+			IMDasherInterface.INSTANCE.KeyDown(System.currentTimeMillis(), key);
+			return true; //handled
+		}
+		return super.onKeyDown(keyCode, event);
+	}	
 	
 	@Override
 	public void onFinishInput() {
