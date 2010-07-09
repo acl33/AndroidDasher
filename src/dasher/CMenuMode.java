@@ -16,8 +16,8 @@ package dasher;
   {BP_GLOBAL_KEYBOARD, T_BOOL, -1, -1, -1, -1, _("Global keyboard grab")}
 };*/
 
-public class CButtonMode extends CDasherButtons {
-	public CButtonMode(CDasherInterfaceBase iface, CSettingsStore sets, int iID, String szName) {
+public class CMenuMode extends CScanning {
+	public CMenuMode(CDasherInterfaceBase iface, CSettingsStore sets, int iID, String szName) {
 		super(iface,sets,iID,szName);
 	}
 
@@ -34,48 +34,22 @@ public class CButtonMode extends CDasherButtons {
 		// See ~mackay/dasher/buttons/
 		final double dRatio = Math.pow(129/127.0, GetLongParameter(Elp_parameters.LP_R));
 		final int lpS = (int)GetLongParameter(Elp_parameters.LP_S);
-	      
-		if(iForwardBoxes == 2+1) { // Special case for two forwards buttons
-			double dNorm = 1+dRatio;
 
-			m_pBoxes[0]=new SBox(0,(int)(iDasherY/dNorm),lpS);
+		double dMaxSize;
+		if(dRatio == 1.0)
+			dMaxSize = iDasherY / (double)iForwardBoxes;
+		else
+			dMaxSize = ((dRatio - 1)/(Math.pow(dRatio, iForwardBoxes) - 1)) * iDasherY; 
 
-			m_pBoxes[1]=new SBox((int)(iDasherY/dNorm),iDasherY,lpS);
-		} else {
-			boolean bEven = iForwardBoxes % 2 == 0;
+		double dMin = 0.0;
 
-			int iGeometricTerms = (iForwardBoxes+1)/2;
-
-			double dMaxSize;
-
-			if(dRatio == 1.0) {
-				dMaxSize = iDasherY / iForwardBoxes;
-			} else {
-				if(bEven)
-					dMaxSize = iDasherY * (dRatio - 1) / (2 * (Math.pow(dRatio, iGeometricTerms) - 1));
-				else
-					dMaxSize = iDasherY * (dRatio - 1) / (2 * (Math.pow(dRatio, iGeometricTerms) - 1) - (dRatio - 1));
-			}
-
-			double dMin;
-			
-			if(bEven)
-				dMin = iDasherY / 2;
-			else
-				dMin = (iDasherY - dMaxSize)/2;
-
-			final int iUpBase = iForwardBoxes / 2; //round down if !bEven
-			final int iDownBase = (iForwardBoxes-1)/2; //round down if bEven
-
-			for(int i = 0; i < iGeometricTerms; ++i) { // One button reserved for backoff
-				double dMax = dMin + dMaxSize * Math.pow(dRatio, i);
-
-		        m_pBoxes[iUpBase + i]=new SBox((int)dMin,(int)dMax,lpS);
-		        
-		        m_pBoxes[iDownBase - i]=new SBox((int)(iDasherY - dMax),(int)(iDasherY - dMin), lpS);
-
-		        dMin = dMax;
-			}
+		for(int i = 0; i < m_pBoxes.length - 1; ++i) { // One button reserved for backoff
+			double dMax = dMin + dMaxSize * Math.pow(dRatio, i);
+  
+//       m_pBoxes[i].iDisplayTop = (i * iDasherY) / (m_iNumBoxes.length - 1);
+//       m_pBoxes[i].iDisplayBottom = ((i+1) * iDasherY) / (m_iNumBoxes.length - 1);
+			m_pBoxes[i] = new SBox((int)dMin, (int)dMax,lpS);
+			dMin = dMax;
 		}
   
 		m_pBoxes[m_pBoxes.length-1]=new SBox((int)(- iDasherY / 2),(int)(iDasherY * 1.5),0,iDasherY);

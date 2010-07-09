@@ -3,7 +3,7 @@ package dasher;
 public class CCompassMode extends CDasherButtons {
 	private int iTargetWidth;
 	public CCompassMode(CDasherInterfaceBase iface, CSettingsStore sets) {
-		super(iface, sets, false /*bMenu*/, 13, "Compass Mode");
+		super(iface, sets, 13, "Compass Mode");
 	}
   
 	@Override protected SBox[] SetupBoxes() {
