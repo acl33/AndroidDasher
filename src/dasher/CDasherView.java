@@ -285,20 +285,20 @@ public abstract class CDasherView extends CDasherComponent {
 	 * the request passed on to the screen.
 	 * 
 	 * @param iLeft Left side x co-ordinate
-	 * @param iTop Top y co-ordinate
+	 * @param iMaxY Max dasher-y co-ordinate
 	 * @param iRight Right side x co-ordinate
-	 * @param iBottom Bottom y co-ordinate
+	 * @param iMinY Min dasher-y co-ordinate
 	 * @param Color Fill colour, -1 => don't fill
 	 * @param iOutlineColour Outline colour (-1 => use default)
 	 * @param ColorScheme Colour scheme to use (usually ignored in favour of colour indices now)
 	 * @param iThickness Outline thickness (<1 => don't outline)
 	 */	
-	public void DasherDrawRectangle(long iLeft, long iTop, long iRight, long iBottom, int Color, int iOutlineColour, int iThickness) {
+	public void DasherDrawRectangle(long iLeft, long iMinY, long iRight, long iMaxY, int Color, int iOutlineColour, int iThickness) {
 		
-		temp1[0] = iLeft; temp1[1] = iTop;
+		temp1[0] = iLeft; temp1[1] = iMaxY;
 		Dasher2Screen(temp1);
 		
-		temp2[0] = iRight; temp2[1] = iBottom;
+		temp2[0] = iRight; temp2[1] = iMinY;
 		Dasher2Screen(temp2);
 		
 		Screen().DrawRectangle((int)temp1[0], (int)temp1[1], (int)temp2[0], (int)temp2[1], Color, iOutlineColour, iThickness);
