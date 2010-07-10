@@ -10,10 +10,12 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Paint.Style;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.WindowManager;
 import android.view.SurfaceHolder.Callback;
 
 public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen {
@@ -38,7 +40,36 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 
 	protected void onMeasure(int widthMS, int heightMS) {
 		Log.d("DasherIME","onMeasure ("+MeasureSpec.toString(widthMS)+","+MeasureSpec.toString(heightMS)+")");
-		setMeasuredDimension(ms(widthMS,dw),ms(heightMS,dh));
+		if (MeasureSpec.getMode(widthMS)==MeasureSpec.EXACTLY) {
+			int w = MeasureSpec.getSize(widthMS);
+			setMeasuredDimension(w, ms(heightMS,w));
+			return;
+		}
+		if (MeasureSpec.getMode(heightMS)==MeasureSpec.EXACTLY) {
+			int h=MeasureSpec.getSize(heightMS);
+			setMeasuredDimension(ms(widthMS,h), h);
+			return;
+		}
+		if (MeasureSpec.getMode(widthMS)==MeasureSpec.AT_MOST) {
+			int d = MeasureSpec.getSize(widthMS);
+			if (MeasureSpec.getMode(heightMS)==MeasureSpec.AT_MOST) {
+				d=Math.min(d,MeasureSpec.getSize(heightMS));
+			} //else, height unspec'd - use width
+			setMeasuredDimension(d,d);
+			return;
+		}
+		//width unspecified
+		if (MeasureSpec.getMode(heightMS)==MeasureSpec.AT_MOST) {
+			int d = MeasureSpec.getSize(heightMS);
+			setMeasuredDimension(d,d);
+			return;
+		}
+		//both unspecified!!
+		WindowManager wm = (WindowManager)getContext().getSystemService(Context.WINDOW_SERVICE);
+		DisplayMetrics dm = new DisplayMetrics();
+		wm.getDefaultDisplay().getMetrics(dm);
+		int d=Math.min(dm.heightPixels,dm.widthPixels);
+		setMeasuredDimension(d,d);
 	}
 	
 	private int ms(int mSpec, int pref) {
