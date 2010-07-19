@@ -40,8 +40,6 @@ public enum Elp_parameters implements EParameters {
 	  LP_YSCALE("YScaling", PERS, 0, "YScaling"),
 	  LP_MOUSEPOSDIST("MousePositionBoxDistance", PERS, 50, "MousePositionBoxDistance"),
 	  //LP_STOP_IDLETIME("StopIdleTime", PERS, 1000, "StopIdleTime" ),
-	  LP_TRUNCATION("Truncation", PERS, 0, "Truncation"),
-	  LP_TRUNCATIONTYPE("TruncationType", PERS, 0, "TruncationType"),
 	  LP_LM_MAX_ORDER("LMMaxOrder", PERS, 5, "LMMaxOrder"),
 	  LP_LM_EXCLUSION("LMExclusion", PERS, 0, "LMExclusion"),
 	  LP_LM_UPDATE_EXCLUSION("LMUpdateExclusion", PERS, 1, "LMUpdateExclusion"),
@@ -76,7 +74,8 @@ public enum Elp_parameters implements EParameters {
 	  LP_NON_LINEAR_X("NonLinearX", PERS, 8, "Nonlinear compression of X-axis (0 = none, higher = more extreme)"),
 	  LP_DASHER_MARGIN("MarginWidth", PERS, 400, "Width of RHS margin (in Dasher co-ords)"),
 	  LP_NODE_BUDGET("NodeBudget", PERS, 1200, "Target number of node objects"),
-	  LP_BUTTON_SCAN_TIME("ButtonScanTime", PERS, 0, "Scanning interval in button mode (0 = don't scan)");
+	  LP_BUTTON_SCAN_TIME("ButtonScanTime", PERS, 0, "Scanning interval in button mode (0 = don't scan)"),
+	  LP_MIN_NODE_SIZE_TEXT("MinNodeSizeForText",PERS, 40, "Minimum size for node to have text (4096=whole screen)");
 		  
 		  private Elp_parameters(String rName, boolean pers, long def, String hr) {
 				humanReadable = hr;

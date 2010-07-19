@@ -124,15 +124,11 @@ public class CDasherViewSquare extends CDasherView {
 	
 	protected DRect visibleRegion;
 	
-	/**
-	 * Cache of LP_TRUNCATION
-	 */
-	protected int lpTruncation;
+	/** Cache of LP_MIN_NODE_SIZE_TEXT */
+	protected int minNodeSizeText;
 	
-	/**
-	 * Cache of LP_TRUNCATION_TYPE
-	 */
-	protected int lpTruncationType;
+	/** Cache of BP_OUTLINE_MODE */
+	protected boolean bOutline;
 	
 	/**
 	 * Cache of LP_NORAMLIZATON
@@ -167,8 +163,8 @@ public class CDasherViewSquare extends CDasherView {
 		m_DelayDraw = new CDelayedDraw();
 		ChangeScreen(DasherScreen);
 		
-		lpTruncation = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_TRUNCATION);
-		lpTruncationType = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_TRUNCATIONTYPE);
+		minNodeSizeText = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_MIN_NODE_SIZE_TEXT);
+		bOutline = SettingsStore.GetBoolParameter(Ebp_parameters.BP_OUTLINE_MODE);
 		lpNormalisation = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_NORMALIZATION);
 		
 		// These results are cached to make co-ordinate transformations quicker.
@@ -200,11 +196,11 @@ public class CDasherViewSquare extends CDasherView {
 				visibleRegion = null;
 				SetScaleFactor();
 			}
-			else if (Evt.m_iParameter == Elp_parameters.LP_TRUNCATION) {
-				lpTruncation = (int)GetLongParameter(Elp_parameters.LP_TRUNCATION);
+			else if (Evt.m_iParameter == Elp_parameters.LP_MIN_NODE_SIZE_TEXT) {
+				minNodeSizeText = (int)GetLongParameter(Elp_parameters.LP_MIN_NODE_SIZE_TEXT);
 			}
-			else if (Evt.m_iParameter == Elp_parameters.LP_TRUNCATIONTYPE) {
-				lpTruncationType = (int)GetLongParameter(Elp_parameters.LP_TRUNCATIONTYPE);
+			else if (Evt.m_iParameter == Ebp_parameters.BP_OUTLINE_MODE) {
+				bOutline = GetBoolParameter(Ebp_parameters.BP_OUTLINE_MODE);
 			}
 			else if (Evt.m_iParameter == Elp_parameters.LP_NORMALIZATION) {
 				lpNormalisation = (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
@@ -285,17 +281,18 @@ public class CDasherViewSquare extends CDasherView {
 		
 		//ok, render the node...
 		long iDasherSize = (y2 - y1);
-				
-		if(lpTruncation == 0) {        // Regular squares
-			DasherDrawRectangle(Math.min(iDasherSize,visreg.maxX), Math.min(y2,visreg.maxY), 0, Math.max(y1,visreg.minY), Render.m_iColour, -1, 0);
-		} else {
-			//ACL did use iSize not iDasherSize - i.e., y2-y1 _after_ applying nonlinearities.
-			DasherTruncRect(y1, y2, iDasherSize, Render.m_iColour);
-		}
+		temp[0]=Math.min(iDasherSize,visreg.maxX);
+		temp[1]=Math.min(y2,visreg.maxY);
+		Dasher2Screen(temp);
+		int left=(int)temp[0], bottom=(int)temp[1];
+		temp[0] = 0;
+		temp[1] = Math.max(y1, visreg.minY);
+		Dasher2Screen(temp);
+		int right=(int)temp[0], top=(int)temp[1];
 		
-		//long iDasherAnchorX = (iDasherSize);
+		Screen().DrawRectangle(left, top, right, bottom, Render.m_iColour, -1, 0);
 		
-		if( Render.m_strDisplayText != null && Render.m_strDisplayText.length() > 0 )
+		if( Render.m_strDisplayText.length() > 0 )
 			mostleft = (int)DasherDrawText(iDasherSize, y1, iDasherSize, y2, Render.m_strDisplayText, mostleft, Render.shove());
 					
 		/* If this node hasn't any children (yet), we're done */
@@ -309,145 +306,41 @@ public class CDasherViewSquare extends CDasherView {
 				CDasherNode child=Render.m_OnlyChildRendered;
 				long newy1 = y1 + (iDasherSize * child.Lbnd()) / lpNormalisation;
 				long newy2 = y1 + (iDasherSize * child.Hbnd()) / lpNormalisation;
-				if (NodeFillsScreen(newy1,newy2)) {
+				if (newy1 <= visreg.minY && newy2 >= visreg.maxY) {
 					RecursiveRender(child, newy1, newy2, mostleft, pol);
-					break renderChildren;
+					break renderChildren; //all other children were collapsed when m_OnlyChildRendered was set
 				}
 				else Render.m_OnlyChildRendered = null;
 			}
 			/* Step 3: Draw our child nodes */
-			for(int i=0, j=Render.ChildCount(); i<j; i++) {
+			long newy1 = y1, newy2;
+			assert newy1 <= visreg.maxY;
+			int i=0, j=Render.ChildCount();
+			for(; i<j; i++, newy1=newy2) {
 				CDasherNode ch = Render.ChildAtIndex(i);
-				
-				long newy1 = y1 + (iDasherSize * ch.Lbnd()) / lpNormalisation;
-				long newy2 = y1 + (iDasherSize * ch.Hbnd()) / lpNormalisation;
-				// FIXME - make the threshold a parameter
-				
-				if(newy2 - newy1 > 50 //quick/approximate test it's big enough
-				   && newy1 <= visreg.maxY && newy2 >= visreg.minY //at least partly onscreen?
-				   // TODO - use new versions of coordinate conversion functions in next check (?!)
-				   && (ymap(newy2)-ymap(newy1))*CanvasY > lpMaxY) { //more than one pixel on actual screen?
-						RecursiveRender(ch, newy1, newy2, mostleft, pol);
-						if (NodeFillsScreen(newy1, newy2)) {
-							Render.m_OnlyChildRendered = ch;
-							break renderChildren; //stop looping round children
-						}
+					
+				newy2 = y1 + (iDasherSize * ch.Hbnd()) / lpNormalisation;
+					
+				if ((newy2 - newy1 > minNodeSizeText || (newy2-newy1 > minNodeSizeText/2 && ch.Range() > lpNormalisation/3))
+						&& newy2 >= visreg.minY) {//at least partly onscreen?
+					RecursiveRender(ch, newy1, newy2, mostleft, pol);
+					if (newy2 >= visreg.maxY) {
+						//remaining children offscreen
+						if (newy1 <= visreg.minY) Render.m_OnlyChildRendered = ch; //and previous ones were too!
+						break; 
+					}
 				} else
 					ch.Delete_children(); //did not render child - too small, or entirely off-screen - collapse immediately.
+				if (newy2 > visreg.maxY) break; //rest of children are offscreen
 			}
+			//any remaining children are offscreen, and do not need rendering
+			while (++i<j) Render.ChildAtIndex(i).Delete_children();
 		}
-		if (GetBoolParameter(Ebp_parameters.BP_OUTLINE_MODE)
-				&& Render.outline()
-				&& lpTruncation==0) {
-			DasherDrawRectangle(Math.min(iDasherSize,visreg.maxX), Math.min(y2,visreg.maxY), 0, Math.max(y1,visreg.minY), -1, -1, 1);
+		if (bOutline && Render.outline()) {
+			Screen().DrawRectangle(left, top, right, bottom, -1, -1, 1);
 		}
 	}
-	
-	private void DasherTruncRect(long y1, long y2, long iSize, int Color) {
-		int iDasherY = (int)lpMaxY;
-		long iDasherSize = y2-y1;
-		int iSpacing = iDasherY / 128;       // FIXME - assuming that this is an integer below
-		
-		int iXStart = 0;
-		
-		switch (lpTruncationType) {
-		case 1:
-			iXStart = (int)(iSize - iSize * lpTruncation / 200);
-			break;
-		case 2:
-			iXStart = (int)(iSize - iSize * lpTruncation / 100);
-			break;
-		}
-		
-		int iTipMin = (int)((y2 - y1) * lpTruncation / (200) + y1);
-		int iTipMax = (int)(y2 - (y2 - y1) * lpTruncation / (200));
-		
-		int iLowerMin = (int)(((y1 + 1) / iSpacing) * iSpacing);
-		int iLowerMax = (((iTipMin - 1) / iSpacing) * iSpacing);
-		
-		int iUpperMin = (((iTipMax + 1) / iSpacing) * iSpacing);
-		int iUpperMax = (int)(((y2 - 1) / iSpacing) * iSpacing);
-		
-		if(iLowerMin < 0)
-			iLowerMin = 0;
-		
-		if(iLowerMax < 0)
-			iLowerMax = 0;
-		
-		if(iUpperMin < 0)
-			iUpperMin = 0;
-		
-		if(iUpperMax < 0)
-			iUpperMax = 0;
-		
-		if(iLowerMin > iDasherY)
-			iLowerMin = iDasherY;
-		
-		if(iLowerMax > iDasherY)
-			iLowerMax = iDasherY;
-		
-		if(iUpperMin > iDasherY)
-			iUpperMin = iDasherY;
-		
-		if(iUpperMax > iDasherY)
-			iUpperMax = iDasherY;
-		
-		while(iLowerMin < y1)
-			iLowerMin += iSpacing;
-		
-		while(iLowerMax > iTipMin)
-			iLowerMax -= iSpacing;
-		
-		while(iUpperMin < iTipMax)
-			iUpperMin += iSpacing;
-		
-		while(iUpperMax > y2)
-			iUpperMax -= iSpacing;
-		
-		int iLowerCount = ((iLowerMax - iLowerMin) / iSpacing + 1);
-		int iUpperCount = ((iUpperMax - iUpperMin) / iSpacing + 1);
-		
-		if(iLowerCount < 0)
-			iLowerCount = 0;
-		
-		if(iUpperCount < 0)
-			iUpperCount = 0;
-		
-		int iTotalCount = (int)(iLowerCount + iUpperCount + 6);
-		
-		long[] x = new long[iTotalCount];
-		long[] y = new long[iTotalCount];
-		
-		// Weird duplication here is to make truncated squares possible too
-		
-		x[0] = 0;
-		y[0] = y1;
-		x[1] = iXStart;
-		y[1] = y1;
-		
-		x[iLowerCount + 2] = iDasherSize;
-		y[iLowerCount + 2] = iTipMin;
-		x[iLowerCount + 3] = iDasherSize;
-		y[iLowerCount + 3] = iTipMax;
-		
-		x[iTotalCount - 2] = iXStart;
-		y[iTotalCount - 2] = y2;
-		x[iTotalCount - 1] = 0;
-		y[iTotalCount - 1] = y2;
-		
-		for(int i = (0); i < iLowerCount; ++i) {
-			x[i + 2] = (iLowerMin + i * iSpacing - y1) * (iDasherSize - iXStart) / (iTipMin - y1) + iXStart;
-			y[i + 2] = iLowerMin + i * iSpacing;
-		}
-		
-		for(int j = (0); j < iUpperCount; ++j) {
-			x[j + iLowerCount + 4] = (y2 - (iUpperMin + j * iSpacing)) * (iDasherSize - iXStart) / (y2 - iTipMax) + iXStart;
-			y[j + iLowerCount + 4] = iUpperMin + j * iSpacing;
-		}
-		
-		DasherPolygon(x, y, iTotalCount, Color);
-	}
-	
+	private final long[] temp=new long[2];
 	/**
 	 * Determines whether a node falls within our current visible
 	 * region. This is determined by the simple expedient of calling

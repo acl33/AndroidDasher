@@ -124,6 +124,7 @@ public abstract class CDasherNode {
 	 * @param Colour Colour number
 	 */
     protected void initNode(CDasherNode Parent, int iOffset, long ilbnd, long ihbnd, int Colour, String strDisplayText) {
+    	if (ihbnd < ilbnd || strDisplayText==null) throw new IllegalArgumentException();
     	m_iOffset = iOffset;
 		m_iLbnd = ilbnd;
 		m_iHbnd = ihbnd;

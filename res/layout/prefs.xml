@@ -12,6 +12,12 @@
     <PreferenceScreen
       android:title="Display Settings">
     	
+    	<dasher.android.SeekBarPreference
+    	  android:key="MinNodeSizeForText"
+    	  android:title="Size for Text"
+    	  android:summary="smallest node to have text, 4096=whole screen"
+    	  min="10" android:max="100"/>
+    	
 	    <dasher.android.SeekBarPreference
 	      android:key="NodeBudget"
 	      android:title="Node budget"
@@ -23,8 +29,8 @@
 	       android:title="X Non-linearity"
 	       android:summary="Log compress left of crosshair"
 	       android:max="10"/>
-	     
-		<dasher.android.SeekBarPreference
+	    
+	    <dasher.android.SeekBarPreference
 		  android:key="DasherFontSize"
 		  android:title="Font Size"
 		  android:summary="Small / medium / large"
