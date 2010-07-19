@@ -124,18 +124,6 @@ public class CDasherModel extends CDasherComponent {
 	protected double total_nats;            // Information entered so far
 	
 	/**
-	 * The probability that gets added to every symbol
-	 */ 
-	protected double m_dMaxRate;
-	
-	/**
-	 * Number of interpolated steps to use in Click Mode.
-	 * 
-	 * @see CClickFilter
-	 */
-	protected int m_Stepnum;
-	
-	/**
 	 * Our alphabet manager, for functions which require knowledge
 	 * of an Alphabet.
 	 */
@@ -215,11 +203,9 @@ public class CDasherModel extends CDasherComponent {
 	super(iface, SettingsStore); 
 	m_DasherInterface = iface;
 	
-	// Set max bitrate in the FrameRate class
-	m_dMaxRate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) / 100.0;
-	
 	m_fr = new CFrameRate();
-	m_fr.SetMaxBitrate(m_dMaxRate);
+	// Set max bitrate, inc in the FrameRate class
+	HandleEvent(new CParameterNotificationEvent(Elp_parameters.LP_MAX_BITRATE));
 	
 	// Convert the full alphabet to a symbolic representation for use in the language model
 	
@@ -321,10 +307,9 @@ public class CDasherModel extends CDasherComponent {
 			CParameterNotificationEvent Evt = (CParameterNotificationEvent)(Event);
 			
 			if(Evt.m_iParameter == Elp_parameters.LP_MAX_BITRATE
-					|| Evt.m_iParameter == Elp_parameters.LP_BOOSTFACTOR
-					|| Evt.m_iParameter == Elp_parameters.LP_SPEED_DIVISOR) {
-				m_dMaxRate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) * GetLongParameter(Elp_parameters.LP_BOOSTFACTOR) / 100 / (double)(GetLongParameter(Elp_parameters.LP_SPEED_DIVISOR));
-				m_fr.SetMaxBitrate(m_dMaxRate);
+					|| Evt.m_iParameter == Elp_parameters.LP_BOOSTFACTOR) {
+				//both bitrate _and_ boostfactor are stored as %ages...
+				m_fr.SetMaxBitrate(GetLongParameter(Elp_parameters.LP_MAX_BITRATE) * GetLongParameter(Elp_parameters.LP_BOOSTFACTOR) / 10000.0);
 			}
 			else if(Evt.m_iParameter == Ebp_parameters.BP_CONTROL_MODE) { // Rebuild the model if control mode is switched on/off
 				RebuildAroundNode(Get_node_under_crosshair());
@@ -1192,13 +1177,6 @@ public class CDasherModel extends CDasherComponent {
 	 */
 	public void Halt() {
 	    m_fr.Initialise();
-	}
-	
-	/**
-	 * Deferred to m_fr.
-	 */
-	public void SetBitrate(double TargetRate) {
-	    m_fr.SetBitrate(TargetRate);
 	}
 	
 	/**

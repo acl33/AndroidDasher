@@ -31,7 +31,8 @@ package dasher;
  * such as automatic speed control.
  */
 public class CFrameRate {
-	
+private int logCount;	
+private double logFrames;
 	/**
 	 * Current frame rate
 	 */
@@ -78,24 +79,14 @@ public class CFrameRate {
 	final double LN2 = Math.log(2.0);
 
 	/**
-	 * Gets maximum x movement per frame
-	 * 
-	 * @return m_dRXmax
-	 */
-	public double Rxmax() {
-	    return m_dRXmax;
-	}
-	/// Get the minimum size of the target viewport
-	////// TODO: Eventually fix this so that it uses integer maths internally. 
-	
-	/**
 	 * Gets the minimum size of the target viewport
 	 * 
-	 * @param t Current time
+	 * @param y height of the current view/screen
 	 * @return Minimum size of target viewport
-	 */
-	public long MinSize(long t) {
-		return (long)(t / m_dRXmax);
+	 */ 
+	public long MinSize(long iMaxY) {
+	////// TODO: Eventually fix this so that it uses integer maths internally.
+		return (long)(iMaxY / m_dRXmax);
 	}
 	
 	/**
@@ -128,16 +119,7 @@ public class CFrameRate {
 		
 		// maxbitrate should be user-defined and/or adaptive. Currently it is not.
 		m_dMaxbitrate = 5.5;
-		m_dRXmax = 2;                 // only a transient effect
-		m_iFrames = 0;
-		m_iSamples = 1;
-		
-		// we dont know the framerate yet - play it safe by setting it high
-		m_dFr = 1 << 5;
-		
-		// start off very slow until we have sampled framerate adequately
-		m_iSteps = 2000;
-		m_iTime = 0;                  // Hmmm, User must reset framerate before starting.
+		Initialise();
 	}
 	
 	/**
@@ -183,7 +165,11 @@ public class CFrameRate {
 				m_dFr = m_iFrames * 1000.0 / (m_iTime2 - m_iTime);
 				m_iTime = m_iTime2;
 				m_iFrames = 0;
-				
+			}
+			logFrames+=m_dFr;
+			if (++logCount==20) {
+				android.util.Log.d("DasherCore","Framerate: "+logFrames/logCount);
+				logFrames = logCount=0;
 			}
 			m_dRXmax = Math.exp(m_dMaxbitrate * LN2 / m_dFr);
 			m_iSteps = m_iSteps / 2 + (int)(-Math.log(0.2) * m_dFr / LN2 / m_dMaxbitrate) / 2;
@@ -204,15 +190,6 @@ public class CFrameRate {
 	public void Reset(long Time) {
 		m_iFrames = 0;
 		m_iTime = Time;
-	}
-	
-	/**
-	 * Sets the max bitrate
-	 * 
-	 * @param TargetRate New bitrate
-	 */
-	public void SetBitrate(double TargetRate) {
-		m_dMaxbitrate = TargetRate;
 	}
 	
 	/**
