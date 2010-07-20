@@ -328,7 +328,7 @@ public class CDasherModel extends CDasherComponent {
 					SetLongParameter(Elp_parameters.LP_REAL_ORIENTATION, GetLongParameter(Elp_parameters.LP_ORIENTATION));
 				m_DasherInterface.Redraw(true);
 			} else if (Evt.m_iParameter == Elp_parameters.LP_NODE_BUDGET) {
-				pol = new BudgettingPolicy((int)GetLongParameter(Elp_parameters.LP_NODE_BUDGET));
+				pol = new AmortizedPolicy((int)GetLongParameter(Elp_parameters.LP_NODE_BUDGET));
 			}
 			
 			
