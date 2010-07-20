@@ -306,7 +306,7 @@ public class CDasherViewSquare extends CDasherView {
 				CDasherNode child=Render.m_OnlyChildRendered;
 				long newy1 = y1 + (iDasherSize * child.Lbnd()) / lpNormalisation;
 				long newy2 = y1 + (iDasherSize * child.Hbnd()) / lpNormalisation;
-				if (newy1 <= visreg.minY && newy2 >= visreg.maxY) {
+				if (y2-y1 < minNodeSizeText || (newy1 <= visreg.minY && newy2 >= visreg.maxY)) {
 					RecursiveRender(child, newy1, newy2, mostleft, pol);
 					break renderChildren; //all other children were collapsed when m_OnlyChildRendered was set
 				}
@@ -314,27 +314,44 @@ public class CDasherViewSquare extends CDasherView {
 			}
 			/* Step 3: Draw our child nodes */
 			long newy1 = y1, newy2;
+			int bestSz=lpNormalisation/3; CDasherNode bestCh=null;
 			assert newy1 <= visreg.maxY;
 			int i=0, j=Render.ChildCount();
 			for(; i<j; i++, newy1=newy2) {
 				CDasherNode ch = Render.ChildAtIndex(i);
 					
 				newy2 = y1 + (iDasherSize * ch.Hbnd()) / lpNormalisation;
-					
-				if ((newy2 - newy1 > minNodeSizeText || (newy2-newy1 > minNodeSizeText/2 && ch.Range() > lpNormalisation/3))
-						&& newy2 >= visreg.minY) {//at least partly onscreen?
+				if (newy2 < visreg.minY) continue; //not reached screen yet.
+				if (newy2 - newy1 > minNodeSizeText) {
+					//definitely big enough to render
 					RecursiveRender(ch, newy1, newy2, mostleft, pol);
 					if (newy2 >= visreg.maxY) {
 						//remaining children offscreen
 						if (newy1 <= visreg.minY) Render.m_OnlyChildRendered = ch; //and previous ones were too!
 						break; 
 					}
-				} else
-					ch.Delete_children(); //did not render child - too small, or entirely off-screen - collapse immediately.
+					bestSz = Integer.MAX_VALUE;
+					continue; //skips a repeat test of newy2 > visreg.maxY...
+				} else if (ch.Range() > bestSz) {
+					if (bestCh!=null) bestCh.Delete_children();
+					bestCh = ch;
+					bestSz = (int)ch.Range();
+				} else {
+					//did not RecursiveRender, or store into bestCh.
+					ch.Delete_children();
+				}
 				if (newy2 > visreg.maxY) break; //rest of children are offscreen
 			}
 			//any remaining children are offscreen, and do not need rendering
 			while (++i<j) Render.ChildAtIndex(i).Delete_children();
+			if (bestSz>lpNormalisation/3) {
+				if (bestSz!=Integer.MAX_VALUE) {
+					RecursiveRender(bestCh,y1 + (bestCh.Lbnd() * iDasherSize)/lpNormalisation,
+									y1 + (bestCh.Hbnd() * iDasherSize)/lpNormalisation, mostleft,pol);
+					Render.m_OnlyChildRendered = bestCh;
+				} else if (bestCh!=null) bestCh.Delete_children();
+			}
+				
 		}
 		if (bOutline && Render.outline()) {
 			Screen().DrawRectangle(left, top, right, bottom, -1, -1, 1);
