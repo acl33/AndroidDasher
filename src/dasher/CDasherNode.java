@@ -145,6 +145,8 @@ public abstract class CDasherNode {
     
     public static int currentNumNodeObjects() {return numNodes;}
 
+    public abstract int ExpectedNumChildren();
+    
     /**
 	 * Fills this Node's child list.
 	 */

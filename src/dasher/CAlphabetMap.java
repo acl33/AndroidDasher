@@ -67,7 +67,7 @@ public class CAlphabetMap {
 	 */
 	public void Add(String key, int value) {
 		if (key.length()==1) {Add(key.charAt(0), value); return;}
-		if (value<=0) throw new IllegalArgumentException("Illegal symbol number "+value + " for display text "+key);
+		if (value<0) throw new IllegalArgumentException("Illegal symbol number "+value + " for display text "+key);
 		if (multiChars.containsKey(key))
 			throw new IllegalArgumentException(
 					(multiChars.get(key)==PREFIX) ? "symbol "+value+" with display text "+key+" is prefix of another symbol"
@@ -95,7 +95,7 @@ public class CAlphabetMap {
 	 * with the same text, or if this symbol is a prefix of another symbol added previously.
 	 */
 	public void Add(char key,int value) {
-		if (value<=0) throw new IllegalArgumentException("Illegal symbol number "+value + " for display text "+key);
+		if (value<0) throw new IllegalArgumentException("Illegal symbol number "+value + " for display text "+key);
 		if (key >= singleChars.length) {
 			int[] old = singleChars;
 			singleChars = new int[Math.max(old.length*2+1, key+1)];

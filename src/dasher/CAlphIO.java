@@ -138,10 +138,8 @@ public class CAlphIO implements XMLFileParser {
 		int Orientation; // <alphabet><orientation type="[Orientation]">
 		// Needs converting from eg. "RL" to Opts.ScreenOrientations.RighttoLeft.
 		
-		/**
-		 * Number of characters in this alphabet.
-		 */
-		int m_iCharacters;
+		/** Number of child nodes: top-level groups and symbols not in a group */
+		int iNumChildNodes;
 		
 		/**
 		 * List of groups into which this alphabet's symbols
@@ -294,7 +292,8 @@ public class CAlphIO implements XMLFileParser {
 					currentAlph.Mutable = bLoadMutable;
 				    currentAlph.SpaceCharacter.Colour = -1;
 				    currentAlph.ParagraphCharacter.Colour = -1;
-				    currentAlph.m_iCharacters = 1; // Start at 1 as 0 is the root node symbol
+				    //currentAlph.m_iCharacters = 1; // Start at 1 as 0 is the root node symbol
+				    //currentAlph.iNumChildNodes = 1; //the root symbol...urgh :-(
 				    currentAlph.m_BaseGroup = null;
 				    
 				    bFirstGroup = true;
@@ -352,30 +351,17 @@ public class CAlphIO implements XMLFileParser {
 						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
 						if(attributeName == "d") {
 							currentAlph.ParagraphCharacter.Display = tagAttributes.getValue(i);
-							currentAlph.ParagraphCharacter.Text = String.format("%n");
+							try {
+								currentAlph.ParagraphCharacter.Text = System.getProperty("line.separator");
+							} catch (SecurityException e) {
+								/* CSFS: This slightly odd route is used because the traditional method,
+								 * which is to read the system property 'line.seperator' is in fact
+								 * forbidden for applets! Why it's potentially dangerous to establish
+								 * how to terminate lines, I'm not sure.
+								 */
+								currentAlph.ParagraphCharacter.Text = String.format("%n");
+							}
 							
-							/* CSFS: This slightly odd route is used because the traditional method,
-							 * which is to read the system property 'line.seperator' is in fact
-							 * forbidden for applets! Why it's potentially dangerous to establish
-							 * how to terminate lines, I'm not sure.
-							 */
-							
-						}
-						if(attributeName == "b") {
-							currentAlph.ParagraphCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
-						}
-						if(attributeName == "f") {
-							currentAlph.ParagraphCharacter.Foreground = tagAttributes.getValue(i);
-						}
-					}	
-				}
-				
-				else if(tagName == "paragraph") {
-					for(int i = 0; i < tagAttributes.getLength(); i++) {
-						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-						if(attributeName == "d") {
-							currentAlph.ParagraphCharacter.Display = tagAttributes.getValue(i);
-							currentAlph.ParagraphCharacter.Text = System.getProperty("line.seperator");
 						}
 						if(attributeName == "b") {
 							currentAlph.ParagraphCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
@@ -494,17 +480,20 @@ public class CAlphIO implements XMLFileParser {
 						}
 					}
 					
-				    currentGroup.iStart = currentAlph.m_iCharacters;
+				    currentGroup.iStart = currentAlph.m_vCharacters.size();
 
 				    currentGroup.Child = null;
 
-				    if(currentAlph.m_vGroups.size() > 0) {
-				      currentGroup.Next = currentAlph.m_vGroups.get(currentAlph.m_vGroups.size() - 1).Child;
-				      currentAlph.m_vGroups.get(currentAlph.m_vGroups.size() - 1).Child = currentGroup;
+				    if(!currentAlph.m_vGroups.isEmpty()) {
+				    	SGroupInfo parent = currentAlph.m_vGroups.get(currentAlph.m_vGroups.size()-1);
+				      currentGroup.Next = parent.Child;
+				      parent.Child = currentGroup;
+				      parent.iNumChildNodes++;
 				    }
 				    else {
 				      currentGroup.Next = currentAlph.m_BaseGroup;
 				      currentAlph.m_BaseGroup = currentGroup;
+				      currentAlph.iNumChildNodes++;
 				    }
 				    
 				    currentAlph.m_vGroups.add(currentGroup);
@@ -513,8 +502,10 @@ public class CAlphIO implements XMLFileParser {
 				else if(tagName == "s") {
 					CAlphIO.character newChar = new CAlphIO.character();
 					newChar.Colour = -1;
-					++currentAlph.m_iCharacters;
-					
+					if (currentAlph.m_vGroups.isEmpty())
+						currentAlph.iNumChildNodes++;
+					else
+						currentAlph.m_vGroups.get(currentAlph.m_vGroups.size()-1).iNumChildNodes++;
 					for(int i = 0; i < tagAttributes.getLength(); i++) {
 						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
 						if(attributeName == "d") {
@@ -540,6 +531,8 @@ public class CAlphIO implements XMLFileParser {
 				
 				if(tagName == "alphabet") {
 					currentAlph.m_BaseGroup = Reverse(currentAlph.m_BaseGroup);
+					if (currentAlph.SpaceCharacter.Text != "") currentAlph.iNumChildNodes++;
+					if (currentAlph.ParagraphCharacter.Text != "") currentAlph.iNumChildNodes++;
 					Alphabets.put(currentAlph.AlphID, currentAlph);
 				}
 				
@@ -554,7 +547,7 @@ public class CAlphIO implements XMLFileParser {
 				// once the tags we're interested in have been closed.
 
 				else if(tagName == "group") {
-					currentAlph.m_vGroups.get(currentAlph.m_vGroups.size() - 1).iEnd = currentAlph.m_iCharacters;
+					currentAlph.m_vGroups.get(currentAlph.m_vGroups.size() - 1).iEnd = currentAlph.m_vCharacters.size();
 					currentAlph.m_vGroups.remove(currentAlph.m_vGroups.get(currentAlph.m_vGroups.size() - 1));
 				}
 				

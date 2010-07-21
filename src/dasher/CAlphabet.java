@@ -53,40 +53,40 @@ public class CAlphabet {
 	 * left-to-right, right-to-left, top-to-bottom or
 	 * bottom-to-top screen orientation.
 	 */
-	protected int m_Orientation;
+	protected final int m_Orientation;
 	
 	/**
 	 * The symbol number of the new-paragraph character.
 	 */
-	protected int m_ParagraphSymbol;
+	protected final int m_ParagraphSymbol;
 	
 	/**
 	 * The symbol number of the space character.
 	 */
-	protected int m_SpaceSymbol;
+	protected final int m_SpaceSymbol;
 	
 	/**
 	 * Path of a file containing training text relevant
 	 * to this alphabet.
 	 */
-	protected String m_TrainingFile;
+	protected final String m_TrainingFile;
 	
 	// Undocumented as the future of this isn't decided.
-	protected String m_GameModeFile;
+	protected final String m_GameModeFile;
 	
 	/**
 	 * Name of the colour scheme which this alphabet
 	 * 'prefers' to use. This class does not enforce its
 	 * use.
 	 */
-	protected String m_DefaultPalette;
+	protected final String m_DefaultPalette;
 		
 	/**
 	 * Symbols' representations when typed. These are Strings
 	 * and not Characters because some alphabets may define
 	 * multi-character symbols.
 	 */
-	protected ArrayList<String> m_Characters; // stores the characters
+	protected final ArrayList<String> m_Characters; // stores the characters
 	
 	/**
 	 * Symbols' representations on screen. Usually this is the
@@ -94,7 +94,7 @@ public class CAlphabet {
 	 * with extra ornamentation on screen, such as the apostrophe
 	 * in English, and most combining accent characters.
 	 */
-	protected ArrayList<String> m_Display;      // stores how the characters are visually represented in the Dasher nodes
+	protected final ArrayList<String> m_Display;      // stores how the characters are visually represented in the Dasher nodes
 	
 	/**
 	 * Symbols' background colours, used by CDasherView to display
@@ -102,55 +102,27 @@ public class CAlphabet {
 	 * by an instance of CCustomColours to retrieve actual RGB
 	 * colours.
 	 */
-	protected ArrayList<Integer> m_Colours;       // stores the colour of the characters
+	protected final ArrayList<Integer> m_Colours;       // stores the colour of the characters
 	
 	/**
 	 * Stores the foreground colour of the symbols.
 	 */
-	protected ArrayList<Integer> m_Foreground;   // stores the colour of the character foreground
+	protected final ArrayList<Integer> m_Foreground;   // stores the colour of the character foreground
 	
 	/**
 	 * Root of the group tree. Contains all other groups.
 	 */
-	public SGroupInfo m_BaseGroup = new SGroupInfo();
-	
+	public final SGroupInfo m_BaseGroup;
+	public final int iNumChildNodes;
 	/**
 	 * Mapping from text to symbol numbers, for use in parsing
 	 * training text.
 	 */
-	protected CAlphabetMap TextMap;
+	protected final CAlphabetMap TextMap=new CAlphabetMap();
 
 	/** Value used (internally - in {@link #singleChars} and as a return value)
 	 * to indicate 'no such symbol' */
 	public static final int UNDEFINED = -1;
-	
-	/* CSFS: It would be good to fix the code duplication between these
-	 * two constructors.
-	 */
-	
-		
-	/**
-	 * Default constructor; produces an alphabet containing no
-	 * characters. Characters may subsequently be added by
-	 * calling AddChar. Special characters should be added
-	 * by using AddParagraphSymbol, AddSpaceSymbol, and so forth.
-	 */
-	
-	public CAlphabet() {
-		m_Orientation = Opts.ScreenOrientations.LeftToRight;
-				
-		m_Characters = new ArrayList<String>();
-		m_Display = new ArrayList<String>();
-		m_Colours = new ArrayList<Integer>();
-		m_Foreground = new ArrayList<Integer>();
-		
-		m_Characters.add("");
-		m_Display.add("");
-		m_Colours.add(-1);
-		m_Foreground.add(4);
-		TextMap = new CAlphabetMap();
-		
-	}
 	
 	/**
 	 * Produces a ready-made Alphabet from an AlphInfo class
@@ -169,29 +141,22 @@ public class CAlphabet {
 	 */
 	
 	public CAlphabet(CAlphIO.AlphInfo AlphabetInfo) { 
-		m_Orientation = Opts.ScreenOrientations.LeftToRight;
-		
-		int nSymbols = AlphabetInfo.m_iCharacters + 5;
-		// +5 because of space, paragraph, control, start/end conversion.
+
+		//estimate of the number of symbols in alphabet; not vital, just for initial array capacity
+		int nSymbols = AlphabetInfo.m_vCharacters.size() + 2;
+		// +2 for space & paragraph - no control, start/end conversion.
 		
 		m_Characters = new ArrayList<String>(nSymbols);
 		m_Display = new ArrayList<String>(nSymbols);
 		m_Colours = new ArrayList<Integer>(nSymbols);
 		m_Foreground = new ArrayList<Integer>(nSymbols);
 		
-		m_Characters.add("");
-		m_Display.add("");
-		m_Colours.add(-1);
-		m_Foreground.add(4);
-		TextMap = new CAlphabetMap();
-		
 		// Set miscellaneous options
 		
-		SetOrientation(AlphabetInfo.Orientation);
-		SetTrainingFile(AlphabetInfo.TrainingFile);
-		SetGameModeFile(AlphabetInfo.GameModeFile);
-		SetPalette(AlphabetInfo.PreferredColours);
-		
+		m_Orientation = AlphabetInfo.Orientation;
+		m_TrainingFile = AlphabetInfo.TrainingFile;
+		m_GameModeFile = AlphabetInfo.GameModeFile;
+		m_DefaultPalette = AlphabetInfo.PreferredColours;
 				
 		for(CAlphIO.character temp : AlphabetInfo.m_vCharacters) {
 			AddChar(temp.Text, temp.Display, temp.Colour, temp.Foreground);
@@ -199,17 +164,19 @@ public class CAlphabet {
 			
 		// Set Space character if requested
 		
-		if(AlphabetInfo.ParagraphCharacter.Text.length() != 0)
-			AddParagraphSymbol(AlphabetInfo.ParagraphCharacter.Text, AlphabetInfo.ParagraphCharacter.Display, AlphabetInfo.ParagraphCharacter.Colour, AlphabetInfo.ParagraphCharacter.Foreground);
+		if(AlphabetInfo.ParagraphCharacter.Text.length() != 0) {
+			AddChar(AlphabetInfo.ParagraphCharacter.Text, AlphabetInfo.ParagraphCharacter.Display, AlphabetInfo.ParagraphCharacter.Colour, AlphabetInfo.ParagraphCharacter.Foreground);
+			m_ParagraphSymbol = GetNumberSymbols() - 1;
+		} else m_ParagraphSymbol = -1;
 		
-		
-		if(AlphabetInfo.SpaceCharacter.Text.length() != 0)
-			AddSpaceSymbol(AlphabetInfo.SpaceCharacter.Text, AlphabetInfo.SpaceCharacter.Display, AlphabetInfo.SpaceCharacter.Colour, AlphabetInfo.SpaceCharacter.Foreground);
-		
+		if(AlphabetInfo.SpaceCharacter.Text.length() != 0) {
+			AddChar(AlphabetInfo.SpaceCharacter.Text, AlphabetInfo.SpaceCharacter.Display, AlphabetInfo.SpaceCharacter.Colour, AlphabetInfo.SpaceCharacter.Foreground);
+			m_SpaceSymbol = GetNumberSymbols() - 1;
+		} else m_SpaceSymbol = -1;
 		// New group stuff
 		
 		m_BaseGroup = AlphabetInfo.m_BaseGroup;
-		
+		iNumChildNodes = AlphabetInfo.iNumChildNodes;
 	}
 	
 	/**
@@ -267,7 +234,7 @@ public class CAlphabet {
 	 * <code>""</code> =&gt; use default of 4
 	 */
 	
-	public void AddChar(String NewCharacter, String Display, int Colour, String Foreground) {
+	private void AddChar(String NewCharacter, String Display, int Colour, String Foreground) {
 		m_Characters.add(NewCharacter);
 		m_Display.add(Display);
 		m_Colours.add(Colour);
@@ -277,40 +244,6 @@ public class CAlphabet {
 		// importing training text, i.e. converting from text to symbol!)
 		if (NewCharacter.length()>0)
 			TextMap.Add(NewCharacter, m_Characters.size() - 1);
-	}
-	
-	/**
-	 * Adds a paragraph symbol to the alphabet. Since there is only
-	 * one identifier for the paragraph symbol, if multiple
-	 * paragraph symbols are added all but the latest will
-	 * lose their status and will become ordinary symbols.
-	 * 
-	 * @param NewCharacter Representation of this character as to be shown in textual output.
-	 * @param Display Representation to be shown on screen.
-	 * @param Colour Background colour index to be used in drawing nodes containing this character. 
-	 * @param Foreground Foreground colour to be used drawing the text..
-	 */
-	
-	public void AddParagraphSymbol(String NewCharacter, String Display, int Colour, String Foreground) {
-		AddChar(NewCharacter, Display, Colour, Foreground);
-		m_ParagraphSymbol = GetNumberSymbols() - 1;
-	}
-	
-	/**
-	 * Adds a space symbol to the alphabet. Since there is only
-	 * one identifier for the space symbol, if multiple space
-	 * symbols are added all but the latest will lose their
-	 * status and will become ordinary symbols.
-	 * 
-	 * @param NewCharacter Representation of this character as to be shown in textual output.
-	 * @param Display Representation to be shown on screen.
-	 * @param Colour Background colour index to be used in drawing nodes containing this character. 
-	 * @param Foreground Foreground colour to be used drawing the text..
-	 */
-	
-	public void AddSpaceSymbol(String NewCharacter, String Display, int Colour, String Foreground) {
-		AddChar(NewCharacter, Display, Colour, Foreground);
-		m_SpaceSymbol = GetNumberSymbols() - 1;
 	}
 	
 	/**
@@ -436,43 +369,6 @@ public class CAlphabet {
 	public int GetForeground(int i) {
 	      return m_Foreground.get(i);
 	} 
-
-	/**
-	 * Sets the preferred orientation for this alphabet.
-	 * 
-	 * @param Orientation New orientation.
-	 */
-	
-	public void SetOrientation(int Orientation) {
-		m_Orientation = Orientation;
-	}
-		
-	/**
-	 * Sets the training file to be used training a language
-	 * model which uses this alphabet.
-	 * 
-	 * @param TrainingFile New training file location.
-	 */
-	
-	public void SetTrainingFile(String TrainingFile) {
-		m_TrainingFile = TrainingFile;
-	}
-	
-	// Undocumented pending changes.
-	
-	public void SetGameModeFile(String GameModeFile) {
-		m_GameModeFile = GameModeFile;
-	}
-	
-	/**
-	 * Sets this alphabet's preferred colour scheme.
-	 * 
-	 * @param Palette Name of the new scheme.
-	 */
-	
-	public void SetPalette(String Palette) {
-		m_DefaultPalette = Palette;
-	}
 	
 	/**
 	 * Gets the instance of CAlphabetMap which maps Strings

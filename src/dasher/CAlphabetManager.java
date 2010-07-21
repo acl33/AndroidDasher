@@ -77,9 +77,7 @@ public class CAlphabetManager<C> {
 				iColour = 9;
 			} /*else if(sym == ContSymbol) {
 				iColour = 8;
-			} */else if (sym==0){ 
-				iColour = 7;
-			} else {
+			} */else {
 				iColour = (sym % 3) + 10;
 			}
 		}
@@ -173,6 +171,10 @@ public class CAlphabetManager<C> {
 			this.context = context;
 			this.m_iPhase = iphase;
 		}
+        
+        @Override public int ExpectedNumChildren() {
+        	return m_Alphabet.iNumChildNodes;
+        }
         @Override
 		public void DeleteNode() {
         	bCommitted=false;
@@ -268,18 +270,17 @@ public class CAlphabetManager<C> {
     	@Override
         public void Output(List<CSymbolProb> Added, int iNormalization) {
         	m_Model.m_bContextSensitive = true;
-        	if(m_Symbol != 0) { // Ignore symbol 0 (root node)
-        		CEditEvent oEvent = new CEditEvent(1, m_Alphabet.GetText(m_Symbol));
-        		m_Model.InsertEvent(oEvent);
+
+        	CEditEvent oEvent = new CEditEvent(1, m_Alphabet.GetText(m_Symbol));
+        	m_Model.InsertEvent(oEvent);
         		
-        		// Track this symbol and its probability for logging purposes
-        		if (Added != null) {
-        			CSymbolProb sItem = new CSymbolProb();
-        			sItem.sym    = m_Symbol;
-        			sItem.prob   = GetProb(iNormalization);
+        	// Track this symbol and its probability for logging purposes
+        	if (Added != null) {
+        		CSymbolProb sItem = new CSymbolProb();
+        		sItem.sym    = m_Symbol;
+        		sItem.prob   = GetProb(iNormalization);
         			
-        			Added.add(sItem);
-        		}
+        		Added.add(sItem);
         	}
         }
 
@@ -290,11 +291,9 @@ public class CAlphabetManager<C> {
          * @param Node Node whose symbol we wish to remove.
          */    
         public void Undo() {
-        	if(m_Symbol != 0) { // Ignore symbol 0 (root node)
-        		CEditEvent oEvent = new CEditEvent(2, m_Alphabet.GetText(m_Symbol));
-        		m_Model.InsertEvent(oEvent);
-        		bCommitted = false;
-        	}
+        	CEditEvent oEvent = new CEditEvent(2, m_Alphabet.GetText(m_Symbol));
+       		m_Model.InsertEvent(oEvent);
+       		bCommitted = false;
         }
         
         @Override
@@ -368,6 +367,10 @@ public class CAlphabetManager<C> {
     	@Override
     	public boolean outline() {
     		return (m_Group==null || m_Group.bVisible);
+    	}
+    	
+    	@Override public int ExpectedNumChildren() {
+    		return (m_Group==null) ? super.ExpectedNumChildren() : m_Group.iNumChildNodes;
     	}
     	
     	@Override
@@ -450,7 +453,7 @@ public class CAlphabetManager<C> {
     	
     	final int iMin,iMax;
     	if (parentGroup!=null) {iMin = parentGroup.iStart; iMax = parentGroup.iEnd;}
-    	else {iMin = 1; iMax = probInfo.length;}
+    	else {iMin = 0; iMax = probInfo.length-1;}
     	  
     	  // Create child nodes and add them
     	  
@@ -464,12 +467,12 @@ public class CAlphabetManager<C> {
     	                  || i < group.iStart; //not reached next subgroup
     	    final int iStart=i, iEnd = (bSymbol) ? i+1 : group.iEnd;
 
-    	    long iLbnd = ((probInfo[iStart-1] - probInfo[iMin-1]) *
+    	    long iLbnd = ((probInfo[iStart] - probInfo[iMin]) *
     	                          (m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION))) /
-    	                         (probInfo[iMax-1] - probInfo[iMin-1]);
-    	    long iHbnd = ((probInfo[iEnd-1] - probInfo[iMin-1]) *
+    	                         (probInfo[iMax] - probInfo[iMin]);
+    	    long iHbnd = ((probInfo[iEnd] - probInfo[iMin]) *
     	                          (m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION))) /
-    	                         (probInfo[iMax-1] - probInfo[iMin-1]);
+    	                         (probInfo[iMax] - probInfo[iMin]);
     	    
     	    if (bSymbol) {
     	      pNewChild = (buildAround==null) ? mkSymbol(Node, i, iLbnd, iHbnd) : buildAround.rebuildSymbol(Node, i, iLbnd, iHbnd);
@@ -487,7 +490,7 @@ public class CAlphabetManager<C> {
     	//ACL make the new node's context ( - this used to be done only in PushNode(),
 		// before calling populate...)
 		C cont;
-		if (sym < m_Alphabet.GetNumberSymbols() && sym > 0) {
+		if (sym < m_Alphabet.GetNumberSymbols() && sym >= 0) {
 			// Normal symbol - derive context from parent
 			cont = m_LanguageModel.ContextWithSymbol(parent.context,sym);
 		} else {

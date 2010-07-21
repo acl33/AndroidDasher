@@ -114,7 +114,7 @@ public abstract class ExpansionPolicy {
 		{
 			CDasherNode nExp = expandable[nextExp-1];
 			if (nExp.m_dCost <= collapseCost) break; 
-			if (CDasherNode.currentNumNodeObjects()+15/*ACL TODO FIXME nExp.ExpectedNumChildren()*/ < m_iNodeBudget)
+			if (CDasherNode.currentNumNodeObjects()+nExp.ExpectedNumChildren() < m_iNodeBudget)
 			{
 		    	model.Push_Node(nExp);
 		    	nextExp--;

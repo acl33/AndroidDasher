@@ -66,4 +66,7 @@ public class SGroupInfo {
 	 * Should this group be drawn?
 	 */
 	boolean bVisible;
+
+	/** Number of child nodes = immediate subgroups + symbols contained directly (not in a subgroup) */ 
+	int iNumChildNodes;
 }

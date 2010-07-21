@@ -125,6 +125,12 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 		return NodesAllocated;
 	}
 
+	/** Returns an array of probabilities for the next symbol
+	 * @param ppmcontext context in which to make predictions
+	 * @param norm value to which the probabilities should sum
+	 * @return array with one element per character in the alphabet
+	 * PLUS an initial zero.
+	 */
 	public long[] GetProbs(CPPMnode ppmcontext, long norm) {
 
 		/* CSFS: In the original C++ the norm value was an
@@ -135,7 +141,7 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 		//exclusions[] array etc. was removed by CSFS.
 		// this was CountExclusion, not UpdateExclusion - a (minor) speed
 		// improvement at the cost of worse compression/prediction, hence leaving it out. 
-		int iNumSymbols = m_Alphabet.GetNumberSymbols();
+		int iNumSymbols = m_Alphabet.GetNumberSymbols()+1;
 
 		long[] probs = new long[iNumSymbols];
 
@@ -156,22 +162,17 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 				for(CPPMnode pSymbol = ppmcontext.child; pSymbol!=null;pSymbol = pSymbol.next) {
 					long p = (size_of_slice) * (100 * pSymbol.count - lpBeta) / (100 * iTotal + lpAlpha);
 
-					probs[pSymbol.symbol] += p;
+					probs[pSymbol.symbol+1] += p;
 					iToSpend -= p;
 				}
 			}
 		}
 
 		long size_of_slice = iToSpend;
-		int symbolsleft = 0;
-
-		for(i = 1; i < iNumSymbols; i++) symbolsleft++;
-		//if(!(exclusions[i] && doExclusion))
-
 
 		for(i = 1; i < iNumSymbols; i++) {
 			//if(!(exclusions[i] && doExclusion)) {
-			long p = size_of_slice / symbolsleft;
+			long p = size_of_slice / (iNumSymbols-1);
 			probs[i] += p;
 			iToSpend -= p;
 			//}
@@ -196,10 +197,6 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 	// creates new nodes, updates counts
 	// and leaves 'context' at the new context
 	{
-		// Ignore attempts to add the root symbol
-
-		if(sym==0) return ctx;
-
 		assert(sym >= 0 && sym < m_Alphabet.GetNumberSymbols());
 		CPPMnode r = AddSymbol(ctx,sym);
 		while(!orderOk(r))
@@ -236,8 +233,6 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 	}
 
 	public CPPMnode ContextWithSymbol(CPPMnode ctx, int Symbol) {
-		if(Symbol==0) return ctx;
-
 		assert(Symbol >= 0 && Symbol < m_Alphabet.GetNumberSymbols());
 
 		while(ctx != null) {
