@@ -621,10 +621,7 @@ public class CDasherModel extends CDasherComponent {
 	 * mouse position and the time elpased since the last
 	 * update took place.
 	 * <p>
-	 * If BP_OLD_STYLE_PUSH is enabled, prompts the creation
-	 * of new segments of tree where appropriate, using
-	 * OldPush. If not, we let node pushing take place elsewhere.
-	 * <p>
+	 * 
 	 * In the case that the m_deGotoQueue contains any points,
 	 * indicating that a pre-scheduled zoom is currently in
 	 * progress, we move to the next specified point in the queue
@@ -657,9 +654,6 @@ public class CDasherModel extends CDasherComponent {
 //		Clear out parameters that might get passed in to track user activity
 		if (pAdded != null)	pAdded.clear();
 			
-		if(GetBoolParameter(Ebp_parameters.BP_OLD_STYLE_PUSH))
-			OldPush(miMousex, miMousey);
-		
 		//ACL I've inlined Get_new_root_coords here, so we don't have to allocate a temporary object to return two values...
 
 		// Avoid Mousex=0, as this corresponds to infinite zoom
@@ -729,85 +723,6 @@ public class CDasherModel extends CDasherComponent {
             SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
         }
 		return true;
-	}
-	
-	/**
-	 * Expands sections of the node tree, using random point
-	 * selection and the Get_node_under method to try to bias
-	 * the process in favour of larger nodes.
-	 * <p>
-	 * Takes account of the current frame rate, and does more
-	 * pushing if Dasher is performing better.
-	 * <p>
-	 * This method is only ever used if BP_OLD_STYLE_PUSH is
-	 * enabled which is not the default.
-	 * <p>
-	 * The actual node pushing is done by Push_Node.
-	 * 
-	 * @param iMousex Current mouse X co-ordinate
-	 * @param iMousey Current mosue Y co-ordinate
-	 */
-	protected void OldPush(long iMousex, long iMousey) {
-//		push node under mouse
-		CDasherNode UnderMouse = Get_node_under_mouse(iMousex, iMousey);
-		
-		/* CSFS: This code originally made liberal use of RandomInt, which on
-		 * most platforms called rand(), which in turn generates a random integer
-		 * between 0 and, on GCC, the largest signed integer. This may however
-		 * vary from platform to platform. This is my attempt to emulate this
-		 * under Java.
-		 */ 
-		
-		Push_Node(UnderMouse);
-		
-		if(Framerate() > 4) {
-//			push node under mouse but with x coord on RHS
-			CDasherNode Right = Get_node_under_mouse(50, iMousey);
-			Push_Node(Right);
-		}
-		
-		if(Framerate() > 8) {
-//			push node under the crosshair
-			CDasherNode UnderCross = Get_node_under_crosshair();
-			Push_Node(UnderCross);
-		}
-		
-		java.util.Random rgen = new java.util.Random();
-		int iRandom = rgen.nextInt(Integer.MAX_VALUE);
-		
-		if(Framerate() > 8) {
-//			add some noise and push another node
-			CDasherNode Right = Get_node_under_mouse(50, iMousey + iRandom % 500 - 250);
-			Push_Node(Right);
-		}
-		
-		iRandom = rgen.nextInt(Integer.MAX_VALUE);
-		
-		if(Framerate() > 15) {
-//			add some noise and push another node
-			CDasherNode Right = Get_node_under_mouse(50, iMousey + iRandom % 500 - 250);
-			Push_Node(Right);
-		}
-		
-//		only do this if Dasher is flying
-		if(Framerate() > 30) {
-			for(int i = 1; i < (Framerate() - 30) / 3; i++) {
-				
-				int iRandom2 = rgen.nextInt(Integer.MAX_VALUE);
-				
-				if(Framerate() > 8) {
-//					add some noise and push another node
-					CDasherNode Right = Get_node_under_mouse(50, iMousey + iRandom2 % 500 - 250);
-					Push_Node(Right);
-				}
-				
-				iRandom = rgen.nextInt(Integer.MAX_VALUE);
-//				push at a random node on the RHS
-				CDasherNode Right = Get_node_under_mouse(50, iMousey + iRandom % 1000 - 500);
-				Push_Node(Right);
-				
-			}
-		}
 	}
 	
 	/**
@@ -961,13 +876,10 @@ public class CDasherModel extends CDasherComponent {
 	}
 	
 	/**
-	 * Deletes and then repopulates the children of a given
-	 * node.
+	 * Populates the children of a given node, if it doesn't have its children already
 	 * <p>
-	 * If the pushed node has no associated context, an attempt
-	 * is made to derive it by extending that of the node's
-	 * parent, and as a last ditch, creating an empty one.
-	 * 
+	 * (We assume that if a node has any children, it has all its children; and that
+	 * in that case, there is no point in deleting/recreating.)
 	 * @param Node Node to push. Must not be null.
 	 */
 	protected void Push_Node(CDasherNode Node) {

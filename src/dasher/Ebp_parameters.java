@@ -67,7 +67,6 @@ public enum Ebp_parameters implements EParameters {
 			  BP_COMPASSMODE("ButtonCompassMode", PERS, false, "Compass mode"),
 			  BP_SOCKET_INPUT_ENABLE("SocketInputEnable", PERS, false, "Read pointer coordinates from network socket instead of mouse"),
 			  BP_SOCKET_DEBUG("SocketInputDebug", PERS, false, "Print information about socket input processing to console"),
-			  BP_OLD_STYLE_PUSH("OldStylePush", PERS, false, "Old style node pushing algorithm"),
 			  BP_CIRCLE_START("CircleStart", PERS, false, "Start on circle mode"),
 			  BP_GLOBAL_KEYBOARD("GlobalKeyboard", PERS, false, "Whether to assume global control of the keyboard"),
 			  BP_DELAY_VIEW("DelayView", !PERS, false, "Delayed dynamics (for two button mode)"),
