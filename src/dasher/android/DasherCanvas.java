@@ -126,6 +126,10 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 			x=y=-1;
 			break;
 		}
+		synchronized(this) {
+			try {this.wait(1000);}
+			catch (InterruptedException ex) {}
+		}
 		return true;
 	}
 	
@@ -162,6 +166,8 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 			holder.unlockCanvasAndPost(canvas);
 			canvas=null;
 		}
+		//tell the UI thread we're now ready for another touch event....
+		synchronized(this) {this.notify();}
 	}
 	
 	public void Blank() {

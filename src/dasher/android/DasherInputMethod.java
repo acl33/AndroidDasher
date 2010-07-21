@@ -38,7 +38,7 @@ public class DasherInputMethod extends InputMethodService {
 		String msg = this + " onStartInput ("+attribute+", "+restarting+") with IC "+ic;
 		if (ic==null) {Log.d("DasherIME",msg); return;} //yes, it happens. What else can we do????
 		//get current cursor position...
-		int initCursorPos=attribute.initialSelStart,initNumSel=attribute.initialSelEnd-initCursorPos;
+		int initCursorPos=Math.min(attribute.initialSelStart,attribute.initialSelEnd),initNumSel=Math.abs(attribute.initialSelEnd-attribute.initialSelStart);
 		Log.d("DasherIME",msg+" cursor "+initCursorPos+" starting animation of "+surf);
 		IMDasherInterface.INSTANCE.SetInputConnection(ic);
 		IMDasherInterface.INSTANCE.setSelection(Math.max(0,initCursorPos),initNumSel,true);
@@ -81,7 +81,7 @@ public class DasherInputMethod extends InputMethodService {
 	public void onUpdateSelection(int oldSelStart, int oldSelEnd,
 								  int newSelStart, int newSelEnd,
 								  int candidatesStart, int candidatesEnd) {
-		IMDasherInterface.INSTANCE.setSelection(newSelStart,newSelEnd - newSelStart,false);
+		IMDasherInterface.INSTANCE.setSelection(Math.min(newSelStart,newSelEnd),Math.abs(newSelEnd - newSelStart),false);
 	}
 	
 	@Override
