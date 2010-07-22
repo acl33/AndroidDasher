@@ -28,6 +28,11 @@ class IMDasherInterface extends ADasherInterface
 	private int lastCursorPos;
 	private int numSelectedChars;
 	
+	/* request from another thread, for main Dasher thread to set lastCursorPos when it runs... (-1 = don't!) */
+	private int new_lastCursorPos;
+	private int new_numSelectedChars;
+	private boolean bForce;
+	
 	@Override
 	protected CSettingsStore createSettingsStore() {
 		Log.d("DasherIME",androidCtx+" creating settings...");
@@ -130,6 +135,19 @@ class IMDasherInterface extends ADasherInterface
 		}
 	}
 	
+	@Override public void NewFrame(long time) {
+		synchronized(this) {
+			if (new_lastCursorPos!=-1) {
+				Log.d("DasherIME","Updating cursor pos to "+new_lastCursorPos+","+new_numSelectedChars);
+				numSelectedChars=new_numSelectedChars;
+				setOffset(new_lastCursorPos-1, bForce);
+				new_lastCursorPos=-1;
+				bForce=false;
+			}
+		}
+		super.NewFrame(time);
+	}
+	
 	/*package*/ void SetInputConnection(final InputConnection _ic) {
 		enqueue(new Runnable() {
 			public void run() {
@@ -139,35 +157,11 @@ class IMDasherInterface extends ADasherInterface
 	}
 	
 	/*package*/ void setSelection(int nPos, int nSel, boolean bStart) {
-		boolean need2queue;
-		synchronized (updSelTask) {
-			need2queue = updSelTask.nPos == Integer.MIN_VALUE;
-			updSelTask.nPos = nPos;
-			updSelTask.nSel = nSel;
-			if (bStart) updSelTask.bStarting=true;
-			if (need2queue) IMDasherInterface.this.enqueue(updSelTask);
+		synchronized (this) {
+			new_lastCursorPos = nPos;
+			new_numSelectedChars = nSel;
+			bForce |= bStart;
 		}
-		Log.d("DasherIME",this+" updateSelection("+nPos+", "+nSel+") "+need2queue);
 	}
 	
-	private final class UpdateSelTask implements Runnable {
-		/*package*/ int nPos=Integer.MIN_VALUE;
-		/*package*/ int nSel;
-		/*package*/ boolean bStarting;
-		
-		public void run() {
-			int nPos,nSel; boolean bStarting;
-			synchronized(this) {
-				if (this.nPos==Integer.MIN_VALUE) return;
-				nPos=this.nPos;
-				nSel=this.nSel;
-				bStarting = this.bStarting;
-				this.nPos=Integer.MIN_VALUE;
-				this.bStarting = false;
-			}
-			IMDasherInterface.this.numSelectedChars = nSel;
-			IMDasherInterface.this.setOffset(nPos-1, bStarting);
-		}
-	};
-	private final UpdateSelTask updSelTask = new UpdateSelTask();	
 }
