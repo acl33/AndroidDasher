@@ -363,7 +363,7 @@ public class CDasherModel extends CDasherComponent {
 		m_Root.commit();
 		
 		m_Root.DeleteNephews(whichchild); //typically, this does nothing, as all siblings of new root are offscreen already...
-		
+		m_Root.m_dCost = Double.MAX_VALUE; //make sure never collapsed, and new root's cost is never limited to <= its parent
 		oldroots.addLast(m_Root);
 		
 		m_Root = whichchild;
@@ -501,7 +501,12 @@ public class CDasherModel extends CDasherComponent {
 			if (NewRoot == null) return; // no existing parent and no way of recreating => give up
 			//RebuildParent() can create multiple generations of ((great-)*grand-)parents in one go.
 			// Add all created ancestors to the root queue, to ensure they're deleted if the model is.
-			for (CDasherNode temp = NewRoot; (temp=temp.Parent())!=null;) oldroots.addFirst(temp);
+			for (CDasherNode temp = NewRoot; (temp=temp.Parent())!=null;) {
+				//collapsing a parent of the root, would leave nothing onscreen....
+				// (and more to point: root's cost will be set to <= its parent!)
+				temp.m_dCost=Double.MAX_VALUE;
+				oldroots.addFirst(temp);
+			}
 		}
 		else {
 			NewRoot = oldroots.removeLast();
@@ -519,6 +524,7 @@ public class CDasherModel extends CDasherComponent {
 			//new node would be too big, so don't reparent.
 			// However, cache the root's parent, so (a) we don't repeatedly recreate it,
 			// (b) it'll get deleted if we clear the oldroots queue.
+			NewRoot.m_dCost = Double.MAX_VALUE;
 			oldroots.addLast(NewRoot);
 			return;
 		}
