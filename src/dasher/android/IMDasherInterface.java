@@ -33,6 +33,8 @@ class IMDasherInterface extends ADasherInterface
 	private int new_numSelectedChars;
 	private boolean bForce;
 	
+	private final IntQueue expectedOffsets = new IntQueue();
+		
 	@Override
 	protected CSettingsStore createSettingsStore() {
 		Log.d("DasherIME",androidCtx+" creating settings...");
@@ -41,12 +43,6 @@ class IMDasherInterface extends ADasherInterface
 	
 	@Override public void Realize(Context ctx) {
 		super.Realize(ctx);
-	}
-
-	@Override public void setOffset(int iNewOffset, boolean bForce) {
-		if (iNewOffset == lastCursorPos-1 && !bForce) return;
-		lastCursorPos = iNewOffset+1;
-		super.setOffset(iNewOffset, bForce);
 	}
 	
 	@Override
@@ -126,10 +122,12 @@ class IMDasherInterface extends ADasherInterface
 				}
 				ic.commitText(evt.m_sText, 1); //position cursor just after
 				lastCursorPos+=evt.m_sText.length();
+				synchronized(this) {expectedOffsets.push(lastCursorPos);}
 				Log.d("DasherIME",androidCtx+" entering "+evt.m_sText+" to give "+ic.getTextBeforeCursor(5, 0));
 			} else if (evt.m_iEditType==2) {
 				ic.deleteSurroundingText(evt.m_sText.length(), 0);
 				lastCursorPos-=evt.m_sText.length();
+				synchronized(this) {expectedOffsets.push(lastCursorPos);}
 				Log.d("DasherIME", androidCtx+" deleting "+evt.m_sText+" to give "+ic.getTextBeforeCursor(5, 0));
 			}
 		}
@@ -138,9 +136,17 @@ class IMDasherInterface extends ADasherInterface
 	@Override public void NewFrame(long time) {
 		synchronized(this) {
 			if (new_lastCursorPos!=-1) {
-				Log.d("DasherIME","Updating cursor pos to "+new_lastCursorPos+","+new_numSelectedChars);
-				numSelectedChars=new_numSelectedChars;
-				setOffset(new_lastCursorPos-1, bForce);
+				clearRequest: {
+					Log.d("DasherIME","Request update cursor pos to "+new_lastCursorPos+","+new_numSelectedChars);
+					while (expectedOffsets.size()>0)
+						if (expectedOffsets.pop()==new_lastCursorPos)
+							if (bForce) break; else break clearRequest;
+					if (new_lastCursorPos == lastCursorPos && !bForce) break clearRequest;
+					Log.d("DasherIME","Proceeding to update cursor pos to "+new_lastCursorPos+","+new_numSelectedChars);
+					lastCursorPos = new_lastCursorPos;
+					numSelectedChars = new_numSelectedChars;
+					setOffset(lastCursorPos-1, bForce);
+				} //break clearRequest
 				new_lastCursorPos=-1;
 				bForce=false;
 			}
@@ -161,6 +167,7 @@ class IMDasherInterface extends ADasherInterface
 			new_lastCursorPos = nPos;
 			new_numSelectedChars = nSel;
 			bForce |= bStart;
+			Redraw(true);
 		}
 	}
 	
