@@ -105,11 +105,6 @@ public class CDasherViewSquare extends CDasherView {
 	protected double m_dXMappingLinearScaleFactor;
 		
 	/**
-	 * Height of our current screen in pixels - i.e., a cache of the screen's GetHeight().
-	 */
-	protected int CanvasY;
-	
-	/**
 	 * Cached values for scaling
 	 */
 	protected long m_iScaleFactorX, m_iScaleFactorY;
@@ -638,9 +633,8 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param NewScreen New screen
 	 */
 	public void ChangeScreen(CDasherScreen NewScreen) {
-		m_Screen = NewScreen;
+		super.ChangeScreen(NewScreen);
 		visibleRegion = null;
-		CanvasY = Screen().GetHeight();
 		SetScaleFactor();
 	}
 	
