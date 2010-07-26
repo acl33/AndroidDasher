@@ -17,6 +17,12 @@ public class DasherActivity extends PreferenceActivity {
     public void onCreate(Bundle savedInstanceState) {
     	Log.d("DasherIME","Activity onCreate");
         super.onCreate(savedInstanceState);
+        
+        //Creating the DasherInterface first will set appropriate defaults
+        // the first time the app is run, for the preferences GUI to load.
+        //TODO...but can we avoid loading the entire training text?!
+        IMDasherInterface.INSTANCE.Realize(this);
+        
         addPreferencesFromResource(R.layout.prefs);
         
         Preference.OnPreferenceClickListener lstnr = new Preference.OnPreferenceClickListener() {
@@ -40,8 +46,6 @@ public class DasherActivity extends PreferenceActivity {
         ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidCompass"))
 		.setOnPreferenceClickListener(lstnr);
     
-        IMDasherInterface.INSTANCE.Realize(this);
-        
         addPermittedValues(Esp_parameters.SP_ALPHABET_ID);
     }
     
