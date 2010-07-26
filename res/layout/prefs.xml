@@ -84,9 +84,10 @@
     </PreferenceScreen>
 
     <PreferenceScreen
-      android:key="AndroidDirect"
-      android:title="Direct Mode"
-      android:widgetLayout="@layout/checkbox_direct">
+      android:key="AndroidBoxes"
+      android:title="Box modes"
+      android:summary="Divide into boxes and scan or tap"
+      android:widgetLayout="@layout/checkbox_boxes">
         <dasher.android.SeekBarPreference
           android:key="ButtonMenuBoxes"
           android:title="Number of (forward) boxes"
@@ -99,18 +100,18 @@
           android:key="ButtonModeNonuniformity"
           android:title="Nonuniformity of box sizes"
           android:max="89" min="-89"/>
-    </PreferenceScreen>
-
-    <PreferenceScreen
-      android:key="AndroidScan"
-      android:title="Scanning Menu"
-      android:widgetLayout="@layout/checkbox_scan">
+        <CheckBoxPreference
+          android:key="AndroidScan"
+          android:title="Scan through boxes"
+          android:summaryOn="LHS scans; tap RHS for highlighted box"
+          android:summaryOff="Tap in box to select"/>
         <dasher.android.SeekBarPreference
+          android:dependency="AndroidScan"
           android:key="ButtonScanTime"
           android:title="Scanning Time"
           android:max="1000" min="0" />
     </PreferenceScreen>
-    
+
     <PreferenceScreen
       android:key="AndroidCompass"
       android:title="Compass Mode"

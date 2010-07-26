@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import android.os.Bundle;
+import android.preference.CheckBoxPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
@@ -27,6 +28,7 @@ public class DasherActivity extends PreferenceActivity {
         
         Preference.OnPreferenceClickListener lstnr = new Preference.OnPreferenceClickListener() {
         	public boolean onPreferenceClick(Preference pref) {
+        		Log.d("DasherIME","OnPreferenceClick screen "+pref);
         		IMCheckBox.set(pref.getKey());
         		return false; //allow normal click action to occur too
         	}
@@ -37,14 +39,20 @@ public class DasherActivity extends PreferenceActivity {
         ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidTouch"))
         	.setOnPreferenceClickListener(lstnr);
         
-        ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidDirect"))
+        ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidBoxes"))
     		.setOnPreferenceClickListener(lstnr);
         
-        ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidScan"))
-		.setOnPreferenceClickListener(lstnr);
-    
         ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidCompass"))
-		.setOnPreferenceClickListener(lstnr);
+			.setOnPreferenceClickListener(lstnr);
+        
+        ((CheckBoxPreference)getPreferenceScreen().findPreference("AndroidScan"))
+			.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+			
+			public boolean onPreferenceChange(Preference preference, Object newValue) {
+				((DualIMCheckBox)findViewById(R.id.checkbox_boxes)).setInputsForChildChecked(((Boolean)newValue).booleanValue());
+				return true;
+			}
+		});
     
         addPermittedValues(Esp_parameters.SP_ALPHABET_ID);
     }
