@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -28,9 +29,33 @@ import dasher.*;
 
 public abstract class ADasherInterface extends CDasherInterfaceBase {
 	protected Context androidCtx;
-	private final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<Runnable>();
+	private final BlockingQueue<Runnable> tasks = supportsLinkedBlockingQueue ? new LinkedBlockingQueue<Runnable>() : new ArrayBlockingQueue<Runnable>(5);
 	private Thread taskThread;
 	private boolean m_bRedrawRequested;
+	private static final boolean supportsLinkedBlockingQueue;
+	
+	static {
+		boolean ok;
+		try {
+			BlockingQueue<Integer> q = new LinkedBlockingQueue<Integer>();
+			Integer one=1, two=2;
+			q.put(one);
+			q.put(two);
+			q.remove(one);
+			q.remove(two);
+			q.put(3);
+			q.take();
+			//all ok
+			ok = true;
+		} catch (InterruptedException e) {
+			//shouldn't happen?!?!
+			ok = false;
+		} catch (NullPointerException e) {
+			Log.d("DasherIME","LinkedBlockingQueue threw NPE, must be old version, using ArrayBlockingQueue instead");
+			ok = false;
+		}
+		supportsLinkedBlockingQueue = ok;
+	}
 	
 	public void enqueue(Runnable r) {tasks.add(r);}
 	
