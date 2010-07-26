@@ -21,68 +21,64 @@ import android.view.SurfaceHolder.Callback;
 public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen {
 	private final ADasherInterface intf;
 	private final SurfaceHolder holder;
-    /** Desired width & height */
-    private final int dw,dh;
-	private boolean bReady;
+    private boolean bReady;
 	
 	/** coordinates of last touch */
 	private int x,y;
     
-	public DasherCanvas(Context context, ADasherInterface intf, int dw, int dh) {
+	public DasherCanvas(Context context, ADasherInterface intf) {
 		super(context);
 		if (intf==null) throw new NullPointerException();//just do it now!
 		this.intf=intf;
-		this.dw=dw;
-		this.dh=dh;
 		holder = getHolder();
 		holder.addCallback(this);
 	}
 
 	protected void onMeasure(int widthMS, int heightMS) {
 		Log.d("DasherIME","onMeasure ("+MeasureSpec.toString(widthMS)+","+MeasureSpec.toString(heightMS)+")");
-		if (MeasureSpec.getMode(widthMS)==MeasureSpec.EXACTLY) {
-			int w = MeasureSpec.getSize(widthMS);
-			setMeasuredDimension(w, ms(heightMS,w));
-			return;
-		}
-		if (MeasureSpec.getMode(heightMS)==MeasureSpec.EXACTLY) {
-			int h=MeasureSpec.getSize(heightMS);
-			setMeasuredDimension(ms(widthMS,h), h);
-			return;
-		}
-		if (MeasureSpec.getMode(widthMS)==MeasureSpec.AT_MOST) {
-			int d = MeasureSpec.getSize(widthMS);
-			if (MeasureSpec.getMode(heightMS)==MeasureSpec.AT_MOST) {
-				d=Math.min(d,MeasureSpec.getSize(heightMS));
-			} //else, height unspec'd - use width
-			setMeasuredDimension(d,d);
-			return;
-		}
-		//width unspecified
-		if (MeasureSpec.getMode(heightMS)==MeasureSpec.AT_MOST) {
-			int d = MeasureSpec.getSize(heightMS);
-			setMeasuredDimension(d,d);
-			return;
-		}
-		//both unspecified!!
-		WindowManager wm = (WindowManager)getContext().getSystemService(Context.WINDOW_SERVICE);
-		DisplayMetrics dm = new DisplayMetrics();
-		wm.getDefaultDisplay().getMetrics(dm);
-		int d=Math.min(dm.heightPixels,dm.widthPixels);
-		setMeasuredDimension(d,d);
-	}
-	
-	private int ms(int mSpec, int pref) {
-		switch (MeasureSpec.getMode(mSpec)) {
-		case MeasureSpec.AT_MOST:
-			return Math.min(MeasureSpec.getSize(mSpec),pref);
-		case MeasureSpec.UNSPECIFIED:
-			return pref;
+		int w,h;
+		switch (MeasureSpec.getMode(widthMS)) {
 		case MeasureSpec.EXACTLY:
-			return MeasureSpec.getSize(mSpec);
-		default:
-			throw new IllegalArgumentException("Invalid MeasureSpec "+mSpec);
+			w = MeasureSpec.getSize(widthMS);
+			switch (MeasureSpec.getMode(heightMS)) {
+			case MeasureSpec.AT_MOST:
+				h=Math.min(MeasureSpec.getSize(heightMS),w);
+				break;
+			case MeasureSpec.UNSPECIFIED:
+				h=w;
+				break;
+			default://case MeasureSpec.EXACTLY:
+				h=MeasureSpec.getSize(heightMS);
+			}
+			break;
+		case MeasureSpec.AT_MOST:
+			w = MeasureSpec.getSize(widthMS);
+			switch (MeasureSpec.getMode(heightMS)) { 
+			case MeasureSpec.EXACTLY:
+				h=MeasureSpec.getSize(heightMS);
+				w=Math.min(w,h);
+				break;
+			case MeasureSpec.AT_MOST:
+				w=h=Math.min(w,MeasureSpec.getSize(heightMS));
+				break;
+			default://case MeasureSpec.EXACTLY:
+				h=w; //height unspec'd - use width
+			}
+			break;
+		default: //case MeasureSpec.EXACTLY://width unspecified
+			switch (MeasureSpec.getMode(heightMS)) {
+			case MeasureSpec.EXACTLY: case MeasureSpec.AT_MOST: 
+				w=h=MeasureSpec.getSize(heightMS);
+				break;
+			default:{
+					WindowManager wm = (WindowManager)getContext().getSystemService(Context.WINDOW_SERVICE);
+					DisplayMetrics dm = new DisplayMetrics();
+					wm.getDefaultDisplay().getMetrics(dm);
+					w=h=Math.min(dm.heightPixels,dm.widthPixels);
+				}
+			}
 		}
+		setMeasuredDimension(w,h);
 	}
 	
 	public void surfaceChanged(SurfaceHolder holder, int format, int width,
