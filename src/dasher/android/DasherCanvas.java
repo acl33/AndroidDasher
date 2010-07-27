@@ -119,7 +119,7 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 		case MotionEvent.ACTION_OUTSIDE:
 		case MotionEvent.ACTION_CANCEL:
 			intf.KeyUp(System.currentTimeMillis(), 100);
-			x=y=Integer.MIN_VALUE;
+			x=y=-1;
 			break;
 		}
 		synchronized(this) {
@@ -130,10 +130,12 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 	}
 	
 	/* Gets (screen/pixel) x,y coordinates of last touch event*/
-	public void GetCoordinates(long[] coords) {
+	public boolean GetCoordinates(long[] coords) {
 		if (coords.length!=2) throw new IllegalArgumentException("Coordinate array must have exactly two elements");
-		coords[0]=(x==Integer.MIN_VALUE) ? Long.MIN_VALUE : x;
-		coords[1]=(y==Integer.MIN_VALUE) ? Long.MIN_VALUE : y;
+		if (x==-1) return false;
+		coords[0]=x;
+		coords[1]=y;
+		return true;
 	}
 	
 	private Canvas canvas;

@@ -63,10 +63,12 @@ public class TiltInput extends CDasherInput implements SensorEventListener {
 	}
 
 	@Override
-	public void GetScreenCoords(CDasherView pView,long[] Coordinates) {
+	public boolean GetScreenCoords(CDasherView pView,long[] Coordinates) {
+		if (!bActive) return false;
 		Coordinates[0] = (int)(fx * pView.Screen().GetWidth());
 		Coordinates[1] = (int)(fy * pView.Screen().GetHeight());
-		android.util.Log.d("DasherIME","Tilt: got "+Coordinates[0]+", "+Coordinates[1]);
+		//android.util.Log.d("DasherIME","Tilt: got "+Coordinates[0]+", "+Coordinates[1]);
+		return true;
 	}
 
 }

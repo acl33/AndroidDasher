@@ -62,11 +62,13 @@ abstract public class CDasherInput extends CDasherModule {
 	 * override at least one of this and {@link #GetScreenCoords(CDasherView, long[])}.
 	 * @param pView View which may be used for coordinate transforms
 	 * @param coords 2-element array into which to write coordinates
-	 * (for 1-dimensional inputs, suggest fixing x=0). 
+	 * (for 1-dimensional inputs, suggest fixing x=0).
+	 * @return true iff coordinates were available 
 	 */
-	public void GetDasherCoords(CDasherView pView, long[] coords) {
-		GetScreenCoords(pView, coords);
+	public boolean GetDasherCoords(CDasherView pView, long[] coords) {
+		if (!GetScreenCoords(pView, coords)) return false;
 		pView.Screen2Dasher(coords);
+		return true;
 	}
 	
 	/**
@@ -76,11 +78,13 @@ abstract public class CDasherInput extends CDasherModule {
 	 * override at least one of this and {@link #GetDasherCoords(CDasherView, long[])}.
 	 * @param pView View which may be used for coordinate transforms
 	 * @param coords 2-element array into which to write coordinates
-	 * (for 1-dimensional inputs, suggest fixing x=0). 
+	 * (for 1-dimensional inputs, suggest fixing x=0).
+	 * @return true iff coordinates were available 
 	 */
-	public void GetScreenCoords(CDasherView pView, long[] coords) {
-		GetDasherCoords(pView, coords);
+	public boolean GetScreenCoords(CDasherView pView, long[] coords) {
+		if (!GetDasherCoords(pView, coords)) return false;
 		pView.Dasher2Screen(coords);
+		return true;
 	}
 	
 	/**

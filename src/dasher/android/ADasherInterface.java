@@ -128,9 +128,9 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		final SharedPreferences prefs=PreferenceManager.getDefaultSharedPreferences(androidCtx);
 		final CDasherInput touch =new CDasherInput(this, getSettingsStore(), 0, "Touch Input") {
 			@Override
-			public void GetScreenCoords(CDasherView pView,long[] Coordinates) {
+			public boolean GetScreenCoords(CDasherView pView,long[] Coordinates) {
 				DasherCanvas surf = (DasherCanvas)m_DasherScreen;
-				surf.GetCoordinates(Coordinates);
+				if (!surf.GetCoordinates(Coordinates)) return false;
 				if (prefs.getBoolean("AndroidDoubleX", false)) {
 					switch ((int)GetLongParameter(Elp_parameters.LP_REAL_ORIENTATION)) {
 					case Opts.ScreenOrientations.LeftToRight:
@@ -149,19 +149,25 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 						throw new AssertionError();
 					}
 				}
+				return true;
 			}
 		};
-		RegisterModule(setDefaultInput(touch));final TiltInput tilt=TiltInput.MAKE(androidCtx, this, getSettingsStore());
+		RegisterModule(setDefaultInput(touch));
+		final TiltInput tilt=TiltInput.MAKE(androidCtx, this, getSettingsStore());
 		if (tilt!=null) {
 			RegisterModule(tilt);
 			RegisterModule(new CDasherInput(this, getSettingsStore(), 1, "Touch with tilt X") {
-				@Override public void GetScreenCoords(CDasherView pView, long[] coords) {
-					tilt.GetScreenCoords(pView, coords);
+				long lastTouch;
+				@Override public boolean GetScreenCoords(CDasherView pView, long[] coords) {
+					if (!tilt.GetScreenCoords(pView, coords)) return false;
 					int orient = (int)GetLongParameter(Elp_parameters.LP_REAL_ORIENTATION);
 					boolean horiz = (orient == Opts.ScreenOrientations.LeftToRight) || (orient==Opts.ScreenOrientations.RightToLeft);
 					long tiltC = (horiz) ? coords[0] : coords[1];
-					touch.GetScreenCoords(pView, coords);
-					coords[horiz ? 0 : 1] = tiltC; 
+					if (touch.GetScreenCoords(pView, coords))
+						lastTouch = (horiz) ? coords[1] : coords[0];
+					else coords[horiz ? 1 : 0] = lastTouch;
+					coords[horiz ? 0 : 1] = tiltC;
+					return true;
 				}
 				@Override public void Activate() {tilt.Activate();}
 				@Override public void Deactivate() {tilt.Deactivate();}
@@ -174,9 +180,8 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			 * is true. (Used for clicks, as opposed to drags)
 			 */
 			private final CDasherInput undoubledTouch = new CDasherInput(ADasherInterface.this,getSettingsStore(), -1, "Unregistered Input Device") {
-				@Override public void GetScreenCoords(CDasherView pView, long[] coords) {
-					CDasherScreen screen = pView.Screen();
-					((DasherCanvas)screen).GetCoordinates(coords);
+				@Override public boolean GetScreenCoords(CDasherView pView, long[] coords) {
+					return ((DasherCanvas)pView.Screen()).GetCoordinates(coords);
 				}
 			};
 						
