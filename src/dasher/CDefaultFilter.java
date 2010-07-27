@@ -88,7 +88,7 @@ public class CDefaultFilter extends CInputFilter {
 	 * @param View View to which we should draw decorations
 	 * @return True if this method drew anything, false if not.
 	 */
-	public boolean DecorateView(CDasherView View) {
+	@Override public boolean DecorateView(CDasherView View, CDasherInput pInput) {
 		
 		boolean bDidSomething = (false);
 		
@@ -127,7 +127,7 @@ public class CDefaultFilter extends CInputFilter {
 			}
 		}
 		if(m_StartHandler != null) {
-			bDidSomething = m_StartHandler.DecorateView(View) || bDidSomething;
+			bDidSomething = m_StartHandler.DecorateView(View, pInput) || bDidSomething;
 		}
 		return bDidSomething;
 	}

@@ -686,14 +686,14 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			}
 			m_MarkerScreen.SendMarker(1);
 			boolean bDecorationsChanged = (m_InputFilter != null) &&
-				m_InputFilter.DecorateView(m_DasherView);
+				m_InputFilter.DecorateView(m_DasherView, m_Input);
 			bChanged |= bDecorationsChanged;
 			if (bRedrawNodes || bDecorationsChanged)
 				m_MarkerScreen.Display();
 		} else {
 			//simple screen, no markers / caching, render whole frame every time
 			bChanged = m_DasherModel.RenderToView(m_DasherView);
-			if (m_InputFilter!=null) bChanged |= m_InputFilter.DecorateView(m_DasherView);
+			if (m_InputFilter!=null) bChanged |= m_InputFilter.DecorateView(m_DasherView,m_Input);
 		}
 		if (bChanged) Redraw(bRedrawNodes);
 	}

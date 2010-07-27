@@ -80,7 +80,7 @@ public abstract class CDasherButtons extends CInputFilter {
 		return pModel.nextScheduledStep(Time, null);
 	}
 
-	public boolean DecorateView(CDasherView pView) {
+	@Override public boolean DecorateView(CDasherView pView, CDasherInput pInput) {
 		for(int i = 0; i < m_pBoxes.length; ++i) {
 			if(i != m_iActiveBox)
 				DrawBox(pView, m_pBoxes[i], false);

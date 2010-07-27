@@ -93,7 +93,7 @@ public abstract class CInputFilter extends CDasherModule {
 	 * @param View View to which we should draw our decorations.
 	 * @return True if anything has been drawn, false otherwise.
 	 */
-	public boolean DecorateView(CDasherView View) { return false; };
+	public boolean DecorateView(CDasherView View, CDasherInput pInput) { return false; };
 	
 	/**
 	 * Notifies the filter of a key-down event at a given time,

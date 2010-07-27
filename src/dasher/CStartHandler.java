@@ -65,7 +65,7 @@ public abstract class CStartHandler extends CDasherComponent {
 	 * @param View View to which we should draw decorations
 	 * @return True if any decorating was done, false otherwise
 	 */
-	public abstract boolean DecorateView(CDasherView View);
+	public abstract boolean DecorateView(CDasherView View, CDasherInput pInput);
 	
 	/**
 	 * Fired during the start handler's parent input filter's

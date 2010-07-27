@@ -81,7 +81,7 @@ public class CCircleStartHandler extends CStartHandler{
 	 * @param View DasherView upon which to run drawing commands.
 	 * @return True, to indicate that something has been drawn.
 	 */
-	public boolean DecorateView(CDasherView View) {
+	@Override public boolean DecorateView(CDasherView View, CDasherInput pInput) {
 				
 		CDasherView.Point C = View.Dasher2Screen(2048, 2048);
 		

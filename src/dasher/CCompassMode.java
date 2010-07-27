@@ -30,7 +30,7 @@ public class CCompassMode extends CDasherButtons {
 		return m_pBoxes;
 	}
 
-	@Override public boolean DecorateView(CDasherView pView) {
+	@Override public boolean DecorateView(CDasherView pView, CDasherInput pInput) {
 		final long[] x=new long[2], y=new long[2];
 		boolean bFirst=true;
 		x[0]=-100; x[1]=-1000;
