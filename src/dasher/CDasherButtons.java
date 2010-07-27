@@ -1,11 +1,11 @@
 package dasher;
 
 public abstract class CDasherButtons extends CInputFilter {
-	private int m_iActiveBox;
-	private SBox m_pBoxes[];
-	private boolean m_bDecorationChanged;
+	protected int m_iActiveBox;
+	protected SBox m_pBoxes[];
+	protected boolean m_bDecorationChanged;
 	
-	protected void ChangeBoxes() {m_pBoxes = SetupBoxes(); m_bDecorationChanged=true;}
+	//protected void ChangeBoxes() {m_pBoxes = SetupBoxes(); m_bDecorationChanged=true;}
 	
 	public CDasherButtons(CDasherInterfaceBase iface, CSettingsStore sets, int iID, String szName) {
 		super(iface, sets, iID, szName);

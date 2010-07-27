@@ -52,7 +52,9 @@ public class CCompassMode extends CDasherButtons {
 	@Override public void HandleEvent(CEvent pEvent) {
 		if(pEvent instanceof CParameterNotificationEvent) {
 			CParameterNotificationEvent pEvt = (CParameterNotificationEvent)pEvent;
-    		if (pEvt.m_iParameter == Elp_parameters.LP_RIGHTZOOM) ChangeBoxes();
+    		if (pEvt.m_iParameter == Elp_parameters.LP_RIGHTZOOM) {
+    			m_pBoxes=SetupBoxes(); m_bDecorationChanged = true;
+    		}
   		}
 	}
 }

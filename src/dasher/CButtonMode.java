@@ -87,8 +87,9 @@ public class CButtonMode extends CDasherButtons {
 		if(pEvent instanceof CParameterNotificationEvent) {
 			CParameterNotificationEvent pEvt = (CParameterNotificationEvent)pEvent;
 
-			if (pEvt.m_iParameter == Elp_parameters.LP_B || pEvt.m_iParameter==Elp_parameters.LP_R)
-				ChangeBoxes();
+			if (pEvt.m_iParameter == Elp_parameters.LP_B || pEvt.m_iParameter==Elp_parameters.LP_R) {
+				m_pBoxes=SetupBoxes(); m_bDecorationChanged=true;
+			}
 		}
 	}
 }
