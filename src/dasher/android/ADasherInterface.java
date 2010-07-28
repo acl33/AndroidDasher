@@ -156,7 +156,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		final TiltInput tilt=TiltInput.MAKE(androidCtx, this, getSettingsStore());
 		if (tilt!=null) {
 			RegisterModule(tilt);
-			RegisterModule(new CDasherInput(this, getSettingsStore(), 1, "Touch with tilt X") {
+			RegisterModule(new CDasherInput(this, getSettingsStore(), 2, "Touch with tilt X") {
 				long lastTouch;
 				@Override public boolean GetScreenCoords(CDasherView pView, long[] coords) {
 					if (!tilt.GetScreenCoords(pView, coords)) return false;
@@ -177,7 +177,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		RegisterModule(setDefaultInputFilter(new CStylusFilter(this, getSettingsStore(), 16, "Android Touch Control") {
 			/** A special CDasherInput that reads touch coordinates from the screen/DasherCanvas,
 			 * but does <em>not</em> double the x coordinate even if the AndroidDoubleX preference
-			 * is true. (Used for clicks, as opposed to drags)
+			 * is true, nor get its X coordinate from tilting. (Used for clicks, as opposed to drags)
 			 */
 			private final CDasherInput undoubledTouch = new CDasherInput(ADasherInterface.this,getSettingsStore(), -1, "Unregistered Input Device") {
 				@Override public boolean GetScreenCoords(CDasherView pView, long[] coords) {
@@ -185,8 +185,8 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 				}
 			};
 						
-			@Override public void KeyDown(long iTime, int iID, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
-				super.KeyDown(iTime, iID, pView, undoubledTouch, pModel);
+			@Override public void KeyUp(long iTime, int iID, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
+				super.KeyUp(iTime, iID, pView, undoubledTouch, pModel);
 			}
 		}));
 		RegisterModule(new CDefaultFilter(this, getSettingsStore(), 14, "Android Tilt Control") {
@@ -231,7 +231,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 					touch.GetDasherCoords(pView, coords);
 					coords[1]=iDasherY;
 				}
-				if (prefs.getBoolean("AndroidTilt2D", true))
+				if (prefs.getBoolean("AndroidTilt2D", false)) //false=default
 					super.ApplyTransform(pView, coords);
 				else
 					Apply1DTransform(pView, coords);
