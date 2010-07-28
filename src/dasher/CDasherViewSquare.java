@@ -483,7 +483,6 @@ public class CDasherViewSquare extends CDasherView {
 		    m_dXMappingLinearScaleFactor = Math.min(1.0,0.9 * dScaleFactorX / dScaleFactorY);
 		    temp+=" => Xscale "+m_dXMappingLinearScaleFactor;
 		}
-		android.util.Log.d("DasherIME",temp+", m_iX "+ m_iScaleFactorX+" m_iY "+m_iScaleFactorY);
 		m_iCenterX *= m_dXMappingLinearScaleFactor;
 		
 		// Vertical bar of crosshair

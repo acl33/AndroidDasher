@@ -31,8 +31,8 @@ package dasher;
  * such as automatic speed control.
  */
 public class CFrameRate {
-private int logCount;	
-private double logFrames;
+/*private int logCount;	
+private double logFrames;*/
 	/**
 	 * Current frame rate
 	 */
@@ -166,11 +166,11 @@ private double logFrames;
 				m_iTime = m_iTime2;
 				m_iFrames = 0;
 			}
-			logFrames+=m_dFr;
+			/*logFrames+=m_dFr;
 			if (++logCount==20) {
 				android.util.Log.d("DasherCore","Framerate: "+logFrames/logCount);
 				logFrames = logCount=0;
-			}
+			}*/
 			m_dRXmax = Math.exp(m_dMaxbitrate * LN2 / m_dFr);
 			m_iSteps = m_iSteps / 2 + (int)(-Math.log(0.2) * m_dFr / LN2 / m_dMaxbitrate) / 2;
 			
