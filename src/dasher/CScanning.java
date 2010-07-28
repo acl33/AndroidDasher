@@ -29,6 +29,7 @@ public abstract class CScanning extends CDasherButtons {
 			m_bDecorationChanged = true;
 			if(++m_iActiveBox == m_pBoxes.length)
 				m_iActiveBox = 0;
+			m_Interface.Redraw(false);
 			break;
 		case 2:
 		case 3:
