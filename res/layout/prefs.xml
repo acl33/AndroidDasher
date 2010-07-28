@@ -90,11 +90,12 @@
       android:widgetLayout="@layout/checkbox_boxes">
         <dasher.android.SeekBarPreference
           android:key="ButtonMenuBoxes"
-          android:title="Number of (forward) boxes"
+          android:title="No. of forward boxes"
           android:max="9" min="2" />
         <dasher.android.SeekBarPreference
           android:key="ButtonMenuSafety"
-          android:title="Safety margin (%? Dasher Y?)"
+          android:title="Safety margin"
+          android:summary="Don't zoom all the way into box"
           android:max="256" min="0"/>
         <dasher.android.SeekBarPreference
           android:key="ButtonModeNonuniformity"
@@ -103,18 +104,20 @@
         <CheckBoxPreference
           android:key="AndroidScan"
           android:title="Scan through boxes"
-          android:summaryOn="LHS scans; tap RHS for highlighted box"
+          android:summaryOn="Tap screen for highlighted box"
           android:summaryOff="Tap in box to select"/>
         <dasher.android.SeekBarPreference
           android:dependency="AndroidScan"
           android:key="ButtonScanTime"
           android:title="Scanning Time"
+          android:summary="0 = tap top half of screen to scan"
           android:max="1000" min="0" />
     </PreferenceScreen>
 
     <PreferenceScreen
       android:key="AndroidCompass"
       android:title="Compass Mode"
+      android:summary="Control with trackball"
       android:widgetLayout="@layout/checkbox_compass">
         <dasher.android.SeekBarPreference
           android:key="ButtonCompassModeRightZoom"

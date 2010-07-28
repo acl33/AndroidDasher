@@ -45,7 +45,7 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
   @Override public void onAttachedToHierarchy(PreferenceManager pm) {
 	  super.onAttachedToHierarchy(pm);
 	  lValue = getPersistedLong(lDef);
-	  setTitle(mTitle+": "+(lValue/(double)lDiv));
+	  updateText();
   }
   @Override 
   protected View onCreateDialogView() {
@@ -57,6 +57,7 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
     mValueText = new TextView(getContext());
     mValueText.setGravity(Gravity.CENTER_HORIZONTAL);
     mValueText.setTextSize(32);
+    updateText();
     
     mSeekBar = new SeekBar(getContext());
     mSeekBar.setOnSeekBarChangeListener(this);
@@ -87,11 +88,15 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
   }
   
   public void onProgressChanged(SeekBar seek, int value, boolean fromTouch) {
-    String t = String.valueOf((value+lMin)/(double)lDiv);
-    mValueText.setText(mSuffix == null ? t : t.concat(mSuffix));
     persistLong(lValue = (value+lMin));
     callChangeListener(new Integer(value));
+    updateText();
+  }
+  
+  private void updateText() {
+    String t = (lDiv==1) ? String.valueOf(lValue) : String.valueOf(lValue/(double)lDiv);
     setTitle(mTitle+": "+t);
+    if (mValueText!=null) mValueText.setText(mSuffix == null ? t : t.concat(mSuffix));
   }
   
   public void onStartTrackingTouch(SeekBar seek) {}
