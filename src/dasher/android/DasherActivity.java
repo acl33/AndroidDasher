@@ -26,33 +26,7 @@ public class DasherActivity extends PreferenceActivity {
         
         addPreferencesFromResource(R.layout.prefs);
         
-        Preference.OnPreferenceClickListener lstnr = new Preference.OnPreferenceClickListener() {
-        	public boolean onPreferenceClick(Preference pref) {
-        		Log.d("DasherIME","OnPreferenceClick screen "+pref);
-        		IMCheckBox.set(pref.getKey());
-        		return false; //allow normal click action to occur too
-        	}
-        };
-        ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidTilt"))
-        	.setOnPreferenceClickListener(lstnr);
-        
-        ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidTouch"))
-        	.setOnPreferenceClickListener(lstnr);
-        
-        ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidBoxes"))
-    		.setOnPreferenceClickListener(lstnr);
-        
-        ((PreferenceScreen)getPreferenceScreen().findPreference("AndroidCompass"))
-			.setOnPreferenceClickListener(lstnr);
-        
-        ((CheckBoxPreference)getPreferenceScreen().findPreference("AndroidScan"))
-			.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-			
-			public boolean onPreferenceChange(Preference preference, Object newValue) {
-				((DualIMCheckBox)findViewById(R.id.checkbox_boxes)).setInputsForChildChecked(((Boolean)newValue).booleanValue());
-				return true;
-			}
-		});
+        IMCheckBox.setPrefScreen(getPreferenceScreen());
     
         addPermittedValues(Esp_parameters.SP_ALPHABET_ID);
     }

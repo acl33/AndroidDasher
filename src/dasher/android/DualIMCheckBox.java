@@ -2,7 +2,10 @@ package dasher.android;
 
 import dasher.Esp_parameters;
 import android.content.Context;
+import android.preference.CheckBoxPreference;
+import android.preference.Preference;
 import android.preference.PreferenceManager;
+import android.preference.PreferenceScreen;
 import android.util.AttributeSet;
 
 public class DualIMCheckBox extends IMCheckBox {
@@ -17,7 +20,14 @@ public class DualIMCheckBox extends IMCheckBox {
 		inputDevOff= getAttribute(attrs,"inputDeviceOff","inputDevice");
 		inputFilOn= getAttribute(attrs,"inputFilterOn","inputFilter");
 		inputFilOff = getAttribute(attrs,"inputFilterOff","inputFilter");
-		android.util.Log.d("DasherIME","Created"+this);
+		CheckBoxPreference cb = (CheckBoxPreference)ps.findPreference(childKey);
+		cb.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+			
+			public boolean onPreferenceChange(Preference preference, Object newValue) {
+				DualIMCheckBox.this.setInputsForChildChecked(((Boolean)newValue).booleanValue());
+				return true; //allow
+			}
+		});
 	}
 	
 	private static String getAttribute(AttributeSet attrs, String fst, String snd) {
@@ -41,4 +51,5 @@ public class DualIMCheckBox extends IMCheckBox {
 		IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_DEVICE, d);
 		IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_FILTER, f);
 	}
+
 }

@@ -7,7 +7,9 @@ import java.util.Set;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.preference.Preference;
 import android.preference.PreferenceManager;
+import android.preference.PreferenceScreen;
 import android.util.AttributeSet;
 import android.widget.CheckBox;
 
@@ -22,6 +24,7 @@ public abstract class IMCheckBox extends CheckBox {
 		super(ctx,attrs);
 		key = attrs.getAttributeValue(androidns, "key");
 		BOXES.add(new WeakReference<IMCheckBox>(this));
+		((PreferenceScreen)ps.findPreference(key)).setOnPreferenceClickListener(lstnr);
 	}
 	
 	@Override public void onFinishInflate() {
@@ -46,6 +49,8 @@ public abstract class IMCheckBox extends CheckBox {
 		}	
 	}
 
+	public static void setPrefScreen(PreferenceScreen _ps) {ps=_ps;}
+	protected static PreferenceScreen ps;
 	
 	protected void hasBecomeChecked() {
 		SharedPreferences.Editor edit = PreferenceManager.getDefaultSharedPreferences(getContext()).edit();
@@ -54,5 +59,12 @@ public abstract class IMCheckBox extends CheckBox {
 	}
 	
 	public String toString() {return getClass().getName()+" w/ key "+key;}
+
+	private static final Preference.OnPreferenceClickListener lstnr = new Preference.OnPreferenceClickListener() {
+    	public boolean onPreferenceClick(Preference pref) {
+    		IMCheckBox.set(pref.getKey());
+    		return false; //allow normal click action to occur too
+    	}
+    };
 
 }
