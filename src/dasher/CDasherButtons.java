@@ -108,7 +108,7 @@ public abstract class CDasherButtons extends CInputFilter {
 			iWidth = 1;
 		}
 
-		pView.DasherDrawRectangle(iMaxX, box.iDisplayBottom, 0, box.iDisplayTop, -1, iColour, iWidth);
+		pView.DasherDrawRectangle(iMaxX, box.iDisplayTop, 0, box.iDisplayBottom, -1, iColour, iWidth);
    }
 
 }

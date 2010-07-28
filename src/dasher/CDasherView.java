@@ -295,10 +295,10 @@ public abstract class CDasherView extends CDasherComponent {
 	 */	
 	public void DasherDrawRectangle(long iLeft, long iMinY, long iRight, long iMaxY, int Color, int iOutlineColour, int iThickness) {
 		
-		temp1[0] = iLeft; temp1[1] = iMaxY;
+		temp1[0] = iLeft; temp1[1] = iMinY;
 		Dasher2Screen(temp1);
 		
-		temp2[0] = iRight; temp2[1] = iMinY;
+		temp2[0] = iRight; temp2[1] = iMaxY;
 		Dasher2Screen(temp2);
 		
 		Screen().DrawRectangle((int)temp1[0], (int)temp1[1], (int)temp2[0], (int)temp2[1], Color, iOutlineColour, iThickness);
