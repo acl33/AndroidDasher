@@ -95,6 +95,7 @@ public class CDefaultFilter extends CInputFilter {
 		if (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
 			//not retrieving input coords in Timer, so better try here...
 			if (!pInput.GetDasherCoords(View, lastInputCoords)) return false;
+			ApplyTransform(View, lastInputCoords);
 		}
 		
 		temp[0]=lastInputCoords[0];
@@ -156,7 +157,9 @@ public class CDefaultFilter extends CInputFilter {
 	@Override public boolean Timer(long Time, CDasherView pView, CDasherInput pInput, CDasherModel m_DasherModel) {
 		boolean bDidSomething;
 		if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
-			pInput.GetDasherCoords(pView,lastInputCoords);
+			if (!pInput.GetDasherCoords(pView,lastInputCoords)) {
+				m_Interface.PauseAt(0,0);
+			}
 			ApplyTransform(pView, lastInputCoords);
 			m_DasherModel.oneStepTowards(lastInputCoords[0],lastInputCoords[1], Time, null);
 		
