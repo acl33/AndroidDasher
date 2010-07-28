@@ -142,4 +142,9 @@
 	      android:title="Touch on left half only"
 	      android:summary="As if finger were twice as far to the right"/>
 	</PreferenceScreen>
+	
+	<ListPreference
+      android:key="ColourID"
+      android:title="Colour Scheme"/>
+	
 </PreferenceScreen>

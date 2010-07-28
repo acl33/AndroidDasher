@@ -29,6 +29,7 @@ public class DasherActivity extends PreferenceActivity {
         IMCheckBox.setPrefScreen(getPreferenceScreen());
     
         addPermittedValues(Esp_parameters.SP_ALPHABET_ID);
+        addPermittedValues(Esp_parameters.SP_COLOUR_ID);
     }
     
     private void addPermittedValues(Esp_parameters param) {
