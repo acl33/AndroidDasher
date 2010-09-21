@@ -142,6 +142,11 @@
 	      android:key="AndroidDoubleX"
 	      android:title="Touch on left half only"
 	      android:summary="As if finger were twice as far to the right"/>
+	    <dasher.android.SeekBarPreference
+	      android:key="SlowStartTime"
+	      android:title="Slow Startup Time"
+	      android:summary="Gradually increase speed from 1/10 to full over this time period"
+	      android:max="5000" min="0" android:text="ms"/>
 	</PreferenceScreen>
 	
 	<ListPreference

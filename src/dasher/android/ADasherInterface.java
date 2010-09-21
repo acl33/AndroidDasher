@@ -247,8 +247,9 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			@Override public void Deactivate() {bActive=false;}
 			
 			@Override public void HandleEvent(CEvent evt) {
-				if (!bActive) return;
-				if (evt instanceof CParameterNotificationEvent &&
+				super.HandleEvent(evt);
+				if (bActive &&
+						evt instanceof CParameterNotificationEvent &&
 						((CParameterNotificationEvent)evt).m_iParameter == Ebp_parameters.BP_DASHER_PAUSED &&
 						!prefs.getBoolean("AndroidTiltHoldToGo", false)) {
 					if (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {

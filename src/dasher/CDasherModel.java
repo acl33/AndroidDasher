@@ -609,43 +609,26 @@ public class CDasherModel extends CFrameRate {
 	}
 	
 	/**
-	 * Performs a single update of the model based on a given
-	 * mouse position and the time elpased since the last
-	 * update took place.
-	 * <p>
+	 * Updates the model to move one step towards a specified mouse position.
+	 * The distance moved is based on the current frame rate
+	 * and a speed multiplier passed in (this can be used to implement slow start,
+	 * etc.)
 	 * 
-	 * In the case that the m_deGotoQueue contains any points,
-	 * indicating that a pre-scheduled zoom is currently in
-	 * progress, we move to the next specified point in the queue
-	 * instead and ignore the mouse position.
-	 * <p>
-	 * Internally, this method uses Get_new_root_coords to work
-	 * out where to go, and NewGoto to actually go there.
-	 * <p>
-	 * If this method is called whilst Dasher is paused, it
-	 * will do nothing and return false.
+	 * Internally, this computes the new boundaries of the current root node,
+	 * and then calls {@link #NewGoTo(long, long)} to take us there.
 	 * 
 	 * @param miMousex Current mouse X co-ordinate
 	 * @param miMousey Current mouse Y co-ordinate
-	 * @param Time Current system time as a UNIX timestamp
-	 * @param pAdded Ignored parameter
-	 * @return True if we have updated the model, false otherwise.
+	 * @param Time Time of current frame (used to compute framerate, which
+	 * controls rate of advance per frame)
+	 * @param dSpeedMul Multiplier to apply to the current speed (i.e. 0.0 = don't move, 10.0 = go 10* as fast)
 	 */
 	public void oneStepTowards(long miMousex,
 			long miMousey, 
 			long Time, 
-			ArrayList<CSymbolProb> pAdded)	{
+			float dSpeedMul)	{
 		CountFrame(Time);
-		/* CSFS: There used to be an extra parameter here called pNumDeleted
-		 * which was an int * which looked as if it was intended to return the
-		 * number of deleted nodes to the calling routine; however, every
-		 * call in the current source-code supplies a null pointer, so rather
-		 * than work on actually returning NumDeleted I've removed the parameter.
-		 */
-		
-		//		TODO: Reimplement this 
-//		Clear out parameters that might get passed in to track user activity
-		if (pAdded != null)	pAdded.clear();
+		if (dSpeedMul <= 0.0) return;
 			
 		//ACL I've inlined Get_new_root_coords here, so we don't have to allocate a temporary object to return two values...
 
@@ -665,44 +648,73 @@ public class CDasherModel extends CFrameRate {
 		// Calculate what the extremes of the viewport will be when the
 		// point under the cursor is at the cross-hair. This is where 
 		// we want to be in iSteps updates
-		/* CSFS: In the original C++ iTargetMin and iTargetMax were, apparently
-		 * intentionally, ints and not longs. I've changed this since it seems they may
-		 * be liable to overflow if simply assigned the values given.
-		 */		  
 		long iTargetMin = (miMousey - (iMaxY * miMousex) / (2 * iOX));
 		long iTargetMax = (miMousey + (iMaxY * miMousex) / (2 * iOY));
-
-
+		//back these up, we may want them later
+		long origMin=iTargetMin,origMax=iTargetMax;
+		
 		// iSteps is the number of update steps we need to get the point
 		// under the cursor over to the cross hair. Calculated in order to
 		// keep a constant bit-rate.
-		int iSteps = Steps();
-		assert(iSteps > 0);
+
+		final int iSteps = Math.max(1,(int)(Steps()/dSpeedMul));
 		
 		// Calculate the new values of iTargetMin and iTargetMax required to
-		// perform a single update step. Note that the slightly awkward
-		// expressions are in order to reproduce the behaviour of the old
-		// algorithm
-		long iNewTargetMin = (iTargetMin * iMaxY / (iMaxY + (iSteps - 1) * (iTargetMax - iTargetMin)));
-		long iNewTargetMax = ((iTargetMax * iSteps - iTargetMin * (iSteps - 1)) * iMaxY) / (iMaxY + (iSteps - 1) * (iTargetMax - iTargetMin));
+		// perform a single update step. Note the awkward equations
+		// interpolating between (iTargetMin,iTargetMax), with weight lpMaxY,
+		// and (0,iMaxY), with weight iOldWeight; in the olg algorithm, the latter was
+		// (iSteps-1)*(iTargetMax-iTargetMin), but people wanted to reverse faster!
+		// (TODO: should this be a parameter? I'm resisting "too many user settings" atm, but maybe...)
+		final long iOldWeight = (iSteps-1) * Math.min(iTargetMax - iTargetMin, iMaxY+(iTargetMax-iTargetMin)>>>4);
+		long iDenom = iMaxY + iOldWeight;
+		long iNewTargetMin = (iTargetMin * iMaxY) / iDenom;
+		long iNewTargetMax = (iTargetMax+iOldWeight) * iMaxY / iDenom;
 		iTargetMin = iNewTargetMin;
 		iTargetMax = iNewTargetMax;
 
 		// Calculate the minimum size of the viewport corresponding to the
 		// maximum zoom.
-		long iMinSize = (long)(iMaxY/maxZoom());
+		long iMinSize = (long)(iMaxY/(dSpeedMul*maxZoom()+(1.0f-dSpeedMul)));
 
 		if((iTargetMax - iTargetMin) < iMinSize) {
-		    iNewTargetMin = iTargetMin * (iMaxY - iMinSize) / (iMaxY - (iTargetMax - iTargetMin));
+			iNewTargetMin = iTargetMin * (iMaxY - iMinSize) / (iMaxY - (iTargetMax - iTargetMin));
 		    iNewTargetMax = iNewTargetMin + iMinSize;
 
 		    iTargetMin = iNewTargetMin;
 		    iTargetMax = iNewTargetMax;
 		}
+		
+		//Now calculate the bounds of the root node, that put (y1,y2) at the screen edges...
+		// If |(0,Y2)| = |(y1,y2)|, the "zoom factor" is 1, so we just translate.
+		if (iMaxY == iTargetMax - iTargetMin) {
+		    m_Rootmin -= iTargetMin;
+		    m_Rootmax -= iTargetMin;
+		    return;
+	    }
+		
+		// There is a point C on the y-axis such the ratios (y1-C):(0-C) and
+		// (y2-C):(iMaxY-C) are equal - iow that divides the "target" region y1-y2
+		// into the same proportions as it divides the screen (0-iMaxY). I.e., this
+		// is the center of expansion - the point on the y-axis which everything
+		// moves away from (or towards, if reversing).
+		  
+		//We prefer to compute C from the _original_ (y1,y2) pair, as this is more
+		// accurate (and avoids drifting up/down when heading straight along the
+		// x-axis in dynamic button modes). However...
+		if ((iTargetMax-iTargetMin) < iMaxY ^ (origMax-origMin) < iMaxY) {
+		    //Sometimes (very occasionally), the calculation of a single-step above
+		    // can turn a zoom-in into a zoom-out, or vice versa, when the movement
+		    // is mostly translation. In which case, must compute C consistently with
+		    // the (scaled, single-step) movement we are going to perform, or else we
+		    // will end up suddenly going the wrong way along the y-axis (i.e., the
+		    // sense of translation will be reversed) !
+		    origMin=iTargetMin; origMax=iTargetMax;
+		}
+		final long C = (origMin * iMaxY) / (origMin + iMaxY - origMax);
 
 		//finally, update the rootnode bounds to put iTargetMin/iTargetMax at (0,LP_MAX_Y).
-		NewGoTo((((m_Rootmin - iTargetMin) * GetLongParameter(Elp_parameters.LP_MAX_Y)) / (iTargetMax - iTargetMin)),
-				(((m_Rootmax - iTargetMax) * GetLongParameter(Elp_parameters.LP_MAX_Y)) / (iTargetMax - iTargetMin) + GetLongParameter(Elp_parameters.LP_MAX_Y)));
+		NewGoTo( ((m_Rootmin - C) * iMaxY) / (iTargetMax - iTargetMin) + C,
+				 ((m_Rootmax - C) * iMaxY) / (iTargetMax - iTargetMin) + C);
 	}
 	
 	public boolean nextScheduledStep(long time, ArrayList<CSymbolProb> vAdded) {
