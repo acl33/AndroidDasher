@@ -252,7 +252,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 						evt instanceof CParameterNotificationEvent &&
 						((CParameterNotificationEvent)evt).m_iParameter == Ebp_parameters.BP_DASHER_PAUSED &&
 						!prefs.getBoolean("AndroidTiltHoldToGo", false)) {
-					if (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
+					if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
 						if (!wl.isHeld()) wl.acquire();
 					} else {
 						if (wl.isHeld()) wl.release();
