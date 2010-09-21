@@ -352,7 +352,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * <p>
 	 * The interface responds to the following parameter changes:
 	 * <p>
-	 * <i>BP_COLOUR_MODE</i>: Calls Start() and redraws the display.
+	 * <i>BP_COLOUR_MODE</i>: redraws the display.
 	 * <p>
 	 * <i>BP_OUTLINE_MODE</i>: Redraws the display.
 	 * <p>
@@ -364,7 +364,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * sets LP_REAL_ORIENTATION appropriately.
 	 * <p>
 	 * <i>SP_ALPHABET_ID</i>: Calls ChangeAlphabet() to rebuild the DasherModel
-	 * appropriately, and then Start().
+	 * appropriately
 	 * <p>
 	 * <i>SP_COLOUR_ID</i>: Calls ChangeColours() to insert the new colour scheme.
 	 * <p>
@@ -399,7 +399,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			
 			if(Evt.m_iParameter == Ebp_parameters.BP_COLOUR_MODE) {       // Forces us to redraw the display
 				// TODO) { Is this variable ever used any more?
-				Start();
 				Redraw(true);
 			} else if(Evt.m_iParameter ==  Ebp_parameters.BP_OUTLINE_MODE) {
 				Redraw(true);
@@ -407,7 +406,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 				m_bConnectLock = GetBoolParameter(Ebp_parameters.BP_CONNECT_LOCK);
 			} else if(Evt.m_iParameter ==  Esp_parameters.SP_ALPHABET_ID) {
 				ChangeAlphabet();
-				Start();
 				Redraw(true);
 			} else if(Evt.m_iParameter ==  Esp_parameters.SP_COLOUR_ID) {
 				ChangeColours();
@@ -417,12 +415,10 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 					SetStringParameter(Esp_parameters.SP_COLOUR_ID, GetStringParameter(Esp_parameters.SP_DEFAULT_COLOUR_ID));
 			} else if(Evt.m_iParameter == Elp_parameters.LP_LANGUAGE_MODEL_ID) {
 				CreateDasherModel();
-				Start();
 				Redraw(true);
 			} else if(Evt.m_iParameter == Esp_parameters.SP_LM_HOST) {
 				if(GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID) == 5) {
 					CreateDasherModel();
-					Start();
 					Redraw(true);
 				}
 			} else if(Evt.m_iParameter == Elp_parameters.LP_LINE_WIDTH) {
@@ -467,7 +463,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * This function also trains the newly created model using the
 	 * using the new Alphabet's specified training text. 
 	 */
-	public void CreateDasherModel() 
+	private void CreateDasherModel() 
 	{
 		if(m_AlphIO == null)
 			return;
@@ -478,14 +474,18 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		if( lmID == -1 ) return;
 			
 		// Train the new language model
+		SetBoolParameter( Ebp_parameters.BP_TRAINING, true );
+		
 		CLockEvent evt = new CLockEvent("Training Dasher", true, 0); 
 		InsertEvent(evt);
 		
+		int iOffset;
 		// Delete the old model and create a new one
 		if(m_DasherModel != null) {
+			iOffset = m_DasherModel.GetOffset();
 			m_DasherModel.shutdown();
 			m_DasherModel.UnregisterComponent();
-		}
+		} else iOffset = -1;
 		
 		m_DasherModel = new CDasherModel(this, m_SettingsStore, m_AlphIO, m_UserLog);
 		
@@ -494,13 +494,10 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		
 		evt.m_bLock = false;
 		InsertEvent(evt);
+		
+		SetBoolParameter( Ebp_parameters.BP_TRAINING, false );
+		m_DasherModel.SetOffset(iOffset, true);
 	}
-	
-	/**
-	 * Utility method, preserved for backwards compatibility.
-	 * Simply calls {@link #InvalidateContext(boolean)} with <code>true</code>.
-	 */
-	public void Start() {setOffset(m_DasherModel.GetOffset(),true);}
 	
 	/**
 	 * Pauses Dasher at a given mouse location, and sets
@@ -719,19 +716,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		
 		// Lock Dasher to prevent changes from happening while we're training.
 		
-		SetBoolParameter( Ebp_parameters.BP_TRAINING, true );
-		
-		if(m_DasherModel != null) {
-			m_DasherModel.UnregisterComponent();
-			m_DasherModel = null;
-		}
-				
 		CreateDasherModel();
-		
-		SetBoolParameter( Ebp_parameters.BP_TRAINING, false );
-		
-		Start();
-		
 	}
 	
 	/**
