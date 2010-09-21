@@ -174,16 +174,11 @@ public class CDefaultFilter extends CInputFilter {
 		}
 		return bDidSomething;
 	}
-	
-	private static final double REPULSION_PARAM=0.5;
-
 	/** Modify the input coordinates according to any desired remapping scheme.
 	 * Subclasses may override to change the remapping; the default implementation:
 	 * <ol>
-	 * <li> _iff_ BP_SATURATE_X is true, sets x to either 0 or the view's
-	 * maximum visible x coordinate ({@link CDasherView#VisibleRegion()},
-	 * according to which side of the crosshair it is on;
-	 * <li> applies the eyetracker-remapping from C++ Dasher
+	 * <li> First calls {@link #ApplyAutoCalibration(CDasherView, long[])};
+	 * <li> then applies the eyetracker-remapping from C++ Dasher
 	 * _iff_ BP_COMPRESS_XTREME is set. (This compresses the y coordinate at
 	 * the extremes of the viewport, and also reduces the maximum x at extreme y
 	 * values, so a movement towards a corner instead becomes up/down translation.)
@@ -192,11 +187,7 @@ public class CDefaultFilter extends CInputFilter {
 	 * @param inputCoords dasher co-ordinates of input
 	 */
 	protected void ApplyTransform(CDasherView pView, long[] coords) {
-		if (GetBoolParameter(Ebp_parameters.BP_SATURATE_X)) {
-			if (coords[0] < GetLongParameter(Elp_parameters.LP_OX))
-				coords[0] = 0;
-			else coords[0] = pView.VisibleRegion().maxX;
-		}
+		ApplyAutoCalibration(pView, coords);
 		if (GetBoolParameter(Ebp_parameters.BP_REMAP_XTREME)) {
 			// Y co-ordinate...
 			long dasherOY=GetLongParameter(Elp_parameters.LP_OY); 
@@ -208,7 +199,32 @@ public class CDefaultFilter extends CInputFilter {
 		 	coords[0] = Math.max(coords[0],(long)(GetLongParameter(Elp_parameters.LP_OX) * xmax(double_y)));
 		}
 	}
-
+	/**
+	 * <em>iff</em> <code>BP_AUTOCALIBRATE</code> is true, adjusts the Y coordinate up or down
+	 * according to the computed offset ({@link #m_iYAutoOffset}), and then, <em>iff</em>
+	 * <code>BP_DASHER_PAUSED</code> is false, updates the auto-offset params accordingly.
+	 */
+	protected void ApplyAutoCalibration(CDasherView pView, long[] coords) {
+		if (GetBoolParameter(Ebp_parameters.BP_AUTOCALIBRATE)) {
+			coords[1] += m_iYAutoOffset * 10; //Urgh, arbitrary constants. Better would be screen range in dasher coords / pixels ???
+			if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
+			  m_iSum += (GetLongParameter(Elp_parameters.LP_OY) - coords[1]);
+			  if (++m_iCounter>20) {
+				  if (Math.abs(m_iSum) > GetLongParameter(Elp_parameters.LP_MAX_Y)/2)
+					  m_iYAutoOffset += (m_iSum>0) ? -1 : 1;
+				  m_iSum=m_iCounter=0; //TODO, reset m_iSum only if increment/decrement applied?
+			  }
+			}
+		}
+	}
+	
+	/** Parameters for auto-offset-calibration: current offset, avg offset over last m_iCounter frames, #frames since last adjust. */
+	private int m_iYAutoOffset, m_iSum, m_iCounter;
+	
+	/** Parameter for repelling Y value away from crosshair */
+	private static final double REPULSION_PARAM=0.5;
+	
+	/** Parameters for determining max X from Y value */
 	private static final int A=1, B=1, C=100;
 	
 	private double xmax(double y) {

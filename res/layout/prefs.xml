@@ -15,7 +15,7 @@
     	<dasher.android.SeekBarPreference
     	  android:key="MinNodeSizeForText"
     	  android:title="Size for Text"
-    	  android:summary="smallest node to have text, 4096=whole screen"
+    	  android:summary="smallest box to have text, 4096=whole screen"
     	  min="10" android:max="100"/>
     	
 	    <dasher.android.SeekBarPreference
@@ -132,11 +132,12 @@
       	  android:title="Auto speed control"/>
     	<CheckBoxPreference
       	  android:key="RemapXtreme"
-      	  android:title="Remap X coords at extreme Y"/> 
-	    <CheckBoxPreference
-	      android:key="FullSpeedOnly"
-	      android:title="Full-speed ahead/back"
-	      android:summary="Always target closest left/right edge"/>
+      	  android:title="Remap motion towards top/bottom"
+      	  android:summary="At extremes of axis, translate more and zoom less"/> 
+      	<CheckBoxPreference
+      	  android:key="AutoAdjust"
+      	  android:title="Auto-adjust target"
+      	  android:summary="Learns offset above/below finger"/>
 	    <CheckBoxPreference
 	      android:key="AndroidDoubleX"
 	      android:title="Touch on left half only"

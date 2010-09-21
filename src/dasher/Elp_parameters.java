@@ -37,11 +37,9 @@ public enum Elp_parameters implements EParameters {
 	  LP_LANGUAGE_MODEL_ID("LanguageModelID", PERS, 0, "LanguageModelID"),
 	  LP_DASHER_FONTSIZE("DasherFontSize", PERS, 1, "DasherFontSize"),
 	  LP_UNIFORM("UniformTimes1000", PERS, 50, "UniformTimes1000"),
-	  LP_YSCALE("YScaling", PERS, 0, "YScaling"),
 	  LP_MOUSEPOSDIST("MousePositionBoxDistance", PERS, 50, "MousePositionBoxDistance"),
 	  //LP_STOP_IDLETIME("StopIdleTime", PERS, 1000, "StopIdleTime" ),
 	  LP_LM_MAX_ORDER("LMMaxOrder", PERS, 5, "LMMaxOrder"),
-	  LP_LM_EXCLUSION("LMExclusion", PERS, 0, "LMExclusion"),
 	  LP_LM_UPDATE_EXCLUSION("LMUpdateExclusion", PERS, 1, "LMUpdateExclusion"),
 	  LP_LM_ALPHA("LMAlpha", PERS, 49, "LMAlpha"),
 	  LP_LM_BETA("LMBeta", PERS, 77, "LMBeta"),
@@ -51,7 +49,7 @@ public enum Elp_parameters implements EParameters {
 	  LP_LINE_WIDTH("LineWidth", PERS, 1, "Width to draw crosshair and mouse line"),
 	  //LP_LM_WORD_ALPHA("WordAlpha", PERS, 50, "Alpha value for word-based model"),
 	  LP_USER_LOG_LEVEL_MASK("UserLogLevelMask", PERS, 0, "Controls level of user logging, 0 = none, 1 = short, 2 = detailed, 3 = both"),
-	  LP_ZOOMSTEPS("Zoomsteps", PERS, 32, "Integerised ratio of zoom size for click/button mode, denom 64."),
+	  LP_ZOOMSTEPS("Zoomsteps", PERS, 32, "Frames for zoom"),
 	  LP_B("ButtonMenuBoxes", PERS, 4, "Number of boxes for button menu mode"),
 	  LP_S("ButtonMenuSafety", PERS, 25, "Safety parameter for button mode, in percent."),
 	  LP_R("ButtonModeNonuniformity", PERS, 0, "Button mode box non-uniformity"),
@@ -75,7 +73,7 @@ public enum Elp_parameters implements EParameters {
 	  LP_DASHER_MARGIN("MarginWidth", PERS, 400, "Width of RHS margin (in Dasher co-ords)"),
 	  LP_NODE_BUDGET("NodeBudget", PERS, 1200, "Target number of node objects"),
 	  LP_BUTTON_SCAN_TIME("ButtonScanTime", PERS, 0, "Scanning interval in button mode (0 = don't scan)"),
-	  LP_MIN_NODE_SIZE_TEXT("MinNodeSizeForText",PERS, 40, "Minimum size for node to have text (4096=whole screen)");
+	  LP_MIN_NODE_SIZE_TEXT("MinNodeSizeForText",PERS, 40, "Minimum size for box to have text (4096=whole screen)");
 		  
 		  private Elp_parameters(String rName, boolean pers, long def, String hr) {
 				humanReadable = hr;
