@@ -8,6 +8,8 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.PowerManager;
+import android.util.Log;
+import android.view.WindowManager;
 import dasher.CDasherInput;
 import dasher.CDasherInterfaceBase;
 import dasher.CDasherView;
@@ -17,23 +19,29 @@ import dasher.Ebp_parameters;
 
 public class TiltInput extends CDasherInput implements SensorEventListener {
 	private final SensorManager sm;
+	private final WindowManager wm;
 	
+	/** Last (/current) values of tilt position, as floats in (0,1) */
 	private float fx,fy;
+	/** X & Y values from h/w tilt sensor are multiplied by these scales, then offsets added */
+	private float y_mul=0.125f,y_off=-0.125f,x_mul=-0.5f,x_off=0.5f;
+	
 	private boolean bActive;
 	private final Sensor s;
 	
 	public static TiltInput MAKE(Context androidCtx, CDasherInterfaceBase iface, CSettingsStore sets) {
 		SensorManager sm=(SensorManager)androidCtx.getSystemService(Context.SENSOR_SERVICE);
-		
+		WindowManager wm = (WindowManager)androidCtx.getSystemService(Context.WINDOW_SERVICE);
 		List<Sensor> ss = sm.getSensorList(Sensor.TYPE_ACCELEROMETER);
 		if (ss.isEmpty()) return null;
-		return new TiltInput(iface, sets, sm, ss.get(0));
+		return new TiltInput(iface, sets, sm, ss.get(0),wm);
 	}
 	
-	private TiltInput(CDasherInterfaceBase iface, CSettingsStore sets, SensorManager sm, Sensor s) {
+	private TiltInput(CDasherInterfaceBase iface, CSettingsStore sets, SensorManager sm, Sensor s, WindowManager wm) {
 		super(iface, sets, 1, "Tilt Input");
 		this.sm=sm;
 		this.s=s;
+		this.wm=wm;
 	}
 	
 	@Override public void Activate() {
@@ -49,7 +57,7 @@ public class TiltInput extends CDasherInput implements SensorEventListener {
 	}
 	
 	public void onAccuracyChanged(Sensor sensor, int accuracy) {}
-
+	private int m_iLastOrient;
 	public void onSensorChanged(SensorEvent event) {
 		float[] vals=event.values;
 		/*StringBuilder sb=new StringBuilder();
@@ -57,9 +65,17 @@ public class TiltInput extends CDasherInput implements SensorEventListener {
 			sb.append(i==0 ? "{" : ",").append(vals[i]);
 		sb.append("}");
 		android.util.Log.d("DasherIME","Got rotation "+sb);*/
-		fx = Math.max(0.0f, Math.min(1.0f, (vals[0]-1.0f)/-2.0f));
-		fy = Math.max(0.0f, Math.min(1.0f, (vals[1]-1.0f)/8.0f));
-		
+		int orient = wm.getDefaultDisplay().getOrientation();
+		if (orient != m_iLastOrient) Log.d("DasherIME", "Orientation changed to "+(m_iLastOrient=orient));
+		if (orient==1) {
+			fx = 1.0f - (vals[1]*x_mul + x_off);
+			fy = vals[0]*y_mul + y_off;
+		} else {
+			fx = vals[0]*x_mul + x_off;
+			fy = vals[1]*y_mul + y_off;
+		}
+		fx = Math.max(0.0f, Math.min(1.0f, fx));
+		fy = Math.max(0.0f, Math.min(1.0f, fy));
 	}
 
 	@Override
