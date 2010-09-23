@@ -384,6 +384,20 @@ public class CDasherModel extends CFrameRate {
 		long range = m_Rootmax - m_Rootmin;
 		m_Rootmax = m_Rootmin + (range * m_Root.Hbnd()) / GetLongParameter(Elp_parameters.LP_NORMALIZATION);
 		m_Rootmin = m_Rootmin + (range * m_Root.Lbnd()) / GetLongParameter(Elp_parameters.LP_NORMALIZATION);
+		
+		for (SGotoItem sgi : m_deGotoQueue) {
+			//sgi contains pairs of coordinates for the _old_ root; we need to update it to contain the corresponding
+			// coordinates for the _new_ root, which will be somewhat closer together.
+			// However, it's possible that the existing coordinate pairs may be bigger than would actually be allowed
+			// for a root node (and hence, when we try to NewGoTo them, we'll forcibly reparent); this means that we
+			// may have difficulty working with them...
+			final long r = sgi.iN2 - sgi.iN1;
+			final long iNorm = GetLongParameter(Elp_parameters.LP_NORMALIZATION);
+			sgi.iN2 = sgi.iN1 + //r * m_Root.Hbnd() / iNorm; //rewrite to ensure no overflow:
+				(r / iNorm) * m_Root.Hbnd() + ((r % iNorm) * m_Root.Hbnd())/iNorm;
+		    sgi.iN1 += // r * m_Root.Lbnd() / iNorm;
+		    	(r/iNorm) * m_Root.Lbnd() + ((r % iNorm) * m_Root.Lbnd())/iNorm;
+		}
 	}
 	
 	/**
@@ -754,45 +768,69 @@ public class CDasherModel extends CFrameRate {
 	 */
 	protected void NewGoTo(long newRootmin, long newRootmax) {
 		
-		// Update the max and min of the root node to make iTargetMin and iTargetMax the edges of the viewport.
-			
-		if(newRootmin + m_iDisplayOffset > GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 - 1)
-			newRootmin = GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 - 1 - m_iDisplayOffset;
+		total_nats += Math.log((newRootmax-newRootmin) / (double)(m_Rootmax - m_Rootmin));
+		m_iDisplayOffset = (m_iDisplayOffset*9)/10;
 		
-		if(newRootmax + m_iDisplayOffset < GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 + 1)
-			newRootmax = GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 + 1 - m_iDisplayOffset;
+		//Now actually move to the new location...
+		
+		while (newRootmax >= m_Rootmax_max || newRootmin <= m_Rootmin_min) {
+			//can't make existing root any bigger because of overflow. So force a new root
+			//to be chosen (so that Dasher doesn't just stop!)...
+			
+			//pick _child_ covering crosshair...
+			final long iWidth = m_Rootmax-m_Rootmin, iNorm = GetLongParameter(Elp_parameters.LP_NORMALIZATION), lpOY = GetLongParameter(Elp_parameters.LP_OY);
+			for (CDasherNode ch : m_Root.Children()) {
+				if (m_Rootmin + (ch.Hbnd() * iWidth / iNorm) > lpOY) {
+					//found child to make root. TODO, proceed only if new root is on the game path....
+					/*if (m_bGameMode && !pChild->GetFlag(NF_GAME)) {
+					  //If the user's strayed that far off the game path,
+					  // having Dasher stop seems reasonable!
+					  return;
+					}*/
+					//make pChild the root node...
+					//first we're gonna have to force it to be output, as a non-output root won't work...
+					if (!ch.isSeen()) OutputTo(ch);
+					
+					//we need to update the target coords (newRootmin,newRootmax)
+					// to reflect the new coordinate system based upon pChild as root.
+					//Make_root automatically updates any such pairs stored in m_deGotoQueue, so:
+					SGotoItem temp=new SGotoItem(); temp.iN1 = newRootmin; temp.iN2 = newRootmax;
+					m_deGotoQueue.add(temp);
+					//...when we make pChild the root...
+					Make_root(ch);
+					//...we can retrieve new, equivalent, coordinates for it
+					newRootmin = temp.iN1; newRootmax = temp.iN2;
+					m_deGotoQueue.removeLast();
+					// (note that the next check below will make sure these coords do cover (0, LP_OY))
+					break;
+			    }
+			}
+		}
 		
 		// Check that we haven't drifted too far. The rule is that we're not
 		// allowed to let the root max and min cross the midpoint of the
 		// screen.
+		newRootmin = Math.min(newRootmin, GetLongParameter(Elp_parameters.LP_OY) - 1 - m_iDisplayOffset);
+		newRootmax = Math.max(newRootmax, GetLongParameter(Elp_parameters.LP_OY) + 1 - m_iDisplayOffset);  
 		
-		if(newRootmax < m_Rootmax_max && newRootmin > m_Rootmin_min && (newRootmax - newRootmin) > GetLongParameter(Elp_parameters.LP_MAX_Y) / 4) {
-			// Only update if we're not making things big enough to risk
-			// overflow. In theory we should have reparented the root well
-			// before getting this far.
-			//
-			// Also don't allow the update if it will result in making the
-			// root too small. Again, we should have re-generated a deeper
-			// root in most cases, but the original root is an exception.
 			
-			m_Rootmax = newRootmax;
-			m_Rootmin = newRootmin;
-			
-			m_iDisplayOffset = (m_iDisplayOffset*9)/10;
-		}
-		else {
-			// TODO - force a new root to be chosen, so that we get better
-			// behaviour than just having Dasher stop at this point.
-		}
-		
+		// Only allow the update if it won't make the
+		// root too small. We should have re-generated a deeper root
+		// before now already, but the original root is an exception.
+		// (as is trying to go back beyond the earliest char in the current
+		// alphabet, if there are preceding characters not in that alphabet)
+		if ((newRootmax - newRootmin) > GetLongParameter(Elp_parameters.LP_MAX_Y) / 4) {
+		    m_Rootmax = newRootmax;
+		    m_Rootmin = newRootmin;
+		    
+		    // This may have moved us around a bit...so
 		// push node under crosshair
 		CDasherNode new_under_cross = Get_node_under_crosshair();
 		Push_Node(new_under_cross);
-		
-		OutputTo(new_under_cross);
-		//ACL TODO: following should(/did) use original newRootmin/max params
-        // not modified versions...
-        total_nats += -1.0 * Math.log((newRootmax - newRootmin) / 4096.0);
+			                
+			OutputTo(new_under_cross);
+		} //else, we just stop - this prevents the user from zooming too far back
+		//outside the root node (when we can't generate an older root).
 	}
 	
 	/**
