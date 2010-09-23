@@ -47,7 +47,7 @@ import java.util.ListIterator;
  * The Model does not know how to draw Dasher; this is the responsibility
  * of a DasherView.
  */
-public class CDasherModel extends CDasherComponent {
+public class CDasherModel extends CFrameRate {
 
 	/**
 	 * Are the current model's predictions dependent on
@@ -112,11 +112,6 @@ public class CDasherModel extends CDasherComponent {
 	 * Maximum allowable value of m_Rootmax
 	 */
 	protected long m_Rootmax_max;
-	
-	/**
-	 * Framerate tracker
-	 */
-	protected CFrameRate m_fr;              // keep track of framerate
 	
 	/**
 	 * Record of 'amount of information' entered so far, for logging purposes.
@@ -202,10 +197,6 @@ public class CDasherModel extends CDasherComponent {
 	public CDasherModel(CDasherInterfaceBase iface, CSettingsStore SettingsStore, CAlphIO AlphIO, CUserLog pUserLog) {
 	super(iface, SettingsStore); 
 	m_DasherInterface = iface;
-	
-	m_fr = new CFrameRate();
-	// Set max bitrate, inc in the FrameRate class
-	HandleEvent(new CParameterNotificationEvent(Elp_parameters.LP_MAX_BITRATE));
 	
 	// Convert the full alphabet to a symbolic representation for use in the language model
 	
@@ -302,16 +293,17 @@ public class CDasherModel extends CDasherComponent {
 	 * to reflect the new value. 
 	 */	
 	public void HandleEvent(CEvent Event) {
-		
+		super.HandleEvent(Event); //framerate watches LP_MAX_BITRATE
 		if(Event instanceof CParameterNotificationEvent) {
 			CParameterNotificationEvent Evt = (CParameterNotificationEvent)(Event);
-			
-			if(Evt.m_iParameter == Elp_parameters.LP_MAX_BITRATE
-					|| Evt.m_iParameter == Elp_parameters.LP_BOOSTFACTOR) {
-				//both bitrate _and_ boostfactor are stored as %ages...
-				m_fr.SetMaxBitrate(GetLongParameter(Elp_parameters.LP_MAX_BITRATE) * GetLongParameter(Elp_parameters.LP_BOOSTFACTOR) / 10000.0);
+			if (Evt.m_iParameter == Ebp_parameters.BP_DASHER_PAUSED) {
+				if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
+					//just unpaused
+					ResetFramecount();
+					total_nats = 0.0;
+				}
 			}
-			else if(Evt.m_iParameter == Ebp_parameters.BP_CONTROL_MODE) { // Rebuild the model if control mode is switched on/off
+			if(Evt.m_iParameter == Ebp_parameters.BP_CONTROL_MODE) { // Rebuild the model if control mode is switched on/off
 				RebuildAroundNode(Get_node_under_crosshair());
 				computeNormFactor();
 			}
@@ -643,6 +635,7 @@ public class CDasherModel extends CDasherComponent {
 			long miMousey, 
 			long Time, 
 			ArrayList<CSymbolProb> pAdded)	{
+		CountFrame(Time);
 		/* CSFS: There used to be an extra parameter here called pNumDeleted
 		 * which was an int * which looked as if it was intended to return the
 		 * number of deleted nodes to the calling routine; however, every
@@ -683,7 +676,7 @@ public class CDasherModel extends CDasherComponent {
 		// iSteps is the number of update steps we need to get the point
 		// under the cursor over to the cross hair. Calculated in order to
 		// keep a constant bit-rate.
-		int iSteps = m_fr.Steps();
+		int iSteps = Steps();
 		assert(iSteps > 0);
 		
 		// Calculate the new values of iTargetMin and iTargetMax required to
@@ -697,7 +690,7 @@ public class CDasherModel extends CDasherComponent {
 
 		// Calculate the minimum size of the viewport corresponding to the
 		// maximum zoom.
-		long iMinSize = (m_fr.MinSize(iMaxY));
+		long iMinSize = (long)(iMaxY/maxZoom());
 
 		if((iTargetMax - iTargetMin) < iMinSize) {
 		    iNewTargetMin = iTargetMin * (iMaxY - iMinSize) / (iMaxY - (iTargetMax - iTargetMin));
@@ -1072,37 +1065,9 @@ public class CDasherModel extends CDasherComponent {
 	/**
 	 * Deferred to m_fr.
 	 */
-	public void NewFrame(long Time) { // Used to be unsigned -- potential problem.
-		m_fr.NewFrame(Time);
-	}
-	
-	/**
-	 * Deferred to m_fr.
-	 */
-	public double Framerate() {
+	/*public double Framerate() {
 	    return m_fr.Framerate();
-	}
-	
-	/**
-	 * Deferred to m_fr.
-	 */
-	public void Reset_framerate(long Time) {
-	    m_fr.Reset(Time);
-	}
-	
-	/**
-	 * Deferred to m_fr.Initialise().
-	 */
-	public void Halt() {
-	    m_fr.Initialise();
-	}
-	
-	/**
-	 * Sets total_nats back to 0.
-	 */
-	public void ResetNats() {
-		total_nats = 0;
-	}
+	}*/
 	
 	/**
 	 * Gets total_nats

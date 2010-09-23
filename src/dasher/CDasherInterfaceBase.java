@@ -536,10 +536,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		if(GetBoolParameter(Ebp_parameters.BP_MOUSEPOS_MODE)) {
 			SetLongParameter(Elp_parameters.LP_MOUSE_POS_BOX, 1);
 		}
-		
-		// This will cause us to reinitialise the frame rate counter - ie we start off slowly
-		if(m_DasherModel != null)
-			m_DasherModel.Halt();
 	}
 	
 	/**
@@ -550,16 +546,10 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	public void Unpause(long Time) { // CSFS: Formerly unsigned.
 		SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, false);
-		
-		if(m_DasherModel != null) {
-			m_DasherModel.Reset_framerate(Time);
-			//m_pDasherModel->Set_paused(m_Paused);
-		}
 				
 		CStartEvent oEvent = new CStartEvent();
 		InsertEvent(oEvent);
 		
-		ResetNats();
 		if (m_UserLog != null)
 			m_UserLog.StartWriting();
 	}
@@ -647,11 +637,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		}
 		
 		Draw(bChanged);
-		
-		// This just passes the time through to the framerate tracker, so we
-		// know how often new frames are being drawn.
-		if(m_DasherModel != null)
-			m_DasherModel.NewFrame(iTime);
 	}
 	
 	/**
@@ -903,16 +888,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			return m_DasherModel.GetNats();
 			else
 				return 0.0;
-	}
-	
-	/**
-	 * Passed on to CDasherModel, if it is non-null.
-	 * 
-	 * @see CDasherModel
-	 */
-	public void ResetNats() {
-		if(m_DasherModel != null)
-			m_DasherModel.ResetNats();
 	}
 	
 	/**
