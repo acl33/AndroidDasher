@@ -608,26 +608,17 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		
 		if(m_DasherView != null) {
 			if(!GetBoolParameter(Ebp_parameters.BP_TRAINING)) {
-				if (m_UserLog != null) {
-					
-					ArrayList<CSymbolProb> vAdded = new ArrayList<CSymbolProb>();
-					int iNumDeleted = 0;
-					
-					if(m_InputFilter != null) {
-						bChanged = m_InputFilter.Timer(iTime, m_DasherView, m_Input, m_DasherModel); // FIXME - need logging stuff here
-					}
-					
-					if (iNumDeleted > 0)
-						m_UserLog.DeleteSymbols(iNumDeleted);
-						if (vAdded.size() > 0)
-							m_UserLog.AddSymbols(vAdded);
-							
+				if(m_InputFilter != null) {
+					bChanged = m_InputFilter.Timer(iTime, m_DasherView, m_Input, m_DasherModel); // FIXME - need logging stuff here
 				}
-				else {
-					if(m_InputFilter != null) {
-						bChanged = m_InputFilter.Timer(iTime, m_DasherView, m_Input, m_DasherModel);
-					}
-				}
+					
+				/*Logging code. TODO: capture int iNumDeleted / Vector<CSymbolProb>
+				 * from information broadcast in CEditEvents; then:
+				 *    if (iNumDeleted > 0)
+				 *        m_UserLog.DeleteSymbols(iNumDeleted);
+				 *    if (vAdded.size() > 0)
+				 *        m_UserLog.AddSymbols(vAdded);
+				 */
 				
 				m_DasherModel.CheckForNewRoot(m_DasherView);
 			}

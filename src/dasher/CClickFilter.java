@@ -69,7 +69,7 @@ public class CClickFilter extends CInputFilter {
 	 * @return True if the model has changed, false otherwise. 
 	 */
 	@Override public boolean Timer(long Time, CDasherView pView, CDasherInput pInput, CDasherModel m_DasherModel) {
-	  if (!m_DasherModel.nextScheduledStep(Time, null)) {
+	  if (!m_DasherModel.nextScheduledStep(Time)) {
 		  //no steps scheduled. Reached a pause...
 		  assert (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED));
 		  return false;

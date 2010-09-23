@@ -45,7 +45,7 @@ public class CStylusFilter extends CDefaultFilter {
     
     @Override
     public boolean Timer(long iTime, CDasherView view, CDasherInput pInput, CDasherModel model) {
-        if (model.nextScheduledStep(iTime, null)) {
+        if (model.nextScheduledStep(iTime)) {
             //continued scheduled zoom - must have been in middle
             // (and thus not cleared by subsequent click)
             return true;

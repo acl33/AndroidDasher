@@ -77,7 +77,7 @@ public abstract class CDasherButtons extends CInputFilter {
 			if (m_iActiveBox!=-1) m_bDecorationChanged = true;
 			m_iActiveBox = -1;
 		}
-		return pModel.nextScheduledStep(Time, null);
+		return pModel.nextScheduledStep(Time);
 	}
 
 	@Override public boolean DecorateView(CDasherView pView, CDasherInput pInput) {

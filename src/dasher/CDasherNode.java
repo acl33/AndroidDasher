@@ -156,13 +156,8 @@ public abstract class CDasherNode {
 	 * Performs output appropriate to the Node, if any.
 	 * <p>
 	 * This method will be called when a user enters a given Node.
-	 * <p>
-	 * @param pAdded CSymbolProbs detailing what has been output should
-	 * be added to this list
-	 * @param iNormalization Normalisation value (total to which
-	 * node probabilities always add up)
 	 */
-	public abstract void Output(List<CSymbolProb> pAdded, int iNormalization);
+	public abstract void Output();
     
 	/**
 	 * Reverse or undo the output associated with this Node
@@ -437,17 +432,6 @@ public abstract class CDasherNode {
 			 ChildAtIndex(i).DeleteNode();
 		m_mChildren.clear(); // This should be enough to render them GC-able.
 		m_OnlyChildRendered = null;
-	}
-
-//		 Gets the probability of this node 
-	
-	/**
-	 * Gets this node's probability
-	 * 
-	 * @param iNormalization Norm value, usually LP_NORMALIZATION
-	 */
-	public double GetProb(int iNormalization) {    
-		  return (double) (m_iHbnd - m_iLbnd) / (double) iNormalization;
 	}
 
 	/** "Have to" make colour mutable because of a case in CAlphabetManager.CGroupNode,

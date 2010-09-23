@@ -717,8 +717,7 @@ public class CDasherModel extends CFrameRate {
 				 ((m_Rootmax - C) * iMaxY) / (iTargetMax - iTargetMin) + C);
 	}
 	
-	public boolean nextScheduledStep(long time, ArrayList<CSymbolProb> vAdded) {
-		if (vAdded!=null) vAdded.clear();
+	public boolean nextScheduledStep(long time) {
 		if (m_deGotoQueue.size() == 0) return false;
 		SGotoItem next = m_deGotoQueue.removeFirst();
 		NewGoTo(next.iN1, next.iN2);
@@ -790,7 +789,7 @@ public class CDasherModel extends CFrameRate {
 		CDasherNode new_under_cross = Get_node_under_crosshair();
 		Push_Node(new_under_cross);
 		
-		OutputTo(new_under_cross, null);
+		OutputTo(new_under_cross);
 		//ACL TODO: following should(/did) use original newRootmin/max params
         // not modified versions...
         total_nats += -1.0 * Math.log((newRootmax - newRootmin) / 4096.0);
@@ -810,14 +809,14 @@ public class CDasherModel extends CFrameRate {
 	 * @param NewNode Node now under the crosshair
 	 * @param OldNode Node previously under the crosshair (maybe the same as NewNode)
 	 */
-	protected void OutputTo(CDasherNode NewNode, List<CSymbolProb> pAdded) {
+	protected void OutputTo(CDasherNode NewNode) {
 		if (NewNode!=null && !NewNode.isSeen()) {
-			OutputTo(NewNode.Parent(), pAdded);
+			OutputTo(NewNode.Parent());
 			if (NewNode.Parent()!=null) NewNode.Parent().Leave();
 			NewNode.Enter();
 			NewNode.Seen(true);
 			m_pLastOutput=NewNode;
-			NewNode.Output(pAdded, (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION));
+			NewNode.Output();
 		} else {
 			//NewNode either null or has been seen; delete back to it
 			while (m_pLastOutput != NewNode) {

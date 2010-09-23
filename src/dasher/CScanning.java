@@ -52,7 +52,7 @@ public abstract class CScanning extends CDasherButtons {
 					m_iActiveBox = 0;
 			}
 		}
-		return pModel.nextScheduledStep(Time, null);
+		return pModel.nextScheduledStep(Time);
 	}
 
 }

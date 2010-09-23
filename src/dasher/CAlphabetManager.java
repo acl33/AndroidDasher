@@ -268,22 +268,23 @@ public class CAlphabetManager<C> {
          * @param iNormalization The total to which probabilities should add (usually LP_NORMALIZATION) for the purposes of generating the logged probability.
          */
     	@Override
-        public void Output(List<CSymbolProb> Added, int iNormalization) {
+        public void Output() {
         	m_Model.m_bContextSensitive = true;
 
-        	CEditEvent oEvent = new CEditEvent(1, m_Alphabet.GetText(m_Symbol));
+        	CEditEvent oEvent = new CEditEvent(1, m_Alphabet.GetText(m_Symbol), GetProb());
         	m_Model.InsertEvent(oEvent);
-        		
-        	// Track this symbol and its probability for logging purposes
-        	if (Added != null) {
-        		CSymbolProb sItem = new CSymbolProb();
-        		sItem.sym    = m_Symbol;
-        		sItem.prob   = GetProb(iNormalization);
-        			
-        		Added.add(sItem);
-        	}
         }
 
+    	private double GetProb() {
+    		double prob = 1.0; CDasherNode p=this;
+        	do {
+        		prob *= p.Range();
+        		p=p.Parent();
+        		if (p==null) return prob; //shouldn't really happen, but...?
+        		prob /= p.ChildAtIndex(p.ChildCount()-1).Hbnd();
+        	} while (!(p instanceof CAlphabetManager<?>.CSymbolNode));
+        	return prob;
+    	}
         /**
          * Generates an EditEvent announcing that the character represented
          * by this Node should be removed.
@@ -291,7 +292,7 @@ public class CAlphabetManager<C> {
          * @param Node Node whose symbol we wish to remove.
          */    
         public void Undo() {
-        	CEditEvent oEvent = new CEditEvent(2, m_Alphabet.GetText(m_Symbol));
+        	CEditEvent oEvent = new CEditEvent(2, m_Alphabet.GetText(m_Symbol), GetProb());
        		m_Model.InsertEvent(oEvent);
        		bCommitted = false;
         }
@@ -403,7 +404,7 @@ public class CAlphabetManager<C> {
     	protected SGroupInfo m_Group;
 
 		@Override
-		public void Output(List<CSymbolProb> Added, int iNormalization) {
+		public void Output() {
 			// Do nothing.
 		}
 

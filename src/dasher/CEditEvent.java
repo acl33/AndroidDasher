@@ -41,10 +41,12 @@ public class CEditEvent extends CEvent {
 	 * 
 	 * @param iEditType 1 for new text, 2 for deleted text
 	 * @param sText Text to be added / deleted.
+	 * @param prob Probability of this symbol (for logging purposes)
 	 */
-	public CEditEvent(int iEditType, String sText) {
+	public CEditEvent(int iEditType, String sText, double prob) {
 	    m_iEditType = iEditType;
 	    m_sText = sText;
+	    m_prob = prob;
 	};
 
 	/**
@@ -56,5 +58,10 @@ public class CEditEvent extends CEvent {
 	 * Text to add/remove
 	 */
 	public final String m_sText;
+	
+	/** Probability of this symbol, for logging purposes.
+	 * Expressed as fraction in range 0-1, conditioned
+	 * on the previous symbol. */
+	public final double m_prob;
 	
 }
