@@ -24,7 +24,12 @@ public class TiltInput extends CDasherInput implements SensorEventListener {
 	/** Last (/current) values of tilt position, as floats in (0,1) */
 	private float fx,fy;
 	/** X & Y values from h/w tilt sensor are multiplied by these scales, then offsets added */
-	private float y_mul=0.125f,y_off=-0.125f,x_mul=-0.5f,x_off=0.5f;
+	private float y_mul, y_off, x_mul, x_off;
+	
+	public void setAxes(float minX, float maxX, float minY, float maxY) {
+		y_mul = 1.0f/(maxY-minY); this.y_off = minY/(maxY-minY); //these may be inverted (min > max)
+		x_mul = 1.0f/(minX-maxX); this.x_off = maxX/(minX-maxX); //these we definitely expect to be inverted!
+	}
 	
 	private boolean bActive;
 	private final Sensor s;
@@ -68,11 +73,11 @@ public class TiltInput extends CDasherInput implements SensorEventListener {
 		int orient = wm.getDefaultDisplay().getOrientation();
 		if (orient != m_iLastOrient) Log.d("DasherIME", "Orientation changed to "+(m_iLastOrient=orient));
 		if (orient==1) {
-			fx = 1.0f - (vals[1]*x_mul + x_off);
-			fy = vals[0]*y_mul + y_off;
+			fx = 1.0f - (vals[1]*x_mul - x_off);
+			fy = vals[0]*y_mul - y_off;
 		} else {
-			fx = vals[0]*x_mul + x_off;
-			fy = vals[1]*y_mul + y_off;
+			fx = vals[0]*x_mul - x_off;
+			fy = vals[1]*y_mul - y_off;
 		}
 		fx = Math.max(0.0f, Math.min(1.0f, fx));
 		fy = Math.max(0.0f, Math.min(1.0f, fy));

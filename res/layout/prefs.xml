@@ -62,6 +62,10 @@
               android:key="AndroidTiltUsesTouchX"
               android:title="X Co-ordinate from touch"
               android:dependency="AndroidTiltHoldToGo"/>
+        <dasher.android.CalibPreference
+          android:key="AndroidCalibNeedsNoName"
+          android:title="Calibrate Tilting"
+          android:dialogLayout="@layout/calibrate"/>
     </PreferenceScreen>
 
     <PreferenceScreen

@@ -33,6 +33,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	private Thread taskThread;
 	private boolean m_bRedrawRequested;
 	private static final boolean supportsLinkedBlockingQueue;
+	private TiltInput tilt;
 	
 	static {
 		boolean ok;
@@ -153,8 +154,9 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			}
 		};
 		RegisterModule(setDefaultInput(touch));
-		final TiltInput tilt=TiltInput.MAKE(androidCtx, this, getSettingsStore());
+		tilt=TiltInput.MAKE(androidCtx, this, getSettingsStore());
 		if (tilt!=null) {
+			SetTiltAxes();
 			RegisterModule(tilt);
 			RegisterModule(new CDasherInput(this, getSettingsStore(), 2, "Touch with tilt X") {
 				long lastTouch;
@@ -270,6 +272,17 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		RegisterModule(new CButtonMode(this, getSettingsStore(), 12, "Direct Mode"));
 		RegisterModule(new CMenuMode(this, getSettingsStore(), 11, "Scanning Menu Mode"));
 		RegisterModule(new CCompassMode(this,getSettingsStore()));
+	}
+	
+	public void SetTiltAxes() {
+		//Should never actually be called if tilt sensor isn't present, but checking anyway
+		if (tilt==null) return;
+		SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(androidCtx);
+		//TODO these defaults copied from CalibPreference; remove duplication!
+		tilt.setAxes(sp.getFloat(CalibPreference.ANDROID_TILT_MIN_X, -1.0f),
+					 sp.getFloat(CalibPreference.ANDROID_TILT_MAX_X, 1.0f),
+					 sp.getFloat(CalibPreference.ANDROID_TILT_MIN_Y, 1.0f),
+					 sp.getFloat(CalibPreference.ANDROID_TILT_MAX_Y, 9.0f));
 	}
 	
 	@Override
