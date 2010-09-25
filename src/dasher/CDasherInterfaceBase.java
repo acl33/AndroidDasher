@@ -511,7 +511,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	public void PauseAt(int MouseX, int MouseY) {
 		SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
-		
+		m_DasherModel.clearScheduledSteps();
 		// Request a full redraw at the next time step.
 		SetBoolParameter(Ebp_parameters.BP_REDRAW, true);
 		
@@ -520,19 +520,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		
 		if (m_UserLog != null)
 			m_UserLog.StopWriting((float) GetNats());
-	}
-	
-	/**
-	 * Pauses Dasher and calls DasherModel.Halt().
-	 * <p>
-	 * This function, unlike PauseAt, does not throw a StopEvent. 
-	 */	
-	public void Halt() {
-		SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
-		
-		if(GetBoolParameter(Ebp_parameters.BP_MOUSEPOS_MODE)) {
-			SetLongParameter(Elp_parameters.LP_MOUSE_POS_BOX, 1);
-		}
 	}
 	
 	/**

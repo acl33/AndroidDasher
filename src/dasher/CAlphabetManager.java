@@ -128,27 +128,29 @@ public class CAlphabetManager<C> {
      * -1 indicates the root group node containing all potential first (offset=0) characters
      * @return a symbol node, as long as there is at least one preceding character; a group node if not
      */
-    public CAlphNode GetRoot(CDasherNode Parent, long iLower, long iUpper, int iOffset) {
+    public CAlphNode GetRoot(CDasherNode Parent, long iLower, long iUpper, int iOffset, boolean bEnteredLast) {
     	if (iOffset < -1) throw new IllegalArgumentException("offset "+iOffset+" must be at least -1");
     	ListIterator<Character> previousChars = m_Model.m_DasherInterface.getContext(iOffset);
     	assert iOffset>=0 || !previousChars.hasPrevious();
-    	ListIterator<Integer> previousSyms = m_Alphabet.GetSymbols(previousChars);
     	CAlphNode NewNode;
-    	GotNode: {
-    		if (previousSyms.hasPrevious()) {
-    			int iSym = previousSyms.previous();
-    			if (iSym!=CAlphabet.UNDEFINED) {
-        			NewNode = allocSymbol(Parent,iOffset,iSym,iLower,iUpper, 
-        					m_LanguageModel.ContextWithSymbol(m_LanguageModel.BuildContext(previousSyms),iSym));
-    				break GotNode;
-    			}
-    		} 
-	    	//Couldn't use previous symbol.
+    	ListIterator<Integer> previousSyms = m_Alphabet.GetSymbols(previousChars);
+    	if (bEnteredLast && previousSyms.hasPrevious()) {
+    		int iSym = previousSyms.previous();
+    		if (iSym==CAlphabet.UNDEFINED) {
+    			NewNode = new SpecialNode(Parent,iOffset, previousChars.next(),iLower,iUpper,m_LanguageModel.EmptyContext());
+    		} else {
+        		NewNode = allocSymbol(Parent,iOffset,iSym,iLower,iUpper, 
+        				m_LanguageModel.ContextWithSymbol(m_LanguageModel.BuildContext(previousSyms),iSym));
+    		}
+    	} else {
+    		//don't use previous symbol (if any)
 	    	//TODO should get a default start-of-sentence context from the alphabet.
     		// Note that for (escaping from) Control Mode, etc., we'll need an extra param
     		// to enforce jumping here; and we'll then need to attempt to build a context
 	    	NewNode = allocGroup(Parent, iOffset, null, iLower, iUpper,
-	    			m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), ". "));
+	        		(previousSyms.hasPrevious())
+	        			? m_LanguageModel.BuildContext(previousSyms)
+	        			: m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), ". "));
     	}
     	
     	return NewNode;
@@ -217,7 +219,7 @@ public class CAlphabetManager<C> {
 				 * that we've backed off far enough to need to do so.
 				 */
 				
-			CAlphNode newNode = GetRoot(null, 0, 0, iNewOffset);
+			CAlphNode newNode = GetRoot(null, 0, 0, iNewOffset, true);
 			newNode.Seen(true);
 			IterateChildGroups(newNode, null, this);
 		}
@@ -227,7 +229,71 @@ public class CAlphabetManager<C> {
 		protected abstract CDasherNode rebuildSymbol(CAlphNode parent, int sym, long iLbnd, long iHbnd);
 
     }
-    
+
+    class SpecialNode extends CAlphNode {
+		SpecialNode(CDasherNode parent, int iOffset, Character sym, long iLbnd, long iHbnd, C ctx) {
+			initNode(parent, iOffset,iLbnd, iHbnd, 1, ctx, sym.toString());
+		}
+		@Override
+		protected CGroupNode rebuildGroup(CAlphNode parent, SGroupInfo group, long iLbnd, long iHbnd) {
+			return CAlphabetManager.this.mkGroup(parent,group,iLbnd,iHbnd);
+		}
+
+		@Override
+		protected CDasherNode rebuildSymbol(CAlphNode parent, int sym, long iLbnd, long iHbnd) {
+			return CAlphabetManager.this.mkSymbol(parent, sym, iLbnd, iHbnd);
+		}
+
+		@Override
+		public void Output() {
+			//probability 0 will break user trials, but user trials shouldn't involve unknown symbols anyway...?
+			m_Model.InsertEvent(new CEditEvent(1, m_strDisplayText, 0.0));
+		}
+		
+		@Override public void Undo() {
+			m_Model.InsertEvent(new CEditEvent(2, m_strDisplayText, 0.0));
+		}
+
+		@Override
+		public void PopulateChildren() {
+			IterateChildGroups(this,null,null);
+		}
+
+		@Override
+		public CDasherNode RebuildParent() {
+			if (Parent()==null) {
+				//make a node for the previous symbol - i.e. as we'd expect our parent to be...
+				CAlphNode n = GetRoot(null, 0, 0, getOffset()-1, true);
+				n.Seen(true);
+
+				//however, n won't generate us as a child. That's ok: we'll put in
+				// its children for it, now, giving this special character a probability of 1/4
+				// and reducing everything else accordingly (&all together)...
+				final long norm = m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION), cutOff = (norm*3)/4;
+				//Firstly, a node containing what should be our _siblings_ - this could be our parent,
+				// if we were a normal symbol, but instead will contain all the
+				// sensible, normal, symbols the user could enter in our place.
+				// However, it will sit beneath our common faked-out parent...
+				GetRoot(n, 0, cutOff, getOffset()-1, false);
+				
+				//make ourselves a child too - as long as n remembers...
+				SetRange(cutOff,norm);
+				SetParent(n);
+				//So if we ever reverse far enough that n is collapsed, and then
+				// regenerates its children, this SpecialNode'll be missing - and
+				// there'll be no way to re-enter this symbol, ever. (well, short
+				// of changing alphabet). Which is fine....
+			}
+			return Parent();
+		}
+		@Override
+		public void Enter() {
+			//Make damn sure the user notices something funny is going on by
+			// stopping him in his tracks. He can continue by unpausing...
+			m_Model.m_DasherInterface.PauseAt(0, 0);
+		}
+	}
+
     protected class CSymbolNode extends CAlphNode {
     	private CSymbolNode() {}
     	
