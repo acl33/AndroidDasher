@@ -82,8 +82,16 @@ public class CAlphabetManager<C> {
 			}
 		}
 
-    	if (iColour<130 && (phase%2)==1) iColour+=130;
+    	if (iColour<130 && (phase&1)==0) iColour+=130;
     	return iColour;
+    }
+    private int getColour(CDasherNode parent, SGroupInfo group, int phase) {
+    	if (group!=null) {
+    		if (group.bVisible) return group.iColour;
+    		if (parent!=null) return parent.m_iColour;
+    	}
+    	//colour cycle root node (only)
+    	return ((phase&1)==0) ? 137 : 7;
     }
     protected final ArrayList<String> m_DisplayText;
     // Both undocumented (caches)
@@ -130,7 +138,7 @@ public class CAlphabetManager<C> {
     		if (previousSyms.hasPrevious()) {
     			int iSym = previousSyms.previous();
     			if (iSym!=CAlphabet.UNDEFINED) {
-        			NewNode = allocSymbol(Parent,iOffset,iSym,0,iLower,iUpper, 
+        			NewNode = allocSymbol(Parent,iOffset,iSym,iLower,iUpper, 
         					m_LanguageModel.ContextWithSymbol(m_LanguageModel.BuildContext(previousSyms),iSym));
     				break GotNode;
     			}
@@ -139,7 +147,7 @@ public class CAlphabetManager<C> {
 	    	//TODO should get a default start-of-sentence context from the alphabet.
     		// Note that for (escaping from) Control Mode, etc., we'll need an extra param
     		// to enforce jumping here; and we'll then need to attempt to build a context
-	    	NewNode = allocGroup(Parent, iOffset, null, 0, iLower, iUpper,
+	    	NewNode = allocGroup(Parent, iOffset, null, iLower, iUpper,
 	    			m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), ". "));
     	}
     	
@@ -149,7 +157,6 @@ public class CAlphabetManager<C> {
     abstract class CAlphNode extends CDasherNode {
     	
     	protected final CAlphabetManager<C> mgr() {return CAlphabetManager.this;}
-    	/*package*/ int m_iPhase;
     	protected boolean bCommitted;
     	private long[] probInfo;
     	
@@ -162,14 +169,13 @@ public class CAlphabetManager<C> {
     	private CAlphNode() {}
     	@Override
     	protected final void initNode(CDasherNode Parent, int iOffset, long iLbnd, long iHbnd, int colour, String label) {
-    		throw new RuntimeException("Call version with extra iphase & context args instead");
+    		throw new RuntimeException("Call version with extra context arg instead");
     	}
-        void initNode(CDasherNode Parent, int iOffset, int iphase,
+        void initNode(CDasherNode Parent, int iOffset,
 				long ilbnd, long ihbnd, int Colour, C context,
 				String label) {
 			super.initNode(Parent, iOffset, ilbnd, ihbnd, Colour, label);
 			this.context = context;
-			this.m_iPhase = iphase;
 		}
         
         @Override public int ExpectedNumChildren() {
@@ -226,11 +232,11 @@ public class CAlphabetManager<C> {
     	private CSymbolNode() {}
     	
     	@Override
-    	final void initNode(CDasherNode Parent, int iOffset, int iphase, long ilbnd, long ihbnd, int Colour, C context, String label) {
+    	final void initNode(CDasherNode Parent, int iOffset, long ilbnd, long ihbnd, int Colour, C context, String label) {
     		throw new RuntimeException("Use (CDasherNode, int, int, long, long, C) instead");
     	}
-    	void initNode(CDasherNode Parent, int iOffset, int symbol, int iphase, long ilbnd, long ihbnd, C context) {
-			super.initNode(Parent, iOffset, iphase, ilbnd, ihbnd, getColour(symbol, iphase), context, m_DisplayText.get(symbol));
+    	void initNode(CDasherNode Parent, int iOffset, int symbol, long ilbnd, long ihbnd, C context) {
+			super.initNode(Parent, iOffset, ilbnd, ihbnd, getColour(symbol, iOffset), context, m_DisplayText.get(symbol));
 			this.m_Symbol = symbol;
 		}
 
@@ -355,13 +361,13 @@ public class CAlphabetManager<C> {
     protected class CGroupNode extends CAlphNode {
     	private CGroupNode() {}
     	@Override
-    	final void initNode(CDasherNode Parent, int iOffset, int iphase, long ilbnd, long ihbnd, int Colour, C context, String label) {
-    		throw new RuntimeException("Use (CDasherNode, int, int, long, long, C) instead");
+    	final void initNode(CDasherNode Parent, int iOffset, long ilbnd, long ihbnd, int Colour, C context, String label) {
+    		throw new RuntimeException("Use (CDasherNode, int, SGroupInfo, long, long, C) instead");
     	}
     	
     	void initNode(CDasherNode Parent, int iOffset, SGroupInfo group,
-				int iphase, long ilbnd, long ihbnd, C context) {
-			super.initNode(Parent, iOffset, iphase, ilbnd, ihbnd, group==null ? 7 : group.bVisible ? group.iColour : Parent==null ? 7 : Parent.m_iColour, context, (group==null || !group.bVisible) ? "" : group.strLabel);
+				long ilbnd, long ihbnd, C context) {
+			super.initNode(Parent, iOffset, ilbnd, ihbnd, getColour(Parent, group,iOffset), context, (group==null || !group.bVisible) ? "" : group.strLabel);
 			this.m_Group = group;
 		}
 
@@ -501,26 +507,26 @@ public class CAlphabetManager<C> {
 			cont = m_LanguageModel.EmptyContext();
 			//      EnterText(cont, "");
 		}
-		return allocSymbol(parent, parent.getOffset()+1, sym, (parent.m_iPhase+1)%2, iLbnd, iHbnd, cont);
+		return allocSymbol(parent, parent.getOffset()+1, sym, iLbnd, iHbnd, cont);
     }
     
     CGroupNode mkGroup(CAlphNode parent, SGroupInfo group, long iLbnd, long iHbnd) {
-    	return allocGroup(parent, parent.getOffset(), group, parent.m_iPhase, iLbnd, iHbnd, parent.context);
+    	return allocGroup(parent, parent.getOffset(), group, iLbnd, iHbnd, parent.context);
     }
     
     private final List<CGroupNode> freeGroupList = new ArrayList<CGroupNode>();
     
-    private CGroupNode allocGroup(CDasherNode parent, int iOffset, SGroupInfo group, int phase, long iLbnd, long iHbnd, C ctx) {
+    private CGroupNode allocGroup(CDasherNode parent, int iOffset, SGroupInfo group, long iLbnd, long iHbnd, C ctx) {
     	CGroupNode node = (freeGroupList.isEmpty()) ? new CGroupNode() : freeGroupList.remove(freeGroupList.size()-1);
-    	node.initNode(parent, iOffset, group, phase, iLbnd, iHbnd, ctx);
+    	node.initNode(parent, iOffset, group, iLbnd, iHbnd, ctx);
     	return node;
     }
 
     private final List<CSymbolNode> freeSymbolList = new ArrayList<CSymbolNode>();
     
-    private CSymbolNode allocSymbol(CDasherNode parent, int iOffset, int sym, int phase, long iLbnd, long iHbnd, C ctx) {
+    private CSymbolNode allocSymbol(CDasherNode parent, int iOffset, int sym, long iLbnd, long iHbnd, C ctx) {
     	CSymbolNode node = (freeSymbolList.isEmpty()) ? new CSymbolNode() : freeSymbolList.remove(freeSymbolList.size()-1);
-    	node.initNode(parent, iOffset, sym, phase, iLbnd, iHbnd, ctx);
+    	node.initNode(parent, iOffset, sym, iLbnd, iHbnd, ctx);
     	return node;
     }
     /**
