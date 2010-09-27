@@ -992,29 +992,6 @@ public class CDasherModel extends CFrameRate {
 	}
 
 	/**
-	 * TODO work out what this does and document.
-	 * 
-	 * @param dasherx Dasher X co-ordinate
-	 * @param dashery Dasher Y co-ordinate
-	 * @return Correction factor
-	 */
-	protected double CorrectionFactor(long dasherx, long dashery) {
-		double dX = 1 - dasherx/2048.0;
-		double dY = dashery/2048.0 - 1;
-		
-		/* CSFS: All C++ maths functions switched for Java's equivalent;
-		 * now I just hope for equivalent function!
-		 */
-		
-		double dR = Math.sqrt(Math.pow(dX, 2.0) + Math.pow(dY, 2.0));
-		
-		if(Math.abs(dX) < 0.1)
-			return dR * (1 + dX /2.0+ Math.pow(dX, 2.0) / 3.0 + Math.pow(dX, 3.0) / 4.0 + Math.pow(dX, 4.0) / 5.0);
-		else
-			return -dR * Math.log(1 - dX) / dX;
-	}
-	
-	/**
 	 * Interpolates between our current position and a given
 	 * new position, scheduling a zoom to the new position by
 	 * adding the interpolated points to m_deGotoQueue.
@@ -1033,42 +1010,49 @@ public class CDasherModel extends CFrameRate {
 		// Takes dasher co-ordinates and 'schedules' a zoom to that location
 		// by storing a sequence of moves in 'm_deGotoQueue'
 		
+		m_deGotoQueue.clear();
+		
 		// TODO: What is the following line for?
 		//if (dasherx < 2) { dasherx = 100; }
 		//ACL I don't know, so I'm going with:
 		if (dasherx < 2) dasherx = 2;
 		
-		double dCFactor = CorrectionFactor(dasherx, dashery);
-		
-		final int iSteps = (int)(GetLongParameter(Elp_parameters.LP_ZOOMSTEPS) * dCFactor);
+		final int iSteps = (int)(GetLongParameter(Elp_parameters.LP_ZOOMSTEPS));
 			
-		final long iTarget1 = dashery - dasherx,
-			iTarget2 = dashery + dasherx;
+		final long y1 = dashery - dasherx, y2 = dashery + dasherx;
+		final long iMaxY = GetLongParameter(Elp_parameters.LP_MAX_Y);
+		long targetRootMin,targetRootMax;
 		
-		double dZ = 4096 / (double)(iTarget2 - iTarget1);
+		if (y2-y1 == iMaxY) {
+			//just translate
+			targetRootMin = m_Rootmin + y1;
+			targetRootMax = m_Rootmax + y1;
+		} else {
+			//find the center of expansion / contraction - this divides interval
+			// (iTarget1,iTarget2) into the same proportions as it divides (0,maxY),
+			// i.e. (C-iTarget1)/(C-0) == (C-iTarget2)/(C-iMaxY)
+			final long C = (y1 * iMaxY) / (y1 + iMaxY - y2);
+			if (y1 != C) {
+		          targetRootMin = ((m_Rootmin - C) * (0 - C)) / (y1 - C) + C;
+		          targetRootMax = ((m_Rootmax - C) * (0 - C)) / (y1 - C) + C;
+		      } else if (y2 != C) {
+		          targetRootMin = ((m_Rootmin - C) * (iMaxY - C)) / (y2 - C) + C;
+		          targetRootMax = ((m_Rootmax - C) * (iMaxY - C)) / (y2 - C) + C;
+		      } else { // implies y1 = y2
+		          throw new AssertionError("Impossible geometry in CDasherModel.ScheduleZoom");
+		      }
+		}
 		
-		final long n1 = (long)((m_Rootmin - iTarget1) * dZ),
-			n2 = (long)((m_Rootmax - iTarget2) * dZ + 4096);
+		//now a simple linear interpolation from m_Root{min,max} to targetRoot{Min,Max}
 		
-		m_deGotoQueue.clear();
-		
-		for(int s = 1; s < iSteps; ++s) {
-			// use simple linear interpolation. Really should do logarithmic interpolation, but
-			// this will probably look fine.
+		for(int s = iSteps-1; s >= 0; --s) {
 			SGotoItem sNewItem = new SGotoItem();
 			
-			sNewItem.iN1 = (s * n1 + (iSteps-s) * m_Rootmin) / iSteps;
-			sNewItem.iN2 = (s * n2 + (iSteps-s) * m_Rootmax) / iSteps;
+			sNewItem.iN1 = targetRootMin - (s * (targetRootMin - m_Rootmin))/iSteps;
+			sNewItem.iN2 = targetRootMax - (s * (targetRootMax - m_Rootmax))/iSteps;
 			
 			m_deGotoQueue.addLast(sNewItem);
 		} 
-		
-		SGotoItem sNewItem = new SGotoItem();
-		
-		sNewItem.iN1 = n1;
-		sNewItem.iN2 = n2;
-		
-		m_deGotoQueue.addLast(sNewItem);
 		
 		SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, false);
 	}
