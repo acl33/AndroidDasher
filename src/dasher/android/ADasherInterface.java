@@ -3,8 +3,10 @@ package dasher.android;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -21,6 +23,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Environment;
 import android.os.PowerManager;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -327,14 +330,14 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		} catch (IOException e) {
 			System.err.println("Could not list assets: " + e.toString());
 		}
-		File userDir = androidCtx.getDir("data", Context.MODE_WORLD_WRITEABLE);
-		
-		for (String aFile : userDir.list()) {
-			if (aFile.contains(prefix) && aFile.endsWith(".xml"))
-				try {parser.ParseFile(new FileInputStream(new File(userDir,aFile)), true);}
-				catch (Exception e) {
-					System.err.println("Could not parse/read user file "+aFile+": "+e);
-				}
+		if (USER_DIR.exists()) {
+			for (String aFile : USER_DIR.list()) {
+				if (aFile.contains(prefix) && aFile.endsWith(".xml"))
+					try {parser.ParseFile(new FileInputStream(new File(USER_DIR,aFile)), true);}
+					catch (Exception e) {
+						System.err.println("Could not parse/read user file "+aFile+": "+e);
+					}
+			}
 		}
 	}
 
@@ -353,7 +356,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			//no system training file present. Which is fine; silently skip.
 		}
 		//2. user file
-		File f=new File(trainFileName);
+		File f = new File(USER_DIR,trainFileName);
 		if (f.exists()) {
 			try {
 			iTotalBytes += f.length();
@@ -369,9 +372,28 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			try {
 				iRead = m_DasherModel.TrainStream(in, iTotalBytes, iRead, evt);
 			} catch (IOException e) {
-				android.util.Log.e("dasher", "error in training - rest of text skipped", e);
+				android.util.Log.e("Dasher", "error in training - rest of text skipped", e);
 			}
 		}
 	}
+	
+	@Override public void WriteTrainFile(String s) {
+		String msg;
+		if (USER_DIR.exists() || USER_DIR.mkdir()) {
+			try {
+				//second parameter is whether to append to any existing file - yes, do!
+				PrintWriter pw = new PrintWriter(new FileWriter(new File(USER_DIR,GetStringParameter(Esp_parameters.SP_TRAIN_FILE)), true));
+				pw.print(s);
+				pw.flush();
+				pw.close();
+				return; //ok
+			} catch (IOException e) {
+				msg = e.toString();
+			}
+		} else msg = USER_DIR+" does not exist and could not create.";
+		android.util.Log.e("Dasher", "Error writing training file: "+msg);
+	}
+
+	/*package*/ static final File USER_DIR = new File(Environment.getExternalStorageDirectory(),"dasher");
 
 }
