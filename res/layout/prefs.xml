@@ -51,10 +51,10 @@
       android:title="Tilt Control"
       android:widgetLayout="@layout/checkbox_tilt">
         <CheckBoxPreference
-          android:key="AndroidTilt2D"
-          android:title="2D (X &amp; Y)"
-          android:summaryOn="Fwd/back &amp; up/down using 2 tilt axes" 
-          android:summaryOff="Tilt up/down to go in a complete circle"/>
+          android:key="OneDimensionalMode"
+          android:title="Use only 1 dimension"
+          android:summaryOff="Fwd/back &amp; up/down using 2 tilt axes" 
+          android:summaryOn="Tilt up/down to go in a complete circle"/>
         <CheckBoxPreference
           android:key="AndroidTiltHoldToGo"
           android:title="Hold finger to go"/>

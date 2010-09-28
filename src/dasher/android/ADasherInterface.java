@@ -194,52 +194,17 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 				super.KeyUp(iTime, iID, pView, undoubledTouch, pModel);
 			}
 		}));
-		RegisterModule(new CDefaultFilter(this, getSettingsStore(), 14, "Android Tilt Control") {
+		RegisterModule(new COneDimensionalFilter(this, getSettingsStore(), 14, "Android Tilt Control") {
 			private final PowerManager.WakeLock wl = ((PowerManager)androidCtx.getSystemService(Context.POWER_SERVICE)).newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK,"tilting");
 			private boolean bActive;
 			
-			private void Apply1DTransform(CDasherView pView, long[] coords) {
-				// The distance between the Y coordinate and the centreline in pixels
-				final long disty=GetLongParameter(Elp_parameters.LP_OY)-coords[1];
-				  
-				final long circlesize = (long)(GetLongParameter(Elp_parameters.LP_MAX_Y)*(1.0-coords[0]/(double)pView.VisibleRegion().maxX)/2.5);
-				final long yforwardrange = (GetLongParameter(Elp_parameters.LP_MAX_Y)*5)/16;
-				final long yfullrange = GetLongParameter(Elp_parameters.LP_MAX_Y)/2;
-				  
-				double x,y; //0,0=on crosshair; positive=forwards/up...	
-				
-				if (disty<=yforwardrange && disty>=-yforwardrange) {
-					//go forwards!
-					final double angle=((disty*3.14159/2)/(double)yforwardrange);
-					x=Math.cos(angle);
-					y=-Math.sin(angle);
-				} else if (disty<=yfullrange && disty>=-yfullrange) {
-					final long ybackrange = yfullrange-yforwardrange;
-					final long ellipse_eccentricity=6;
-					//backwards, off bottom or top...
-					final double yb = (Math.abs(disty)-yforwardrange)/(double)ybackrange;
-					final double angle=(yb*3.14159)*(yb+(1-yb)*(ybackrange/(double)yforwardrange/ellipse_eccentricity));
-				    
-				    x=-Math.sin(angle)*ellipse_eccentricity/2.0;
-				    y=(1.0+Math.cos(angle))/2.0;
-				    if (disty>yforwardrange) y=-y; //backwards off top
-				} else {
-					//off limits, go nowhere
-					x=0; y=0;
-				} 
-				coords[0] = GetLongParameter(Elp_parameters.LP_OX)-(long)(x*circlesize);
-				coords[1] = GetLongParameter(Elp_parameters.LP_OY)+(long)(y*circlesize);
-			}
 			@Override public void ApplyTransform(CDasherView pView, long[] coords) {
 				if (prefs.getBoolean("AndroidTiltHoldToGo", false) && prefs.getBoolean("AndroidTiltUsesTouchX", false)) {
 					long iDasherY=coords[1];
 					touch.GetDasherCoords(pView, coords);
 					coords[1]=iDasherY;
 				}
-				if (prefs.getBoolean("AndroidTilt2D", false)) //false=default
-					super.ApplyTransform(pView, coords);
-				else
-					Apply1DTransform(pView, coords);
+				super.ApplyTransform(pView, coords);
 			}
 			
 			@Override public void KeyDown(long iTime, int iID, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
