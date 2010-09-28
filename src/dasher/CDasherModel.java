@@ -996,7 +996,7 @@ public class CDasherModel extends CFrameRate {
 	 * new position, scheduling a zoom to the new position by
 	 * adding the interpolated points to m_deGotoQueue.
 	 * <p>
-	 * dasherx will be increased to 100 if this is not already so.
+	 * dasherx will be increased to 1 if this is not already so.
 	 * <p>
 	 * The number of points to interpolate (and hence the smoothness
 	 * of the zoom, at the expense of speed,) is controlled by
@@ -1012,10 +1012,7 @@ public class CDasherModel extends CFrameRate {
 		
 		m_deGotoQueue.clear();
 		
-		// TODO: What is the following line for?
-		//if (dasherx < 2) { dasherx = 100; }
-		//ACL I don't know, so I'm going with:
-		if (dasherx < 2) dasherx = 2;
+		if (dasherx < 1) dasherx = 1;
 		
 		final int iSteps = (int)(GetLongParameter(Elp_parameters.LP_ZOOMSTEPS));
 			

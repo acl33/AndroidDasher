@@ -11,9 +11,11 @@ package dasher;
  */
 public class CStylusFilter extends CDefaultFilter {
     private long m_iKeyDownTime;
+    private long minX;
     
     public CStylusFilter(CDasherInterfaceBase iface, CSettingsStore store) {
         this(iface,store,15,"Stylus Control");
+        HandleEvent(new CParameterNotificationEvent(Elp_parameters.LP_MAX_ZOOM));
     }
 
     protected CStylusFilter(CDasherInterfaceBase iface, CSettingsStore store, long iID, String sName) {
@@ -35,7 +37,7 @@ public class CStylusFilter extends CDefaultFilter {
             if ((iTime - m_iKeyDownTime < GetLongParameter(Elp_parameters.LP_TAP_TIME))) {
             	pInput.GetDasherCoords(pView, lastInputCoords);
     			ApplyClickTransform(pView, lastInputCoords);
-    			model.ScheduleZoom(lastInputCoords[0],lastInputCoords[1]);
+    			model.ScheduleZoom(Math.max(minX,lastInputCoords[0]),lastInputCoords[1]);
     			//leave unpaused
             } else {
                 m_Interface.PauseAt(0, 0);
@@ -66,4 +68,10 @@ public class CStylusFilter extends CDefaultFilter {
      */
     protected void ApplyClickTransform(CDasherView pView, long[] dasherCoords) {
     }
+    
+    @Override public void HandleEvent(CEvent evt) {
+		if (evt instanceof CParameterNotificationEvent
+				&& ((CParameterNotificationEvent)evt).m_iParameter==Elp_parameters.LP_MAX_ZOOM)
+			minX = Math.max(2, GetLongParameter(Elp_parameters.LP_OX)/GetLongParameter(Elp_parameters.LP_MAX_ZOOM));
+	}
 }

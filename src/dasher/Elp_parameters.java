@@ -75,7 +75,8 @@ public enum Elp_parameters implements EParameters {
 	  LP_BUTTON_SCAN_TIME("ButtonScanTime", PERS, 0, "Scanning interval in button mode (0 = don't scan)"),
 	  LP_MIN_NODE_SIZE_TEXT("MinNodeSizeForText",PERS, 40, "Minimum size for box to have text (4096=whole screen)"),
 	  LP_SLOW_START_TIME("SlowStartTime", PERS, 1000, "Time in ms over which slow start is applied"),
-	  LP_SWEEP_TIME("SweepTime", PERS, 3000, "Time in ms to sweep top-to-bottom");
+	  LP_SWEEP_TIME("SweepTime", PERS, 3000, "Time in ms to sweep top-to-bottom"),
+	  LP_MAX_ZOOM("MaxZoom", PERS, 20, "Max factor to zoom by in stylus/click mode");
 		  
 		  private Elp_parameters(String rName, boolean pers, long def, String hr) {
 				humanReadable = hr;

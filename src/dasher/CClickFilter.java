@@ -43,6 +43,7 @@ package dasher;
 
 public class CClickFilter extends CInputFilter {
 
+	private long minX;
 	/**
 	 * Sole constructor. Calls the CInputFilter constructor with a type of 7,
 	 * an ID of 1, and the name <i>Click Mode</i>.
@@ -53,6 +54,7 @@ public class CClickFilter extends CInputFilter {
 	 */
 	public CClickFilter(CDasherInterfaceBase iface, CSettingsStore SettingsStore) {
 	  super(iface, SettingsStore, 7, "Click Mode");
+	  HandleEvent(new CParameterNotificationEvent(Elp_parameters.LP_MAX_ZOOM));
 	}
 
 	/**
@@ -93,10 +95,15 @@ public class CClickFilter extends CInputFilter {
 	  switch(iId) {
 	  case 100: // Mouse clicks
 	    pInput.GetDasherCoords(pView,inputCoords);
-	    Model.ScheduleZoom(inputCoords[0],inputCoords[1]);
+	    Model.ScheduleZoom(Math.max(minX, inputCoords[0]),inputCoords[1]);
 	    break;
 	  }
 	}
 	private final long[] inputCoords = new long[2];  
 
+	@Override public void HandleEvent(CEvent evt) {
+		if (evt instanceof CParameterNotificationEvent
+				&& ((CParameterNotificationEvent)evt).m_iParameter==Elp_parameters.LP_MAX_ZOOM)
+			minX = Math.max(2, GetLongParameter(Elp_parameters.LP_OX)/GetLongParameter(Elp_parameters.LP_MAX_ZOOM));
+	}
 }
