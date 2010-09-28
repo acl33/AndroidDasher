@@ -77,6 +77,15 @@
           android:key="AndroidTouchUsesTiltX"
           android:title="X Co-ordinate from tilting"/>
         <dasher.android.SeekBarPreference
+          android:key="TargetOffset"
+          android:title="Offset Target"
+          android:summary="Above/below actual finger position (400=screen height)"
+          android:max="200" min="-200"/>
+        <CheckBoxPreference
+      	  android:key="AutoAdjust"
+      	  android:title="Auto-adjust"
+      	  android:summary="Learn offset (previous) from eventual destination"/>
+        <dasher.android.SeekBarPreference
           android:key="TapTime"
           android:title="Max time for 'tap'"
           android:summary="Anything longer counts as drag"
@@ -157,10 +166,6 @@
       	  android:title="Remap motion towards top/bottom"
       	  android:summary="At extremes of axis, translate more and zoom less"/> 
       	<CheckBoxPreference
-      	  android:key="AutoAdjust"
-      	  android:title="Auto-adjust target"
-      	  android:summary="Learns offset above/below finger"/>
-	    <CheckBoxPreference
 	      android:key="AndroidDoubleX"
 	      android:title="Touch on left half only"
 	      android:summary="As if finger were twice as far to the right"/>

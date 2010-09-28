@@ -195,7 +195,7 @@ public class CDefaultFilter extends CInputFilter {
 	/** Modify the input coordinates according to any desired remapping scheme.
 	 * Subclasses may override to change the remapping; the default implementation:
 	 * <ol>
-	 * <li> First calls {@link #ApplyAutoCalibration(CDasherView, long[])};
+	 * <li> First calls {@link #ApplyOffset(CDasherView, long[])};
 	 * <li> then applies the eyetracker-remapping from C++ Dasher
 	 * _iff_ BP_COMPRESS_XTREME is set. (This compresses the y coordinate at
 	 * the extremes of the viewport, and also reduces the maximum x at extreme y
@@ -205,7 +205,7 @@ public class CDefaultFilter extends CInputFilter {
 	 * @param inputCoords dasher co-ordinates of input
 	 */
 	protected void ApplyTransform(CDasherView pView, long[] coords) {
-		ApplyAutoCalibration(pView, coords);
+		ApplyOffset(pView, coords);
 		if (GetBoolParameter(Ebp_parameters.BP_REMAP_XTREME)) {
 			// Y co-ordinate...
 			long dasherOY=GetLongParameter(Elp_parameters.LP_OY); 
@@ -218,26 +218,26 @@ public class CDefaultFilter extends CInputFilter {
 		}
 	}
 	/**
-	 * <em>iff</em> <code>BP_AUTOCALIBRATE</code> is true, adjusts the Y coordinate up or down
-	 * according to the computed offset ({@link #m_iYAutoOffset}), and then, <em>iff</em>
-	 * <code>BP_DASHER_PAUSED</code> is false, updates the auto-offset params accordingly.
+	 * Adjusts the Y co-ordinate up or down according to LP_TARGET_OFFSET times 10.
+	 * Then, <em>iff</em> <code>BP_AUTOCALIBRATE</code> is true and
+	 * <code>BP_DASHER_PAUSED</code> is false, updates the offset params accordingly.
 	 */
-	protected void ApplyAutoCalibration(CDasherView pView, long[] coords) {
+	protected void ApplyOffset(CDasherView pView, long[] coords) {
+		coords[1] += GetLongParameter(Elp_parameters.LP_TARGET_OFFSET) * 10; //Urgh, arbitrary constants. Better would be screen range in dasher coords / pixels ???
 		if (GetBoolParameter(Ebp_parameters.BP_AUTOCALIBRATE)) {
-			coords[1] += m_iYAutoOffset * 10; //Urgh, arbitrary constants. Better would be screen range in dasher coords / pixels ???
 			if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
 			  m_iSum += (GetLongParameter(Elp_parameters.LP_OY) - coords[1]);
 			  if (++m_iCounter>20) {
 				  if (Math.abs(m_iSum) > GetLongParameter(Elp_parameters.LP_MAX_Y)/2)
-					  m_iYAutoOffset += (m_iSum>0) ? -1 : 1;
+					  SetLongParameter(Elp_parameters.LP_TARGET_OFFSET, GetLongParameter(Elp_parameters.LP_TARGET_OFFSET) + ((m_iSum>0) ? -1 : 1)) ;
 				  m_iSum=m_iCounter=0; //TODO, reset m_iSum only if increment/decrement applied?
 			  }
 			}
 		}
 	}
 	
-	/** Parameters for auto-offset-calibration: current offset, avg offset over last m_iCounter frames, #frames since last adjust. */
-	private int m_iYAutoOffset, m_iSum, m_iCounter;
+	/** Parameters for auto-offset-calibration: avg offset over last m_iCounter frames, #frames since last adjust. */
+	private int m_iSum, m_iCounter;
 	
 	/** Parameter for repelling Y value away from crosshair */
 	private static final double REPULSION_PARAM=0.5;

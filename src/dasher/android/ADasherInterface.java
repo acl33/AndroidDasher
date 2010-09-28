@@ -207,6 +207,11 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 				super.ApplyTransform(pView, coords);
 			}
 			
+			/** Override to disable offset for tilting. */
+			@Override public void ApplyOffset(CDasherView pView, long[] coords) {
+				//do nothing
+			}
+			
 			@Override public void KeyDown(long iTime, int iID, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
 				if (iID==100 && prefs.getBoolean("AndroidTiltHoldToGo", false)) {
 					m_Interface.Unpause(iTime);
