@@ -679,7 +679,7 @@ public class CDasherModel extends CFrameRate {
 		// and (0,iMaxY), with weight iOldWeight; in the olg algorithm, the latter was
 		// (iSteps-1)*(iTargetMax-iTargetMin), but people wanted to reverse faster!
 		// (TODO: should this be a parameter? I'm resisting "too many user settings" atm, but maybe...)
-		final long iOldWeight = (iSteps-1) * Math.min(iTargetMax - iTargetMin, iMaxY+(iTargetMax-iTargetMin)>>>4);
+		final long iOldWeight = (iSteps-1) * Math.min(iTargetMax - iTargetMin, iMaxY+(iTargetMax-iTargetMin)>>>GetLongParameter(Elp_parameters.LP_REVERSE_BOOST));
 		long iDenom = iMaxY + iOldWeight;
 		long iNewTargetMin = (iTargetMin * iMaxY) / iDenom;
 		long iNewTargetMax = (iTargetMax+iOldWeight) * iMaxY / iDenom;

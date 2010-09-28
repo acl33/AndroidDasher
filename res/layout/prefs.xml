@@ -169,6 +169,11 @@
 	      android:title="Slow Startup Time"
 	      android:summary="Gradually increase speed from 1/10 to full over this time period"
 	      android:max="5000" min="0" android:text="ms"/>
+	    <dasher.android.SeekBarPreference
+	      android:key="ReverseBoost"
+	      android:title="Reverse Faster"
+	      android:summary="Boost speed of reversing (0=don't)"
+	      android:max="10" min="0"/>
 	</PreferenceScreen>
 	
 	<ListPreference
