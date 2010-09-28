@@ -130,6 +130,18 @@
     </PreferenceScreen>
  
     <PreferenceScreen
+      android:key="AndroidSweep"
+      android:title="Sweep Mode"
+      android:summary="Tap screen or button to go/reverse"
+      android:widgetLayout="@layout/checkbox_sweep">
+        <dasher.android.SeekBarPreference
+          android:key="SweepTime"
+          android:title="Sweep Time"
+          android:summary="Time in ms to sweep top-to-bottom"
+          android:max="10000" min="500" text="ms"/>
+    </PreferenceScreen>
+  
+    <PreferenceScreen
       android:title="General Input Settings">
         <CheckBoxPreference
       	  android:key="AutoSpeedControl"

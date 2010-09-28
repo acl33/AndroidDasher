@@ -51,21 +51,29 @@ public class DasherInputMethod extends InputMethodService {
 	}
 	
 	@Override public boolean onKeyUp(int keyCode, KeyEvent event) {
-		if (PreferenceManager.getDefaultSharedPreferences(this).getString(IMCheckBox.SETTING, "").equals("AndroidCompass")
-				&& keyCode>=19 && keyCode<=22) {
+		String im=PreferenceManager.getDefaultSharedPreferences(this).getString(IMCheckBox.SETTING, "");
+		if (im.equals("AndroidCompass") && keyCode>=19 && keyCode<=22) {
 			int key = ((keyCode-18)*2) % 5; //2,4,1,3
 			IMDasherInterface.INSTANCE.KeyUp(System.currentTimeMillis(), key);
 			return true; //handled
+		} else if (im.equals("AndroidSweep") && keyCode!=KeyEvent.KEYCODE_MENU && keyCode!=KeyEvent.KEYCODE_BACK && (keyCode<19 || keyCode>22)) {
+			//don't intercept menu/back (too useful!) or cursor movement (for editing textbox).
+			IMDasherInterface.INSTANCE.KeyUp(System.currentTimeMillis(), keyCode);
+			return true;
 		}
 		return super.onKeyUp(keyCode, event);
 	}			
 	
 	@Override public boolean onKeyDown(int keyCode, KeyEvent event) {
-		if (PreferenceManager.getDefaultSharedPreferences(this).getString(IMCheckBox.SETTING, "").equals("AndroidCompass")
-				&& keyCode>=19 && keyCode<=22) {
+		String im=PreferenceManager.getDefaultSharedPreferences(this).getString(IMCheckBox.SETTING, "");
+		if (im.equals("AndroidCompass") && keyCode>=19 && keyCode<=22) {
 			int key = ((keyCode-18)*2) % 5; //2,4,1,3
 			IMDasherInterface.INSTANCE.KeyDown(System.currentTimeMillis(), key);
 			return true; //handled
+		} else if (im.equals("AndroidSweep") && keyCode!=KeyEvent.KEYCODE_MENU && keyCode!=KeyEvent.KEYCODE_BACK && (keyCode<19 || keyCode>22)) {
+			//don't intercept menu/back (too useful!) or cursor movement (for editing textbox).
+			IMDasherInterface.INSTANCE.KeyDown(System.currentTimeMillis(), keyCode);
+			return true;
 		}
 		return super.onKeyDown(keyCode, event);
 	}	
