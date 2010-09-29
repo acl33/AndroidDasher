@@ -63,6 +63,10 @@
               android:key="AndroidTiltUsesTouchX"
               android:title="X Co-ordinate from touch"
               android:dependency="AndroidTiltHoldToGo"/>
+        <CheckBoxPreference
+          android:key="CircleStart"
+          android:title="Start On Circle"
+          android:summary="Dwell pointer inside circle at screen center to start/stop"/>
         <dasher.android.CalibPreference
           android:key="AndroidCalibNeedsNoName"
           android:title="Calibrate Tilting"
