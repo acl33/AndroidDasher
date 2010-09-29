@@ -1085,20 +1085,6 @@ public class CDasherModel extends CFrameRate {
 		m_iDisplayOffset = 0;
 	}
 	
-	/* CSFS: Both of these methods currently use boolean types to
-	 * indicate failure or success. Ideally these would use exceptions
-	 * but it doesn't seem to cause a problem at present.
-	 */
-	
-	//Framerate functions:
-	
-	/**
-	 * Deferred to m_fr.
-	 */
-	/*public double Framerate() {
-	    return m_fr.Framerate();
-	}*/
-	
 	/**
 	 * Gets total_nats
 	 * @return total_nats
@@ -1106,36 +1092,6 @@ public class CDasherModel extends CFrameRate {
 	public double GetNats() {
 		return total_nats;
 	}
-	
-	/**
-	 * Retrieves our current alphabet.
-	 */
-	public CAlphabet GetAlphabet() {
-		return m_cAlphabet; // FIXME CLONE
-	}
-	
-	/**
-	 * Retrieves our current alphabet.
-	 */
-	public CAlphabet GetAlphabetNew() {
-		return m_cAlphabet;
-	}
-	
-	/* CSFS: In the original C++, these read:
-	 * 
-	 * const CAlphabet & GetAlphabet() const {
-     * return *m_pcAlphabet;
-     * }
-     *
-     * CAlphabet *GetAlphabetNew() const {
-     * return m_pcAlphabet;
-     * }
-     * 
-     * Confusingly, it looks as if the return from GetAlphabet will be
-     * a clone of the Alphabet currently registered, whereas the
-     * return from GetAlphabetNew will be a pointer to the current
-     * alphabet which one could then alter
-     */
 	
 	/**
 	 * Retrieves the number of points currently in the m_deGotoQueue.
@@ -1153,21 +1109,6 @@ public class CDasherModel extends CFrameRate {
 		m_deGotoQueue.clear();
 	}
 	
-	/**
-	 * Deferred to m_cAlphabet
-	 */
-	public int GetColour(int s) {
-		return m_cAlphabet.GetColour(s);
-	}
-
-	/**
-	 * Deferred to m_cAlphabet
-	 */	
-	public ArrayList<Integer> GetColours() {
-		// See comments in CAlphabet
-		return m_cAlphabet.GetColours();
-	}
-
 	public void shutdown() {
 		ClearRootQueue();
 		if (m_Root!=null) m_Root.DeleteNode();
