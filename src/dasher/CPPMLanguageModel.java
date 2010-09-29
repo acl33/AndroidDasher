@@ -131,7 +131,7 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 	 * @return array with one element per character in the alphabet
 	 * PLUS an initial zero.
 	 */
-	public long[] GetProbs(CPPMnode ppmcontext, long norm) {
+	public void GetProbs(CPPMnode ppmcontext, long[] probs, long norm) {
 
 		/* CSFS: In the original C++ the norm value was an
 		 * unsigned int. Since Java will only provide a signed
@@ -141,11 +141,7 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 		//exclusions[] array etc. was removed by CSFS.
 		// this was CountExclusion, not UpdateExclusion - a (minor) speed
 		// improvement at the cost of worse compression/prediction, hence leaving it out. 
-		int iNumSymbols = m_Alphabet.GetNumberSymbols()+1;
-
-		long[] probs = new long[iNumSymbols];
-
-		int i;
+		final int iNumSymbols = m_Alphabet.GetNumberSymbols()+1;
 
 		long iToSpend = norm;
 
@@ -170,7 +166,7 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 
 		long size_of_slice = iToSpend;
 
-		for(i = 1; i < iNumSymbols; i++) {
+		for(int i = 1; i < iNumSymbols; i++) {
 			//if(!(exclusions[i] && doExclusion)) {
 			long p = size_of_slice / (iNumSymbols-1);
 			probs[i] += p;
@@ -188,8 +184,6 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 		}
 
 		assert(iToSpend == 0);
-
-		return probs;
 	}
 
 	public CPPMnode ContextLearningSymbol(CPPMnode ctx, int sym)

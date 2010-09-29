@@ -48,33 +48,6 @@ import java.util.ListIterator;
  * of a DasherView.
  */
 public class CDasherModel extends CFrameRate {
-
-	/**
-	 * Are the current model's predictions dependent on
-	 * our context?
-	 * <p>
-	 * In reality almost all models are context sensitive.
-	 */
-	public boolean m_bContextSensitive;
-	// public String m_strContextBuffer;
-		
-	/**
-	 * The Interface to which this Model belongs.
-	 */
-	/*package*/final CDasherInterfaceBase m_DasherInterface;
-	
-/////////////////////////////////////////////////////////////////////////////
-	
-	// Interfaces
-	
-	/**
-	 * Alphabet used by this Model 
-	 */
-	protected CAlphabet m_cAlphabet;        // pointer to the alphabet
-	
-/////////////////////////////////////////////////////////////////////////////
-	
-//	protected CDasherGameMode m_GameMode;
 	
 	/**
 	 * Node which is currently root of the Node tree.
@@ -118,41 +91,13 @@ public class CDasherModel extends CFrameRate {
 	 */
 	protected double total_nats;            // Information entered so far
 	
-	/**
-	 * Our alphabet manager, for functions which require knowledge
-	 * of an Alphabet.
-	 */
-	protected final CAlphabetManager<?> m_AlphabetManager;
-	// protected CControlManagerFactory m_ControlManagerFactory;
-
 	/* CSFS: Converted a struct in the original C into this class */
 	
 	/**
-	 * List of points which we are to go to before responding
-	 * to user input again. 
+	 * List of points which we are to go (i.e. intermediate points,
+	 * interpolated between previous location and user-supplied dest)
 	 */
-	protected LinkedList<SGotoItem> m_deGotoQueue = new LinkedList<SGotoItem>();
-	
-	/**
-	 * Amount to add to all symbols' probabilities, EXCEPT Root/Control mode symbols,
-	 * in order to avoid a zero probability.
-	 */
-	protected int uniformAdd;
-	
-	/**
-	 * Probability assigned to the Control Node
-	 */
-	protected long controlSpace;
-	
-	/**
-	 * Normalization factor as a fraction of which the Language Model should compute
-	 * symbol probabilities, prior to adjusting them with adjustProbs.
-	 */
-	protected long nonUniformNorm;
-	
-	// Both of these are to save repeated calculations of the same answers. Their
-	// values are calculated when the model is created and are recalculated
-	// in response to any dependent parameter changes.
+	protected final LinkedList<SGotoItem> m_deGotoQueue = new LinkedList<SGotoItem>();	
 	
 	/**
 	 * Simple struct recording a point to which we are scheduled
@@ -195,67 +140,6 @@ public class CDasherModel extends CFrameRate {
 	 */
 	public CDasherModel(CDasherInterfaceBase iface, CSettingsStore SettingsStore) {
 		super(iface, SettingsStore); 
-	m_DasherInterface = iface;
-	
-	// Convert the full alphabet to a symbolic representation for use in the language model
-	
-	// -- put all this in a separate method
-	// TODO: Think about having 'prefered' values here, which get
-	// retrieved by DasherInterfaceBase and used to set parameters
-	
-	// TODO: We might get a different alphabet to the one we asked for -
-	// if this is the case then the parameter value should be updated,
-	// but not in such a way that it causes everything to be rebuilt.
-	
-	CAlphIO.AlphInfo oAlphInfo = iface.GetInfo(GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
-	CAlphabet alphabet = m_cAlphabet = new CAlphabet(oAlphInfo);
-	
-	SetStringParameter(Esp_parameters.SP_TRAIN_FILE, m_cAlphabet.GetTrainingFile());
-	SetStringParameter(Esp_parameters.SP_DEFAULT_COLOUR_ID, m_cAlphabet.GetPalette());
-	
-	if(GetLongParameter(Elp_parameters.LP_ORIENTATION) == Opts.AlphabetDefault)
-		SetLongParameter(Elp_parameters.LP_REAL_ORIENTATION, m_cAlphabet.GetOrientation());
-	
-	// Create an appropriate language model;
-	
-	switch ((int)GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)) {
-	default:
-		// If there is a bogus value for the language model ID, we'll default
-		// to our trusty old PPM language model.
-	case 0:
-		
-		m_AlphabetManager = /*ACL (langMod.isRemote())
-            ? new CRemoteAlphabetManager( this, langMod)
-            :*/ new CAlphabetManager<CPPMLanguageModel.CPPMnode>( this, new CPPMLanguageModel(m_EventHandler, m_SettingsStore, alphabet));
-
-		SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, false);
-		break;
-	/* case 2:
-		m_pLanguageModel = new CWordLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
-		break;
-	case 3:
-		m_pLanguageModel = new CMixtureLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
-		break;  
-		#ifdef JAPANESE
-	case 4:
-		m_pLanguageModel = new CJapaneseLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
-		break;
-		#endif */
-		
-	case 5:
-		throw new UnsupportedOperationException("(ACL) Remote LM currently unimplemented");
-		//langMod = new CRemotePPM(m_EventHandler, m_SettingsStore, alphabet);
-		//SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, true);
-	
-		//break;
-	/* CSFS: Commented out the other language models for the time being as they are not
-	 * implemented yet.
-	 */
-	}
-	
-	// m_ControlManagerFactory = new CControlManagerFactory(this, m_LanguageModel);
-	
-	m_bContextSensitive = true;
 		
 		int iNormalization = (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
 		
@@ -267,14 +151,7 @@ public class CDasherModel extends CFrameRate {
 		m_Rootmin_min = Long.MIN_VALUE / iNormalization / 2;
 		m_Rootmax_max = Long.MAX_VALUE / iNormalization / 2;
 		
-	computeNormFactor();
-	
 		HandleEvent(new CParameterNotificationEvent(Elp_parameters.LP_NODE_BUDGET));
-	}
-	
-	public int TrainStream(InputStream FileIn, int iTotalBytes, int iOffset,
-			 CLockEvent evt) throws IOException {
-		return m_AlphabetManager.m_LanguageModel.TrainStream(FileIn, iTotalBytes, iOffset, evt);
 	}
 	
 	/**
@@ -301,22 +178,8 @@ public class CDasherModel extends CFrameRate {
 					total_nats = 0.0;
 				}
 			}
-			if(Evt.m_iParameter == Ebp_parameters.BP_CONTROL_MODE) { // Rebuild the model if control mode is switched on/off
-				RebuildAroundNode(Get_node_under_crosshair());
-				computeNormFactor();
-			}
 			else if(Evt.m_iParameter == Ebp_parameters.BP_DELAY_VIEW) {
 				MatchTarget();
-			}
-			else if(Evt.m_iParameter == Elp_parameters.LP_UNIFORM) {
-				computeNormFactor();
-			} else if(Evt.m_iParameter ==  Elp_parameters.LP_ORIENTATION) {
-				if(GetLongParameter(Elp_parameters.LP_ORIENTATION) == Opts.AlphabetDefault)
-					// TODO) { See comment in DasherModel.cpp about prefered values
-					SetLongParameter(Elp_parameters.LP_REAL_ORIENTATION, m_cAlphabet.GetOrientation());
-				else
-					SetLongParameter(Elp_parameters.LP_REAL_ORIENTATION, GetLongParameter(Elp_parameters.LP_ORIENTATION));
-				m_DasherInterface.Redraw(true);
 			} else if (Evt.m_iParameter == Elp_parameters.LP_NODE_BUDGET) {
 				pol = new AmortizedPolicy((int)GetLongParameter(Elp_parameters.LP_NODE_BUDGET));
 			}
@@ -421,55 +284,6 @@ public class CDasherModel extends CFrameRate {
 			
 			oldroots.removeFirst();
 		}
-	}
-
-	/**
-	 * Calls Make_root repeatedly to make a specified node the new root node.
-	 * <p>
-	 * This function must be called on some descendent of the current root.
-	 * <p>
-	 * Behaviour if called upon a node which is not is undefined;
-	 * most likely it would eventually run into a node whose parent
-	 * has been deleted, and fail with a NullPointerException.
-	 * 
-	 * @param NewRoot Node to make the root.
-	 */
-	protected void RecursiveMakeRoot(CDasherNode NewRoot) {
-		if(NewRoot == null)
-			return;
-		
-		if(NewRoot == m_Root)
-			return;
-		
-		// FIXME - we really ought to check that pNewRoot is actually a
-		// descendent of the root, although that should be guaranteed
-		
-		if(NewRoot.Parent() != m_Root)
-			RecursiveMakeRoot(NewRoot.Parent());
-		
-		Make_root(NewRoot);
-	}
-	
-	/**
-	 * Makes a given Node the root, and then deletes and rebuilds
-	 * its children.
-	 * <p>
-	 * This is intended for situations when an existing Node has
-	 * children which are no longer correct; for instance, if
-	 * Control Mode has been switched on necessitating a new child
-	 * Node, or if the language model has been changed.
-	 * <p>
-	 * The specified Node must be a descendent of the existing
-	 * root, or RecursiveMakeRoot will fail to find a link
-	 * between the two.
-	 * 
-	 * @param Node New root node after the rebuild.
-	 */
-	protected void RebuildAroundNode(CDasherNode Node) {
-		RecursiveMakeRoot(Node);
-		ClearRootQueue();
-		Node.Delete_children();
-		Node.PopulateChildren();
 	}
 
 	/**
@@ -583,7 +397,7 @@ public class CDasherModel extends CFrameRate {
 	 * 
 	 * @param sNewContext Context to set
 	 */
-	public void SetOffset(int iOffset, boolean bForce) {
+	public void SetOffset(int iOffset, CAlphabetManager<?> alphMgr, boolean bForce) {
 		if (iOffset == GetOffset() && !bForce) return;
 		
 		/* If a zoom was in progress, cancel it -- this function will likely change
@@ -599,7 +413,7 @@ public class CDasherModel extends CFrameRate {
 			m_Root.DeleteNode();
 		}
 		
-		m_Root = m_AlphabetManager.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), iOffset, true);
+		m_Root = alphMgr.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), iOffset, true);
 		//we've already entered the node, as it was reconstructed from previously-written context
 		m_Root.Enter();
 		m_Root.Seen(true);
@@ -871,51 +685,6 @@ public class CDasherModel extends CFrameRate {
 	}
 	
 	/**
-	 * Increments all symbol probabilities by the value of {@link #uniformAdd},
-	 * and sets the final probability to {@link #controlSpace}. (The first and last
-	 * elements of the vector are taken as being the root and control symbols,
-	 * respectively)
-	 * 
-	 * @param probs The probabilities to modify
-	 */
-	public void adjustProbs(long[] probs) {
-		
-		assert (probs.length == m_cAlphabet.GetNumberSymbols());
-		
-		//skip root "symbol"...
-		for(int k = 1; k < probs.length; ++k) probs[k] += uniformAdd;
-		
-		//ACL...and would have done:
-		//    probs[probs.length - 1] = controlSpace;
-		//but not now!
-	}
-	
-	/**
-	 * Calculates the non-uniform norm.
-	 * 
-	 * @return Non-uniform norm
-	 */
-	public long getNonUniformNorm() {return nonUniformNorm;}
-	
-	protected void computeNormFactor() {
-//		 Total number of symbols
-		int iSymbols = m_cAlphabet.GetNumberSymbols()-1;      // take off the root "symbol" 0
-		
-		// TODO - sort out size of control node - for the timebeing I'll fix the control node at 5%
-		long iNorm = GetLongParameter(Elp_parameters.LP_NORMALIZATION);
-		if(GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE)) {
-			controlSpace = (long)(iNorm * 0.05);
-			iNorm -= controlSpace;
-		} else {
-			controlSpace = 0;
-		}
-		
-		uniformAdd = (int)((iNorm * GetLongParameter(Elp_parameters.LP_UNIFORM)) / 1000) / iSymbols;  // Subtract 2 from no symbols to lose control/root nodes
-		nonUniformNorm = iNorm - iSymbols * uniformAdd;
-		
-	}
-	
-	/**
 	 * Populates the children of a given node, if it doesn't have its children already
 	 * <p>
 	 * (We assume that if a node has any children, it has all its children; and that
@@ -1052,14 +821,6 @@ public class CDasherModel extends CFrameRate {
 		SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, false);
 	}
 	
-	/**
-	 * Unregisters the language model and then ourselves.
-	 */
-	public void UnregisterComponent() {
-		m_AlphabetManager.m_LanguageModel.UnregisterComponent();
-		super.UnregisterComponent();
-	}
-
 	/**
 	 * Sets each of Rootmin and Rootmax to TargetMin and TargetMax
 	 * plus a given offset. 

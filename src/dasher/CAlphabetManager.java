@@ -54,7 +54,7 @@ public class CAlphabetManager<C> {
 	 * Pointer to the DasherModel which performs some of the
 	 * work in the course of producing probabilities.
 	 */
-    protected final CDasherModel m_Model;
+    protected final CNodeCreationManager m_Model;
     
     /* Cache the alphabet's Space Symbol, as this is given a different colour */
     protected final int SPSymbol;
@@ -106,10 +106,10 @@ public class CAlphabetManager<C> {
      * @param LanguageModel Linked LanguageModel
      */
     
-    public CAlphabetManager( CDasherModel Model, CLanguageModel<C> LanguageModel) {
+    public CAlphabetManager( CNodeCreationManager pNCManager, CLanguageModel<C> LanguageModel) {
     	
     	this.m_LanguageModel = LanguageModel;
-    	this.m_Model = Model;
+    	this.m_Model = pNCManager;
     	
     	m_Alphabet = LanguageModel.getAlphabet();
     	m_Colours = m_Alphabet.GetColours();
@@ -192,8 +192,7 @@ public class CAlphabetManager<C> {
 
         protected long[] GetProbInfo() {
         	if (probInfo == null) {
-	        	probInfo = m_LanguageModel.GetProbs(context, m_Model.getNonUniformNorm());
-	        	m_Model.adjustProbs(probInfo);
+	        	probInfo = m_Model.GetProbs(m_LanguageModel,context);
 	        	for (int i=1; i<probInfo.length; i++)
 	        		probInfo[i]+=probInfo[i-1];
         	}
@@ -341,8 +340,6 @@ public class CAlphabetManager<C> {
          */
     	@Override
         public void Output() {
-        	m_Model.m_bContextSensitive = true;
-
         	CEditEvent oEvent = new CEditEvent(1, m_Alphabet.GetText(m_Symbol), GetProb());
         	m_Model.InsertEvent(oEvent);
         }
@@ -522,11 +519,10 @@ public class CAlphabetManager<C> {
     public void IterateChildGroups( CAlphNode Node, SGroupInfo parentGroup, CAlphNode buildAround) {
     	
     	long[] probInfo = Node.GetProbInfo();
-    	assert (probInfo.length == m_Alphabet.GetNumberSymbols());
     	
     	final int iMin,iMax;
     	if (parentGroup!=null) {iMin = parentGroup.iStart; iMax = parentGroup.iEnd;}
-    	else {iMin = 0; iMax = probInfo.length-1;}
+    	else {iMin = 0; iMax = m_Alphabet.GetNumberSymbols();}
     	  
     	  // Create child nodes and add them
     	  

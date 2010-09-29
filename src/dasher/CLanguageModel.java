@@ -147,18 +147,20 @@ public abstract class CLanguageModel<C> extends CDasherComponent {
 	/////////////////////////////////////////////////////////////////////////////
 
 	/**
-	 * Given a context and a normalisation value to which all
-	 * probabilities must add up, this should produce an array
-	 * in which each term corresponds to the relative probability
-	 * of that symbol coming next.
+	 * Fills an array with probabilities of each symbol coming next.
 	 * <p>
-	 * The indices assigned to symbols should match those in the
-	 * SymbolAlphabet we're working with.
+	 * Element 0 will be left untouched; to element 1 will be added
+	 * the probability of the first symbol (sym=0); and so on.
 	 * <p>
-	 * The size of the array returned should be equal to the number of
-	 * symbols in our current alphabet. 
+	 * @param ctx Context in which to make predictions, i.e. represents
+	 * the text preceding the symbol we are trying to predict
+	 * @param probs Array to fill. Must have at least
+	 * <code>getAlphabet().getNumberSymbols()+1</code>
+	 * elements; any excess elements will be left untouched.
+	 * @param iNorm denominator or normalisation value: the
+	 * generated probabilities will sum to this.
 	 */
-	public abstract long[] GetProbs(C ctx, long iNorm);
+	public abstract void GetProbs(C ctx, long[] probs, long iNorm);
 
 	/** Get some measure of the memory usage for diagnostic
 	 * purposes. No need to implement this if you're not comparing

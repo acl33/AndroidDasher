@@ -73,9 +73,13 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	protected CCustomColours m_Colours;
 	
 	/**
-	 * Current DasherModel
+	 * The DasherModel, i.e. tracks locations of nodes on screen. Only one need be created,
+	 * as it can be fed nodes from multiple NodeCreation/AlphabetManagers; this is done in
+	 * Realize().
 	 */
-	protected CDasherModel m_DasherModel;
+	private CDasherModel m_DasherModel;
+	
+	protected CNodeCreationManager m_pNCManager;
 	
 	/**
 	 * Current DasherScreen
@@ -248,6 +252,8 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		 * centralised GetResource method.
 		 */
 		
+		m_DasherModel = new CDasherModel(this, m_SettingsStore);
+		
 		ChangeColours();
 		
 		// Create the user logging object if we are suppose to.
@@ -278,17 +284,11 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * they will be available for garbage collection.
 	 */
 	public void DestroyInterface() {
-				
-		if(m_DasherModel != null) {
-			m_DasherModel.UnregisterComponent();
-		}
-		  m_DasherModel = null;        // The order of some of these deletions matters
-		  m_DasherView = null;
-		  m_ColourIO = null;
-		  m_AlphIO = null;
-		  m_Colours = null;
-		  if(m_InputFilter != null) m_InputFilter.UnregisterComponent();
-		  m_InputFilter = null;
+		//TODO, on what do we need to call UnregisterComponent?	
+		m_DasherModel.UnregisterComponent();
+
+		if(m_InputFilter != null) m_InputFilter.UnregisterComponent();
+		m_InputFilter = null;
 		  // FIXME Decide what needs happen to these
 		  // Do NOT delete Edit box or Screen. This class did not create them.
 
@@ -413,14 +413,10 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			} else if(Evt.m_iParameter == Ebp_parameters.BP_PALETTE_CHANGE || Evt.m_iParameter == Esp_parameters.SP_DEFAULT_COLOUR_ID) { 
 				if(GetBoolParameter(Ebp_parameters.BP_PALETTE_CHANGE))
 					SetStringParameter(Esp_parameters.SP_COLOUR_ID, GetStringParameter(Esp_parameters.SP_DEFAULT_COLOUR_ID));
-			} else if(Evt.m_iParameter == Elp_parameters.LP_LANGUAGE_MODEL_ID) {
-				CreateDasherModel();
+			} else if(Evt.m_iParameter == Elp_parameters.LP_LANGUAGE_MODEL_ID
+					|| (Evt.m_iParameter == Esp_parameters.SP_LM_HOST && GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)==5)) {
+				CreateNCManager();
 				Redraw(true);
-			} else if(Evt.m_iParameter == Esp_parameters.SP_LM_HOST) {
-				if(GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID) == 5) {
-					CreateDasherModel();
-					Redraw(true);
-				}
 			} else if(Evt.m_iParameter == Elp_parameters.LP_LINE_WIDTH) {
 				Redraw(false); // TODO - make this accessible everywhere
 			} else if(Evt.m_iParameter == Elp_parameters.LP_DASHER_FONTSIZE) {
@@ -430,7 +426,11 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 				CreateInput();
 			} else if(Evt.m_iParameter == Esp_parameters.SP_INPUT_FILTER) {
 				CreateInputFilter();
+			} else if (Evt.m_iParameter == Elp_parameters.LP_UNIFORM
+					|| Evt.m_iParameter == Ebp_parameters.BP_CONTROL_MODE) {
+				forceRebuild();
 			}
+				
 		}
 		else if(Event instanceof CControlEvent) {
 			/* CControlEvent ControlEvent = ((CControlEvent)(Event));
@@ -463,7 +463,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * This function also trains the newly created model using the
 	 * using the new Alphabet's specified training text. 
 	 */
-	private void CreateDasherModel() 
+	private void CreateNCManager() 
 	{
 		if(m_AlphIO == null)
 			return;
@@ -472,31 +472,33 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		// TODO: Do we really need to check for a valid language model?
 		int lmID = (int)GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID);
 		if( lmID == -1 ) return;
-			
+		
+		if (m_pNCManager!=null) m_pNCManager.UnregisterComponent();
+		
 		// Train the new language model
 		SetBoolParameter( Ebp_parameters.BP_TRAINING, true );
 		
 		CLockEvent evt = new CLockEvent("Training Dasher", true, 0); 
 		InsertEvent(evt);
 		
-		int iOffset;
-		// Delete the old model and create a new one
-		if(m_DasherModel != null) {
-			iOffset = m_DasherModel.GetOffset();
-			m_DasherModel.shutdown();
-			m_DasherModel.UnregisterComponent();
-		} else iOffset = -1;
+		m_pNCManager = new CNodeCreationManager(this, m_SettingsStore);
 		
-		m_DasherModel = new CDasherModel(this, m_SettingsStore);
-		
-		// SP_TRAIN_FILE parameter set by CDasherModel constructor... 
+		// SP_TRAIN_FILE parameter set by CNodeCreationManager constructor... 
 		train(GetStringParameter(Esp_parameters.SP_TRAIN_FILE),evt);
 		
 		evt.m_bLock = false;
 		InsertEvent(evt);
 		
 		SetBoolParameter( Ebp_parameters.BP_TRAINING, false );
-		m_DasherModel.SetOffset(iOffset, true);
+		forceRebuild();
+	}
+	
+	/**
+	 *  Forces the tree of nodes to be rebuild (in the same location, from the same nc manager),
+	 *  to ensure probabilities are refreshed.
+	 */
+	/*package*/ void forceRebuild() {
+		m_DasherModel.SetOffset(m_DasherModel.GetOffset(), m_pNCManager.getAlphabetManager(), true);
 	}
 	
 	/**
@@ -694,7 +696,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		
 		// Lock Dasher to prevent changes from happening while we're training.
 		
-		CreateDasherModel();
+		CreateNCManager();
 	}
 	
 	/**
@@ -880,7 +882,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		String strNewContext = strLast.reverse().toString();
 		strTrainfileBuffer.append(strNewContext);
 						
-		m_DasherModel.SetOffset(iOffset,bForce);
+		m_DasherModel.SetOffset(iOffset,m_pNCManager.getAlphabetManager(), bForce);
 		
 		if(m_DasherView != null)
 			m_DasherModel.CheckForNewRoot(m_DasherView);
