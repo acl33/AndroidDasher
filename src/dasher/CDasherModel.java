@@ -192,10 +192,9 @@ public class CDasherModel extends CFrameRate {
 	 * @param SettingsStore Settings repository
 	 * @param DashIface Interface which we serve
 	 * @param AlphIO AlphIO object from which to retrieve the AlphInfo object describing the user's chosen alphabet
-	 * @param pUserLog 
 	 */
-	public CDasherModel(CDasherInterfaceBase iface, CSettingsStore SettingsStore, CAlphIO AlphIO, CUserLog pUserLog) {
-	super(iface, SettingsStore); 
+	public CDasherModel(CDasherInterfaceBase iface, CSettingsStore SettingsStore) {
+		super(iface, SettingsStore); 
 	m_DasherInterface = iface;
 	
 	// Convert the full alphabet to a symbolic representation for use in the language model
@@ -208,7 +207,7 @@ public class CDasherModel extends CFrameRate {
 	// if this is the case then the parameter value should be updated,
 	// but not in such a way that it causes everything to be rebuilt.
 	
-	CAlphIO.AlphInfo oAlphInfo = AlphIO.GetInfo(GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
+	CAlphIO.AlphInfo oAlphInfo = iface.GetInfo(GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
 	CAlphabet alphabet = m_cAlphabet = new CAlphabet(oAlphInfo);
 	
 	SetStringParameter(Esp_parameters.SP_TRAIN_FILE, m_cAlphabet.GetTrainingFile());
@@ -257,21 +256,20 @@ public class CDasherModel extends CFrameRate {
 	// m_ControlManagerFactory = new CControlManagerFactory(this, m_LanguageModel);
 	
 	m_bContextSensitive = true;
-	
-	int iNormalization = (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
-	
-	/* CSFS: These used to be int64_max and int64_min.
-	 * As far as I can determine from the internet,
-	 * these are signed types like long.
-	 */
-	
-	m_Rootmin_min = Long.MIN_VALUE / iNormalization / 2;
-	m_Rootmax_max = Long.MAX_VALUE / iNormalization / 2;
-	
+		
+		int iNormalization = (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
+		
+		/* CSFS: These used to be int64_max and int64_min.
+		 * As far as I can determine from the internet,
+		 * these are signed types like long.
+		 */
+		
+		m_Rootmin_min = Long.MIN_VALUE / iNormalization / 2;
+		m_Rootmax_max = Long.MAX_VALUE / iNormalization / 2;
+		
 	computeNormFactor();
 	
-	if (pUserLog != null) pUserLog.SetAlphabetPtr(alphabet);
-	HandleEvent(new CParameterNotificationEvent(Elp_parameters.LP_NODE_BUDGET));
+		HandleEvent(new CParameterNotificationEvent(Elp_parameters.LP_NODE_BUDGET));
 	}
 	
 	public int TrainStream(InputStream FileIn, int iTotalBytes, int iOffset,

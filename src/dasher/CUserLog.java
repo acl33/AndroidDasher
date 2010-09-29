@@ -56,16 +56,4 @@ public class CUserLog {
 	public void StartWriting() {
 		// stub
 	}
-	
-	public void DeleteSymbols (int deleted) {
-		// stub
-	}
-	
-	public void AddSymbols (ArrayList<CSymbolProb> added) {
-		// stub
-	}
-	
-	public void SetAlphabetPtr(CAlphabet alph) {
-		// stub
-	}
 }

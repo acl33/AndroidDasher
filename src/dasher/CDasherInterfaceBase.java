@@ -487,7 +487,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			m_DasherModel.UnregisterComponent();
 		} else iOffset = -1;
 		
-		m_DasherModel = new CDasherModel(this, m_SettingsStore, m_AlphIO, m_UserLog);
+		m_DasherModel = new CDasherModel(this, m_SettingsStore);
 		
 		// SP_TRAIN_FILE parameter set by CDasherModel constructor... 
 		train(GetStringParameter(Esp_parameters.SP_TRAIN_FILE),evt);
