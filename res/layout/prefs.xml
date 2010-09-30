@@ -43,6 +43,11 @@
 		  min="100" android:max="1000"/>
 	</PreferenceScreen>
 
+	<CheckBoxPreference
+	  android:key="ControlMode"
+	  android:title="Command nodes"
+	  android:summary="Generate nodes for e.g. IME actions"/>
+
     <ListPreference
       android:key="AlphabetID"
       android:title="Alphabet Name"/>

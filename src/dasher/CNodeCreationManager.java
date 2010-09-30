@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
+import dasher.CControlManager.ControlAction;
+
 public class CNodeCreationManager extends CDasherComponent {
 	
 	/** package-access because CAlphabetManager indirects through us to call {@link CDasherInterfaceBase#getContext(int) */
@@ -21,6 +23,7 @@ public class CNodeCreationManager extends CDasherComponent {
 	 * of an Alphabet.
 	 */
 	protected final CAlphabetManager<?> m_AlphabetManager;
+	protected CControlManager m_ControlManager;
 	
 /**
 	 * Amount to add to all symbols' probabilities, EXCEPT control mode symbol,
@@ -103,7 +106,7 @@ public class CNodeCreationManager extends CDasherComponent {
 		 */
 		}
 		
-		computeNormFactor();
+		computeNormFactorNoCheck();
 	}
 	
 	public int TrainStream(InputStream FileIn, int iTotalBytes, int iOffset,
@@ -132,19 +135,27 @@ public class CNodeCreationManager extends CDasherComponent {
 	}
 	
 	public void addExtraNodes(CDasherNode pParent, long[] probInfo) {
+		//if (probInfo[probInfo.length-1]!=GetLongParameter(Elp_parameters.LP_NORMALIZATION)) throw new AssertionError();
 		if (controlSpace==0) {
-			if (pParent.ChildCount()!=probInfo.length-1) throw new AssertionError();
-			if (probInfo.length != m_cAlphabet.GetNumberSymbols()+1) throw new AssertionError();
+			//if (pParent.ChildAtIndex(pParent.ChildCount()-1).Hbnd()!=probInfo[probInfo.length-1]) throw new AssertionError();
+			//if (probInfo.length != m_cAlphabet.GetNumberSymbols()+1) throw new AssertionError();
 			return;
 		}
-		if (pParent.ChildCount()!=probInfo.length-2) throw new AssertionError();
-		if (probInfo.length != m_cAlphabet.GetNumberSymbols()+2) throw new AssertionError();
-		if (pParent.ChildAtIndex(pParent.ChildCount()-1).Hbnd()!=probInfo[probInfo.length-2]) throw new AssertionError();
-		//remaining space from penultimate to last elements of probInfo is for control node
-		//TODO, we're gonna leave controlSpace empty at end of node, now!
+		//if (pParent.ChildAtIndex(pParent.ChildCount()-1).Hbnd()!=probInfo[probInfo.length-2]) throw new AssertionError();
+		//if (probInfo.length != m_cAlphabet.GetNumberSymbols()+2) throw new AssertionError();
+		//remaining space from penultimate to last elements of probInfo is for control node.
+		//control nodes have same offset as parent, not one more, as they do not enter a symbol themselves.
+		m_ControlManager.GetRoot(pParent, pParent.getOffset(), probInfo[probInfo.length-2], probInfo[probInfo.length-1]);
 	}
 	
-	protected void computeNormFactor() {
+	public void computeNormFactor() {
+		long oldSpace = controlSpace, oldNorm = nonUniformNorm;
+		computeNormFactorNoCheck();
+		if (nonUniformNorm!=oldNorm || controlSpace!=oldSpace)
+			m_DasherInterface.forceRebuild();
+	}
+	
+	private void computeNormFactorNoCheck() {
 //		 Total number of symbols in alphabet (i.e. to which we add uniformity)
 		int iSymbols = m_cAlphabet.GetNumberSymbols();
 		
@@ -158,9 +169,20 @@ public class CNodeCreationManager extends CDasherComponent {
 	
 	protected long initControlManager(long iNorm) {
 		mk: if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE)) {
+			final List<ControlAction> actions = m_DasherInterface.getControlActions();
+			ControlAction c;
+			if (actions.size()==1) c=actions.get(0);
+			else if (actions.size()>1) c=new ControlAction() {
+				public String desc() {return "Control";} //TODO internationalize
+				public void happen(CDasherNode node) {} //do nothing
+				public List<ControlAction> successors() {return actions;}
+			};
+			else break mk;
+			m_ControlManager = new CControlManager(m_DasherInterface, m_DasherInterface.getSettingsStore(), this, c);
 			// TODO - sort out size of control node - for the timebeing I'll fix the control node at 5%
 			return iNorm/20;
 		}
+		m_ControlManager=null;
 		return 0;
 	}
 	

@@ -52,4 +52,6 @@ public class SweepFilter extends COneDimensionalFilter {
 		} else //reverse! 
 			increasing = !increasing;
 	}
+	
+	@Override public boolean supportsPause() {return true;}
 }

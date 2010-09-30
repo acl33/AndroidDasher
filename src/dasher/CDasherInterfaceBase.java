@@ -26,11 +26,14 @@
 package dasher;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Collection;
 import java.util.List;
 import java.util.ListIterator;
 import java.io.*;
+
+import dasher.CControlManager.ControlAction;
 
 /**
  * DasherInterfaceBase is the core of Dasher, and the entry
@@ -426,9 +429,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 				CreateInput();
 			} else if(Evt.m_iParameter == Esp_parameters.SP_INPUT_FILTER) {
 				CreateInputFilter();
-			} else if (Evt.m_iParameter == Elp_parameters.LP_UNIFORM
-					|| Evt.m_iParameter == Ebp_parameters.BP_CONTROL_MODE) {
-				forceRebuild();
 			}
 				
 		}
@@ -1050,6 +1050,8 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		if(m_InputFilter != null) {
 			m_InputFilter.Activate();
 		}
+		if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE))
+			if (m_pNCManager!=null) m_pNCManager.computeNormFactor();
 	}
 	
 	/**
@@ -1250,5 +1252,31 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	public CDasherInput setDefaultInput(CDasherInput defaultInput) {
 		return m_DefaultInput = defaultInput;	
 	}
+
+	public List<CControlManager.ControlAction> getControlActions() {
+		List<ControlAction> acts = new ArrayList<ControlAction>();
+		if (m_InputFilter!=null && m_InputFilter.supportsPause()) acts.add(PAUSE_ACTION);
+		return acts;
+	}
 	
+	public final CControlManager.ControlAction PAUSE_ACTION = new ControlAction() {
+		public String desc() {return "Pause";} //TODO internationalize
+		public void happen(CDasherNode node) {SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);}
+		public List<ControlAction> successors() {return REBUILD_OR_EXIT;}
+	};
+		
+	public final CControlManager.ControlAction REBUILD_ACTION = new ControlAction() {
+		public String desc() {return "Rebuild";} //TODO internationalize
+		public void happen(CDasherNode node) {forceRebuild();}
+		public List<ControlAction> successors() {return Collections.emptyList();}
+	};
+	
+	public final List<CControlManager.ControlAction> REBUILD_OR_EXIT;
+	/** Initializer - make REBUILD_OR_EXIT as unmodifiableList */
+	{
+		List<ControlAction> acts = new ArrayList<ControlAction>();
+		acts.add(REBUILD_ACTION);
+		acts.add(null);
+		REBUILD_OR_EXIT = Collections.unmodifiableList(acts);
+	}
 }

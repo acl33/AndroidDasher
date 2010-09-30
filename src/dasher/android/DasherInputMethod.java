@@ -39,8 +39,8 @@ public class DasherInputMethod extends InputMethodService {
 		if (ic==null) {Log.d("DasherIME",msg); return;} //yes, it happens. What else can we do????
 		//get current cursor position...
 		int initCursorPos=Math.min(attribute.initialSelStart,attribute.initialSelEnd),initNumSel=Math.abs(attribute.initialSelEnd-attribute.initialSelStart);
-		Log.d("DasherIME",msg+" cursor "+initCursorPos+" starting animation of "+surf);
-		IMDasherInterface.INSTANCE.SetInputConnection(ic);
+		Log.d("DasherIME",msg+" cursor "+initCursorPos+" actionLabel "+attribute.actionLabel);
+		IMDasherInterface.INSTANCE.SetInputConnection(ic, attribute);
 		IMDasherInterface.INSTANCE.setSelection(Math.max(0,initCursorPos),initNumSel,true);
 		//that'll ensure a setOffset() task is enqueued first...
 		//onCreateInputView().startAnimating();
@@ -82,7 +82,7 @@ public class DasherInputMethod extends InputMethodService {
 	public void onFinishInput() {
 		Log.d("DasherIME",this + " onFinishInput");
 		//if (surf!=null) surf.stopAnimating(); //yeah, we can get sent onFinishInput before/without onCreate...
-		IMDasherInterface.INSTANCE.SetInputConnection(null);
+		IMDasherInterface.INSTANCE.SetInputConnection(null, null);
 	}
 
 	@Override

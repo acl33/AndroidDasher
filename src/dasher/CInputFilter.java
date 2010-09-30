@@ -155,7 +155,8 @@ public abstract class CInputFilter extends CDasherModule {
 	 * which can be freed should be.
 	 *
 	 */
-	public void Deactivate() {};
-	
+	public void Deactivate() {}
+
+	public boolean supportsPause() {return false;}	
 	
 }

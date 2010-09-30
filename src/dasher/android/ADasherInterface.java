@@ -197,7 +197,9 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		RegisterModule(new COneDimensionalFilter(this, getSettingsStore(), 14, "Android Tilt Control") {
 			private final PowerManager.WakeLock wl = ((PowerManager)androidCtx.getSystemService(Context.POWER_SERVICE)).newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK,"tilting");
 			private boolean bActive;
-			
+			@Override public boolean supportsPause() {
+				return !prefs.getBoolean("AndroidTiltHoldToGo",false);
+			}
 			@Override public void ApplyTransform(CDasherView pView, long[] coords) {
 				if (prefs.getBoolean("AndroidTiltHoldToGo", false) && prefs.getBoolean("AndroidTiltUsesTouchX", false)) {
 					long iDasherY=coords[1];
@@ -341,7 +343,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		int iRead = 0;
 		for (InputStream in : streams) {
 			try {
-				iRead = m_DasherModel.TrainStream(in, iTotalBytes, iRead, evt);
+				iRead = m_pNCManager.TrainStream(in, iTotalBytes, iRead, evt);
 			} catch (IOException e) {
 				android.util.Log.e("Dasher", "error in training - rest of text skipped", e);
 			}

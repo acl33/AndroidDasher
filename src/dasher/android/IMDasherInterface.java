@@ -3,21 +3,26 @@
  */
 package dasher.android;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
 import android.content.Context;
 import android.preference.PreferenceManager;
 import android.util.Log;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
+import dasher.CControlManager.ControlAction;
 import dasher.CEditEvent;
 import dasher.CEvent;
 import dasher.CSettingsStore;
 import dasher.Ebp_parameters;
 import dasher.Elp_parameters;
 import dasher.Esp_parameters;
+import dasher.CDasherNode;
 
 class IMDasherInterface extends ADasherInterface
 {
@@ -154,10 +159,46 @@ class IMDasherInterface extends ADasherInterface
 		super.NewFrame(time);
 	}
 	
-	/*package*/ void SetInputConnection(final InputConnection _ic) {
+	/*package*/ void SetInputConnection(final InputConnection ic, final EditorInfo attribute) {
 		enqueue(new Runnable() {
 			public void run() {
-				IMDasherInterface.this.ic=_ic;
+				IMDasherInterface.this.ic=ic;
+				if (attribute==null) return; //finishInput - don't recheck/compute action, wait until next StartInput()
+				boolean hadAction = IMDasherInterface.this.actionLabel!=null;
+				if ((attribute.imeOptions & EditorInfo.IME_FLAG_NO_ACCESSORY_ACTION)!=0
+						|| (attribute.imeOptions & EditorInfo.IME_MASK_ACTION) == EditorInfo.IME_ACTION_NONE)
+					IMDasherInterface.this.actionLabel=null;
+				else {
+					IMDasherInterface.this.actionId =
+						(attribute.actionId!=EditorInfo.IME_ACTION_UNSPECIFIED && attribute.actionId!=EditorInfo.IME_ACTION_NONE)
+						? attribute.actionId : (attribute.imeOptions & EditorInfo.IME_MASK_ACTION);
+					if (attribute.actionLabel != null)
+						IMDasherInterface.this.actionLabel = attribute.actionLabel.toString();
+					else switch (IMDasherInterface.this.actionId) {
+					case EditorInfo.IME_ACTION_UNSPECIFIED:
+					default:
+						IMDasherInterface.this.actionLabel = "Action"; //?!?!?!
+						break;
+					case EditorInfo.IME_ACTION_GO:
+						IMDasherInterface.this.actionLabel = "Go";
+						break;
+					case EditorInfo.IME_ACTION_SEARCH:
+						IMDasherInterface.this.actionLabel = "Search";
+						break;
+					case EditorInfo.IME_ACTION_SEND:
+						IMDasherInterface.this.actionLabel = "Send";
+						break;
+					case EditorInfo.IME_ACTION_NEXT:
+						IMDasherInterface.this.actionLabel = "Next";
+						break;
+					case EditorInfo.IME_ACTION_DONE:
+						IMDasherInterface.this.actionLabel = "Done";
+						break;
+					}
+					IMDasherInterface.this.actionHard = ((attribute.imeOptions & EditorInfo.IME_FLAG_NO_ENTER_ACTION)!=0);
+				}
+				if (hadAction || IMDasherInterface.this.actionLabel!=null)
+					m_pNCManager.computeNormFactor();
 			}
 		});
 	}
@@ -169,6 +210,35 @@ class IMDasherInterface extends ADasherInterface
 			bForce |= bStart;
 			Redraw(true);
 		}
+	}
+	
+	private String actionLabel;
+	private int actionId;
+	private boolean actionHard;
+	
+	@Override public List<ControlAction> getControlActions() {
+		List<ControlAction> lst = super.getControlActions();
+		if (actionLabel!=null) {
+			ControlAction perform = new ControlAction() {
+				public String desc() {return actionLabel;}
+				public void happen(dasher.CDasherNode node) {ic.performEditorAction(actionId);}
+				public List<ControlAction> successors() {return REBUILD_OR_EXIT;}
+			};
+			if (actionHard) {
+				List<ControlAction> temp = new ArrayList<ControlAction>();
+				temp.add(null);
+				temp.add(perform);
+				temp.add(null);
+				final List<ControlAction> rootSuccs = Collections.unmodifiableList(temp);
+				final String title=actionLabel+"?";
+				lst.add(new ControlAction() {
+					public String desc() {return title;}
+					public void happen(CDasherNode node) {}					
+					public List<ControlAction> successors() {return rootSuccs;}
+				});
+			} else lst.add(perform);
+		}
+		return lst;
 	}
 	
 }

@@ -520,9 +520,10 @@ public class CAlphabetManager<C> {
     	
     	long[] probInfo = Node.GetProbInfo();
     	
-    	final int iMin,iMax;
-    	if (parentGroup!=null) {iMin = parentGroup.iStart; iMax = parentGroup.iEnd;}
-    	else {iMin = 0; iMax = m_Alphabet.GetNumberSymbols();}
+    	final int iMin,iMax; //first & last syms
+    	final long iRange; //range of probabilities for all children (syms as prev, plus "extras" e.g. Control Nodes)
+    	if (parentGroup!=null) {iMin = parentGroup.iStart; iMax = parentGroup.iEnd; iRange = probInfo[iMax]-probInfo[iMin];}
+    	else {iMin = 0; iMax = m_Alphabet.GetNumberSymbols(); iRange = m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION);}
     	  
     	  // Create child nodes and add them
     	  
@@ -538,10 +539,10 @@ public class CAlphabetManager<C> {
 
     	    long iLbnd = ((probInfo[iStart] - probInfo[iMin]) *
     	                          (m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION))) /
-    	                         (probInfo[iMax] - probInfo[iMin]);
+    	                         iRange;
     	    long iHbnd = ((probInfo[iEnd] - probInfo[iMin]) *
     	                          (m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION))) /
-    	                         (probInfo[iMax] - probInfo[iMin]);
+    	                         iRange;
     	    
     	    if (bSymbol) {
     	      pNewChild = (buildAround==null) ? mkSymbol(Node, i, iLbnd, iHbnd) : buildAround.rebuildSymbol(Node, i, iLbnd, iHbnd);
@@ -553,6 +554,7 @@ public class CAlphabetManager<C> {
     	    }
     	    assert Node.Children().get(Node.ChildCount()-1)==pNewChild;
     	  }
+    	  if (parentGroup==null) m_Model.addExtraNodes(Node, probInfo);
     }
     
     CDasherNode mkSymbol(CAlphNode parent, int sym, long iLbnd, long iHbnd) {
