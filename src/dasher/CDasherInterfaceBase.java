@@ -609,7 +609,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 				 *        m_UserLog.AddSymbols(vAdded);
 				 */
 				
-				m_DasherModel.CheckForNewRoot(m_DasherView);
 			}
 		}
 		
@@ -883,9 +882,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		strTrainfileBuffer.append(strNewContext);
 						
 		m_DasherModel.SetOffset(iOffset,m_pNCManager.getAlphabetManager(), bForce);
-		
-		if(m_DasherView != null)
-			m_DasherModel.CheckForNewRoot(m_DasherView);
 		
 		Redraw(true);
 		

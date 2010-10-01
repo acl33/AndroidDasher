@@ -301,10 +301,9 @@ public class CDasherModel extends CFrameRate {
 	 * m_RootMax, m_TargetMax and their brethren will also be
 	 * appropriately updated.
 	 * 
-	 * @param lower Current root's Lbnd
-	 * @param upper Current root's Hbnd
+	 * @return true if successfully reparented (i.e. root was changed); false if not.
 	 */
-	protected void Reparent_root() {
+	protected boolean Reparent_root() {
 		
 		/* Change the root node to the parent of the existing node
 		 We need to recalculate the coordinates for the "new" root as the 
@@ -316,7 +315,7 @@ public class CDasherModel extends CFrameRate {
 			
 			/* If our internal buffer of old roots is exhausted, */
 			NewRoot = m_Root.RebuildParent();
-			if (NewRoot == null) return; // no existing parent and no way of recreating => give up
+			if (NewRoot == null) return false; // no existing parent and no way of recreating => give up
 			//RebuildParent() can create multiple generations of ((great-)*grand-)parents in one go.
 			// Add all created ancestors to the root queue, to ensure they're deleted if the model is.
 			for (CDasherNode temp = NewRoot; (temp=temp.Parent())!=null;) {
@@ -344,10 +343,12 @@ public class CDasherModel extends CFrameRate {
 			// (b) it'll get deleted if we clear the oldroots queue.
 			NewRoot.m_dCost = Double.MAX_VALUE;
 			oldroots.addLast(NewRoot);
-			return;
+			return false;
 		}
 		
 		m_Root = NewRoot;
+		
+		//TODO, should we uncommit? C++ Dasher does...
 	
 		m_Rootmax +=  ((lNorm - upper)) * iRootWidth / iWidth;
 	
@@ -358,6 +359,7 @@ public class CDasherModel extends CFrameRate {
 			it.iN2 += (lNorm - upper) * iRootWidth / iWidth;
 			it.iN1 -= lower * iRootWidth / iWidth;
 		}
+		return true; //success!
 	}
 
 	protected CDasherNode Get_node_under_crosshair() {
@@ -707,36 +709,11 @@ public class CDasherModel extends CFrameRate {
 	 * @return whether anything was changed (i.e. nodes were expanded or contracted)
 	 */	
 	public boolean RenderToView(CDasherView View) {
-		View.Render(m_Root, m_Rootmin + m_iDisplayOffset, m_Rootmax + m_iDisplayOffset, pol);
-
-		return pol.apply(this);	
-	}
-	/**
-	 * ExpansionPolicy to determine which CDasherNodes to expand or collapse in each frame.
-	 * Reused between frames to save on allocation.
-	 */
-	private ExpansionPolicy pol;
-	/**
-	 * If the view reports that our current root node isn't
-	 * visible, calls Reparent_root; if only one child of the
-	 * current root is Alive (ie. on screen and visible), makes
-	 * this child the root.
-	 * <p>
-	 * The actual work will be done by Reparent_root and Make_root
-	 * respectively; this just decides which to use and when.
-	 * 
-	 * @param View View against which to check node visibility.
-	 * @return True if Reparent_root made any changes, false otherwise.
-	 */
-	public void CheckForNewRoot(CDasherView View) {
-		
-		if(m_deGotoQueue.size() > 0)
-			return;
-		
-		if(!View.NodeFillsScreen(m_Rootmin,m_Rootmax)) {
-			Reparent_root();
-			return;
+		while (!View.NodeFillsScreen(m_Rootmin,m_Rootmax)) {
+			if (!Reparent_root()) break;
 		}
+		
+		View.Render(m_Root, m_Rootmin + m_iDisplayOffset, m_Rootmax + m_iDisplayOffset, pol);
 		
 		while (m_Root.m_OnlyChildRendered!=null) {
 			// We must have zoomed sufficiently that only one child of the root node 
@@ -753,10 +730,17 @@ public class CDasherModel extends CFrameRate {
 				//and try again, looking for a child of the new root...
 			} else {
 				//more than one child on screen
-				return;
+				break;
 			}
 		}
+
+		return pol.apply(this);	
 	}
+	/**
+	 * ExpansionPolicy to determine which CDasherNodes to expand or collapse in each frame.
+	 * Reused between frames to save on allocation.
+	 */
+	private ExpansionPolicy pol;
 
 	/**
 	 * Interpolates between our current position and a given
