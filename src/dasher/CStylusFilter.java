@@ -74,4 +74,13 @@ public class CStylusFilter extends CDefaultFilter {
 				&& ((CParameterNotificationEvent)evt).m_iParameter==Elp_parameters.LP_MAX_ZOOM)
 			minX = Math.max(2, GetLongParameter(Elp_parameters.LP_OX)/GetLongParameter(Elp_parameters.LP_MAX_ZOOM));
 	}
+    
+    /** Make sure no start handler is created - even tho we ignore changes 
+     * to BP_CIRCLE_START and BP_MOUSEPOS_MODE, this still gets called by
+     * the superclass constructor (if a preference enabling a start handler
+     * was saved by a previous session)
+     */
+    @Override public void CreateStartHandler() {
+    	
+    }
 }
