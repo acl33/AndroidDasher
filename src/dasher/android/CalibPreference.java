@@ -100,9 +100,9 @@ public class CalibPreference extends DialogPreference implements SensorEventList
 
 	public void onSensorChanged(SensorEvent se) {
 		float[] vals = se.values;
-		if (wm.getDefaultDisplay().getOrientation()==1) {
-			minX = Math.min(minX, 1.0f-vals[1]); //??? No - the 1.0-val should be applied only after
-			maxX = Math.max(maxX, 1.0f-vals[1]); //??? vals[1] has been multiplied by x_mul and x_off added...
+		if ((wm.getDefaultDisplay().getOrientation()&1)==1) {
+			minX = Math.min(minX, vals[1]);
+			maxX = Math.max(maxX, vals[1]);
 			minY = Math.min(minY, vals[0]);
 			maxY = Math.max(maxY, vals[0]);
 		} else {

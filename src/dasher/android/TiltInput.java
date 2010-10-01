@@ -72,8 +72,9 @@ public class TiltInput extends CDasherInput implements SensorEventListener {
 		android.util.Log.d("DasherIME","Got rotation "+sb);*/
 		int orient = wm.getDefaultDisplay().getOrientation();
 		if (orient != m_iLastOrient) Log.d("DasherIME", "Orientation changed to "+(m_iLastOrient=orient));
-		if (orient==1) {
-			fx = 1.0f - (vals[1]*x_mul - x_off);
+		if ((orient&1)==1) {
+			fx = vals[1]*x_mul - x_off;
+			if ((orient&2)==0) fx=1.0f-fx;
 			fy = vals[0]*y_mul - y_off;
 		} else {
 			fx = vals[0]*x_mul - x_off;
