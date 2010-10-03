@@ -14,7 +14,7 @@
     	
     	<dasher.android.SeekBarPreference
     	  android:key="MinNodeSizeForText"
-    	  android:title="Size for Text"
+    	  android:title="Size to have Text"
     	  android:summary="smallest box to have text, 4096=whole screen"
     	  min="10" android:max="100"/>
     	
@@ -45,7 +45,7 @@
 
 	<CheckBoxPreference
 	  android:key="ControlMode"
-	  android:title="Command nodes"
+	  android:title="Commands"
 	  android:summary="Generate nodes for e.g. IME actions"/>
 
     <ListPreference
@@ -71,7 +71,7 @@
         <CheckBoxPreference
           android:key="CircleStart"
           android:title="Start On Circle"
-          android:summary="Dwell pointer inside circle at screen center to start/stop"/>
+          android:summary="Dwell near screen center to start/stop"/>
         <dasher.android.CalibPreference
           android:key="AndroidCalibNeedsNoName"
           android:title="Calibrate Tilting"
@@ -93,7 +93,7 @@
         <CheckBoxPreference
       	  android:key="AutoAdjust"
       	  android:title="Auto-adjust"
-      	  android:summary="Learn offset (previous) from eventual destination"/>
+      	  android:summary="Learn offset (previous) automatically"/>
         <dasher.android.SeekBarPreference
           android:key="TapTime"
           android:title="Max time for 'tap'"
@@ -172,8 +172,8 @@
       	  android:title="Auto speed control"/>
     	<CheckBoxPreference
       	  android:key="RemapXtreme"
-      	  android:title="Remap motion towards top/bottom"
-      	  android:summary="At extremes of axis, translate more and zoom less"/> 
+      	  android:title="Remap top/bottom"
+      	  android:summary="...to scroll more and zoom less"/> 
       	<CheckBoxPreference
 	      android:key="AndroidDoubleX"
 	      android:title="Touch on left half only"
@@ -181,7 +181,7 @@
 	    <dasher.android.SeekBarPreference
 	      android:key="SlowStartTime"
 	      android:title="Slow Startup Time"
-	      android:summary="Gradually increase speed from 1/10 to full over this time period"
+	      android:summary="Time to reach full speed (0=straightaway)"
 	      android:max="5000" min="0" android:text="ms"/>
 	    <dasher.android.SeekBarPreference
 	      android:key="ReverseBoost"
