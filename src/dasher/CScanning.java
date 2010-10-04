@@ -16,21 +16,23 @@ public abstract class CScanning extends CDasherButtons {
 	
 	@Override public void KeyDown(long iTime, int iId, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
 		if (iId==100) {
-			iId=2; //select. Unless...
-			if (GetLongParameter(Elp_parameters.LP_BUTTON_SCAN_TIME)==0) {
-				pInput.GetScreenCoords(pView, coords);
-				if (coords[1]<pView.Screen().GetHeight()/2)
-					iId=1; //scan
-			}
+			pInput.GetScreenCoords(pView, coords);
+			iId = (coords[1]<pView.Screen().GetHeight()/2)
+				? 1 //scan
+				: 2; //select
+			
 		}
 		switch(iId) {
 		case 1:
 		case 4:
-			m_bDecorationChanged = true;
-			if(++m_iActiveBox == m_pBoxes.length)
-				m_iActiveBox = 0;
-			m_Interface.Redraw(false);
-			break;
+			//scan.
+			if (GetLongParameter(Elp_parameters.LP_BUTTON_SCAN_TIME)==0) {
+				m_bDecorationChanged = true;
+				if(++m_iActiveBox == m_pBoxes.length)
+					m_iActiveBox = 0;
+				m_Interface.Redraw(false);
+				break;
+			} else iId=2; //automatic scanning by timer, fall through to select
 		case 2:
 		case 3:
 			m_bDecorationChanged = true;			

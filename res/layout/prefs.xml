@@ -199,6 +199,10 @@
     <PreferenceScreen
       android:title="@string/AndroidGeneralInputSettings_title">
         <CheckBoxPreference
+          android:key="AndroidTeklaShield"
+          android:title="Tekla Shield"
+          android:summary="Listen for tekla switch events"/> 
+        <CheckBoxPreference
       	  android:key="AutoSpeedControl"
       	  android:title="@string/AutoSpeedControl_title"/>
     	<CheckBoxPreference

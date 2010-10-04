@@ -2,7 +2,13 @@ package dasher.android;
 
 import java.util.Arrays;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.inputmethodservice.InputMethodService;
+import android.os.PowerManager;
+import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -32,6 +38,9 @@ public class DasherInputMethod extends InputMethodService {
 		return surf;
 	}
 	
+	private final Intent sepIntent = new Intent("ca.idi.tekla.sep.SEPService");
+	{sepIntent.putExtra("ca.idi.tekla.sep.extra.SHIELD_ADDRESS", (String)null);}
+	
 	@Override 
 	public void onStartInput(EditorInfo attribute, boolean restarting) {
 		InputConnection ic = getCurrentInputConnection();
@@ -48,6 +57,14 @@ public class DasherInputMethod extends InputMethodService {
 		
 		//TODO, use EditorInfo to select appropriate...language? (e.g. numbers only!).
 		// Passwords???
+		
+		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidTeklaShield", false)) {
+			Log.d("DasherIME","Starting Tekla Service...");
+			registerReceiver(sepBroadcastReceiver, new IntentFilter("ca.idi.tekla.sep.action.SWITCH_EVENT_RECEIVED"));
+			if (startService(sepIntent)!=null)
+				Log.d("DasherIME","Started Tekla");
+			else Log.d("DasherIME","Couldn't start Tekla");
+		}
 	}
 	
 	@Override public boolean onKeyUp(int keyCode, KeyEvent event) {
@@ -97,6 +114,17 @@ public class DasherInputMethod extends InputMethodService {
 		Log.d("DasherIME",this + " onFinishInput");
 		//if (surf!=null) surf.stopAnimating(); //yeah, we can get sent onFinishInput before/without onCreate...
 		IMDasherInterface.INSTANCE.SetInputConnection(null, null);
+		tekla: if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidTeklaShield", false)) {
+			Log.d("DasherIME","Stopping Tekla Service...");
+			try {
+				unregisterReceiver(sepBroadcastReceiver);
+			} catch (IllegalArgumentException e) {
+				Log.d("DasherIME","Tekla service not running?");
+				break tekla;
+			}
+			stopService(sepIntent);
+			Log.d("DasherIME","Stopped Tekla");
+		}
 	}
 
 	@Override
@@ -110,4 +138,34 @@ public class DasherInputMethod extends InputMethodService {
 	public void onDisplayCompletions(CompletionInfo[] ci) {
 		Log.d("DasherIME","Completions: "+Arrays.toString(ci));
 	}
+	
+	private final BroadcastReceiver sepBroadcastReceiver = new BroadcastReceiver() {
+	    @Override
+	    public void onReceive(Context context, Intent intent) {
+	    	int keyId;
+	    	switch(intent.getExtras().getInt("ca.idi.tekla.sep.extra.SWITCH_EVENT")) {
+	            case 10: //up
+	            	keyId=4;
+	                break;
+	            case 20: //down
+	            	keyId=2;
+	                break;
+	            case 40: //right
+	            	keyId=3; //=> forward
+	                break;
+	            case 80: //left
+	            	keyId=1; //=> back box
+	                break;
+                default:
+                	Log.d("DasherIME", "switch event received with keyid " +intent.getExtras().getInt("ca.idi.tekla.sep.extra.SWITCH_EVENT"));
+                	//don't know what to do with this switch id?!?!
+                	return;
+	            }
+	        long time = System.currentTimeMillis();
+	        IMDasherInterface.INSTANCE.KeyDown(time, keyId);
+	        IMDasherInterface.INSTANCE.KeyUp(time, keyId);
+	        ((PowerManager)getSystemService(POWER_SERVICE)).userActivity(SystemClock.uptimeMillis(), false);
+	    }
+	};
+
 }
