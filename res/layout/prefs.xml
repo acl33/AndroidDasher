@@ -4,194 +4,194 @@
   
   	<dasher.android.SeekBarPreference
   	  android:key="MaxBitRateTimes100"
-  	  android:title="Max speed"
-      android:summary="Max rate of data entry in bits/sec"
+  	  android:title="@string/MaxBitRateTimes100_title"
+      android:summary="@string/MaxBitRateTimes100_summary"
       android:text="bps"
       android:max="1200" min="10" divisor="100"/>
     
     <PreferenceScreen
-      android:title="Display Settings">
+      android:title="@string/AndroidDisplaySettings_title">
     	
     	<dasher.android.SeekBarPreference
     	  android:key="MinNodeSizeForText"
-    	  android:title="Size to have Text"
-    	  android:summary="smallest box to have text, 4096=whole screen"
+    	  android:title="@string/MinNodeSizeForText_title"
+    	  android:summary="@string/MinNodeSizeForText_summary"
     	  min="10" android:max="100"/>
     	
 	    <dasher.android.SeekBarPreference
 	      android:key="NodeBudget"
-	      android:title="Node budget"
-	      android:summary="Higher = more detail; lower = faster"
+	      android:title="@string/NodeBudget_title"
+	      android:summary="@string/NodeBudget_summary"
 	      android:max="10000" min="400"/>
 	      
 	     <dasher.android.SeekBarPreference
 	       android:key="NonLinearX"
-	       android:title="X Non-linearity"
-	       android:summary="Log compress left of crosshair"
+	       android:title="@string/NonLinearX_title"
+	       android:summary="@string/NonLinearX_summary"
 	       android:max="10"/>
 	    
 	    <dasher.android.SeekBarPreference
 		  android:key="DasherFontSize"
-		  android:title="Font Size"
-		  android:summary="Small / medium / large"
+		  android:title="@string/DasherFontSize_title"
+		  android:summary="@string/DasherFontSize_summary"
 		  min="1" android:max="3"/>
 		  
 		<dasher.android.SeekBarPreference
 		  android:key="MarginWidth"
-		  android:title="Margin Width"
-		  android:summary="Space on RHS for finger"
+		  android:title="@string/MarginWidth_title"
+		  android:summary="@string/MarginWidth_summary"
 		  min="100" android:max="1000"/>
 	</PreferenceScreen>
 
 	<CheckBoxPreference
 	  android:key="ControlMode"
-	  android:title="Commands"
-	  android:summary="Generate nodes for e.g. IME actions"/>
+	  android:title="@string/ControlMode_title"
+	  android:summary="@string/ControlMode_summary"/>
 
     <ListPreference
       android:key="AlphabetID"
-      android:title="Alphabet Name"/>
+      android:title="@string/AlphabetID_title"/>
 
     <PreferenceScreen
       android:key="AndroidTilt"
-      android:title="Tilt Control"
+      android:title="@string/AndroidTilt_title"
       android:widgetLayout="@layout/checkbox_tilt">
         <CheckBoxPreference
           android:key="OneDimensionalMode"
-          android:title="Use only 1 dimension"
-          android:summaryOff="Fwd/back &amp; up/down using 2 tilt axes" 
-          android:summaryOn="Tilt up/down to go in a complete circle"/>
+          android:title="@string/OneDimensionalMode_title"
+          android:summaryOff="@string/OneDimensionalMode_summaryOff" 
+          android:summaryOn="@string/OneDimensionalMode_summaryOn"/>
         <CheckBoxPreference
           android:key="AndroidTiltHoldToGo"
-          android:title="Hold finger to go"/>
+          android:title="@string/AndroidTiltHoldToGo_title"/>
             <CheckBoxPreference
               android:key="AndroidTiltUsesTouchX"
-              android:title="X Co-ordinate from touch"
+              android:title="@string/AndroidTiltUsesTouchX_title"
               android:dependency="AndroidTiltHoldToGo"/>
         <CheckBoxPreference
           android:key="CircleStart"
-          android:title="Start On Circle"
-          android:summary="Dwell near screen center to start/stop"/>
+          android:title="@string/CircleStart_title"
+          android:summary="@string/CircleStart_summary"/>
         <dasher.android.CalibPreference
           android:key="AndroidCalibNeedsNoName"
-          android:title="Calibrate Tilting"
+          android:title="@string/AndroidCalibrateTilting_title"
           android:dialogLayout="@layout/calibrate"/>
     </PreferenceScreen>
 
     <PreferenceScreen
       android:key="AndroidTouch"
-      android:title="Touch Control"
+      android:title="@string/AndroidTouch_title"
       android:widgetLayout="@layout/checkbox_touch">
         <CheckBoxPreference
           android:key="AndroidTouchUsesTiltX"
-          android:title="X Co-ordinate from tilting"/>
+          android:title="@string/AndroidTouchUsesTiltX_title"/>
         <dasher.android.SeekBarPreference
           android:key="TargetOffset"
-          android:title="Offset Target"
-          android:summary="Above/below actual finger position (400=screen height)"
+          android:title="@string/TargetOffset_title"
+          android:summary="@string/TargetOffset_summary"
           android:max="200" min="-200"/>
         <CheckBoxPreference
       	  android:key="AutoAdjust"
-      	  android:title="Auto-adjust"
-      	  android:summary="Learn offset (previous) automatically"/>
+      	  android:title="@string/AutoAdjust_title"
+      	  android:summary="@string/AutoAdjust_summary"/>
         <dasher.android.SeekBarPreference
           android:key="TapTime"
-          android:title="Max time for 'tap'"
-          android:summary="Anything longer counts as drag"
+          android:title="@string/TapTime_title"
+          android:summary="@string/TapTime_summary"
           android:max="1000" min="10"
           text="ms"/>
         <dasher.android.SeekBarPreference
           android:key="Zoomsteps"
-          android:title="Frames for tap"
+          android:title="@string/Zoomsteps_title"
           android:max="64" min="8"/>
         <dasher.android.SeekBarPreference
           android:key="MaxZoom"
-          android:title="Max zoom for tap"
-          android:summary="Max factor to zoom in upon tap"
+          android:title="@string/MaxZoom_title"
+          android:summary="@string/MaxZoom_summary"
           android:max="100" min="2"/>
     </PreferenceScreen>
 
     <PreferenceScreen
       android:key="AndroidBoxes"
-      android:title="Box modes"
-      android:summary="Divide into boxes and scan or tap"
+      android:title="@string/AndroidBoxes_title"
+      android:summary="@string/AndroidBoxes_summary"
       android:widgetLayout="@layout/checkbox_boxes">
         <dasher.android.SeekBarPreference
           android:key="ButtonMenuBoxes"
-          android:title="No. of forward boxes"
+          android:title="@string/ButtonMenuBoxes_title"
           android:max="9" min="2" />
         <dasher.android.SeekBarPreference
           android:key="ButtonMenuSafety"
-          android:title="Safety margin"
-          android:summary="Don't zoom all the way into box"
+          android:title="@string/ButtonMenuSafety_title"
+          android:summary="@string/ButtonMenuSafety_summary"
           android:max="256" min="0"/>
         <dasher.android.SeekBarPreference
           android:key="ButtonModeNonuniformity"
-          android:title="Nonuniformity of box sizes"
+          android:title="@string/ButtonModeNonuniformity_title"
           android:max="89" min="-89"/>
         <CheckBoxPreference
           android:key="AndroidScan"
-          android:title="Scan through boxes"
-          android:summaryOn="Tap screen for highlighted box"
-          android:summaryOff="Tap in box to select"/>
+          android:title="@string/AndroidScan_title"
+          android:summaryOn="@string/AndroidScan_summaryOn"
+          android:summaryOff="@string/AndroidScan_summaryOff"/>
         <dasher.android.SeekBarPreference
           android:dependency="AndroidScan"
           android:key="ButtonScanTime"
-          android:title="Scanning Time"
-          android:summary="0 = tap top half of screen to scan"
+          android:title="@string/ButtonScanTime_title"
+          android:summary="@string/ButtonScanTime_summary"
           android:max="1000" min="0" />
     </PreferenceScreen>
 
     <PreferenceScreen
       android:key="AndroidCompass"
-      android:title="Compass Mode"
-      android:summary="Control with trackball"
+      android:title="@string/AndroidCompass_title"
+      android:summary="@string/AndroidCompass_summary"
       android:widgetLayout="@layout/checkbox_compass">
         <dasher.android.SeekBarPreference
           android:key="ButtonCompassModeRightZoom"
-          android:title="Zoom Factor"
+          android:title="@string/ButtonCompassModeRightZoom_title"
           android:max="10240" min="1024" text="/1024" />
     </PreferenceScreen>
  
     <PreferenceScreen
       android:key="AndroidSweep"
-      android:title="Sweep Mode"
-      android:summary="Tap screen or button to go/reverse"
+      android:title="@string/AndroidSweep_title"
+      android:summary="@string/AndroidSweep_summary"
       android:widgetLayout="@layout/checkbox_sweep">
         <dasher.android.SeekBarPreference
           android:key="SweepTime"
-          android:title="Sweep Time"
-          android:summary="Time in ms to sweep top-to-bottom"
+          android:title="@string/SweepTime_title"
+          android:summary="@string/SweepTime_summary"
           android:max="10000" min="500" text="ms"/>
     </PreferenceScreen>
   
     <PreferenceScreen
-      android:title="General Input Settings">
+      android:title="@string/AndroidGeneralInputSettings_title">
         <CheckBoxPreference
       	  android:key="AutoSpeedControl"
-      	  android:title="Auto speed control"/>
+      	  android:title="@string/AutoSpeedControl_title"/>
     	<CheckBoxPreference
       	  android:key="RemapXtreme"
-      	  android:title="Remap top/bottom"
-      	  android:summary="...to scroll more and zoom less"/> 
+      	  android:title="@string/RemapXtreme_title"
+      	  android:summary="@string/RemapXtreme_summary"/> 
       	<CheckBoxPreference
 	      android:key="AndroidDoubleX"
-	      android:title="Touch on left half only"
-	      android:summary="As if finger were twice as far to the right"/>
+	      android:title="@string/AndroidDoubleX_title"
+	      android:summary="@string/AndroidDoubleX_summary"/>
 	    <dasher.android.SeekBarPreference
 	      android:key="SlowStartTime"
-	      android:title="Slow Startup Time"
-	      android:summary="Time to reach full speed (0=straightaway)"
+	      android:title="@string/SlowStartTime_title"
+	      android:summary="@string/SlowStartTime_summary"
 	      android:max="5000" min="0" android:text="ms"/>
 	    <dasher.android.SeekBarPreference
 	      android:key="ReverseBoost"
-	      android:title="Reverse Faster"
-	      android:summary="Boost speed of reversing (0=don't)"
+	      android:title="@string/ReverseBoost_title"
+	      android:summary="@string/ReverseBoost_summary"
 	      android:max="10" min="0"/>
 	</PreferenceScreen>
 	
 	<ListPreference
       android:key="ColourID"
-      android:title="Colour Scheme"/>
+      android:title="@string/ColourID_title"/>
 	
 </PreferenceScreen>

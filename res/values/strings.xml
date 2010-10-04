@@ -3,8 +3,74 @@
     <string name="hello">Hello World, DasherActivity!</string>
     <string name="app_name">Dasher</string>
 
+<!--Preference Strings-->
+<string name="MaxBitRateTimes100_title">Max speed</string>
+<string name="MaxBitRateTimes100_summary">Max rate of data entry in bits/sec</string>
+<string name="AndroidDisplaySettings_title">Display Settings</string>
+<string name="MinNodeSizeForText_title">Size to have Text</string>
+<string name="MinNodeSizeForText_summary">smallest box to have text, 4096=whole screen</string>
+<string name="NodeBudget_title">Node budget</string>
+<string name="NodeBudget_summary">Higher = more detail; lower = faster</string>
+<string name="NonLinearX_title">X Non-linearity</string>
+<string name="NonLinearX_summary">Log compress left of crosshair</string>
+<string name="DasherFontSize_title">Font Size</string>
+<string name="DasherFontSize_summary">Small / medium / large</string>
+<string name="MarginWidth_title">Margin Width</string>
+<string name="MarginWidth_summary">Space on RHS for finger</string>
+<string name="ControlMode_title">Commands</string>
+<string name="ControlMode_summary">Generate nodes for e.g. IME actions</string>
+<string name="AlphabetID_title">Alphabet Name</string>
+<string name="AndroidTilt_title">Tilt Control</string>
+<string name="OneDimensionalMode_title">Use only 1 dimension</string>
+<string name="OneDimensionalMode_summaryOff">Fwd/back &amp; up/down using 2 tilt axes</string>
+<string name="OneDimensionalMode_summaryOn">Tilt up/down to go in a complete circle</string>
+<string name="AndroidTiltHoldToGo_title">Hold finger to go</string>
+<string name="AndroidTiltUsesTouchX_title">X Co-ordinate from touch</string>
+<string name="CircleStart_title">Start On Circle</string>
+<string name="CircleStart_summary">Dwell near screen center to start/stop</string>
+<string name="AndroidCalibrateTilting_title">Calibrate Tilting</string>
+<string name="AndroidTouch_title">Touch Control</string>
+<string name="AndroidTouchUsesTiltX_title">X Co-ordinate from tilting</string>
+<string name="TargetOffset_title">Offset Target</string>
+<string name="TargetOffset_summary">Above/below actual finger position (400=screen height)</string>
+<string name="AutoAdjust_title">Auto-adjust</string>
+<string name="AutoAdjust_summary">Learn offset (previous) automatically</string>
+<string name="TapTime_title">Max time for 'tap'</string>
+<string name="TapTime_summary">Anything longer counts as drag</string>
+<string name="Zoomsteps_title">Frames for tap</string>
+<string name="MaxZoom_title">Max zoom for tap</string>
+<string name="MaxZoom_summary">Max factor to zoom in upon tap</string>
+<string name="AndroidBoxes_title">Box modes</string>
+<string name="AndroidBoxes_summary">Divide into boxes and scan or tap</string>
+<string name="ButtonMenuBoxes_title">No. of forward boxes</string>
+<string name="ButtonMenuSafety_title">Safety margin</string>
+<string name="ButtonMenuSafety_summary">Don't zoom all the way into box</string>
+<string name="ButtonModeNonuniformity_title">Nonuniformity of box sizes</string>
+<string name="AndroidScan_title">Scan through boxes</string>
+<string name="AndroidScan_summaryOn">Tap screen for highlighted box</string>
+<string name="AndroidScan_summaryOff">Tap in box to select</string>
+<string name="ButtonScanTime_title">Scanning Time</string>
+<string name="ButtonScanTime_summary">0 = tap top half of screen to scan</string>
+<string name="AndroidCompass_title">Compass Mode</string>
+<string name="AndroidCompass_summary">Control with trackball</string>
+<string name="ButtonCompassModeRightZoom_title">Zoom Factor</string>
+<string name="AndroidSweep_title">Sweep Mode</string>
+<string name="AndroidSweep_summary">Tap screen or button to go/reverse</string>
+<string name="SweepTime_title">Sweep Time</string>
+<string name="SweepTime_summary">Time in ms to sweep top-to-bottom</string>
+<string name="AndroidGeneralInputSettings_title">General Input Settings</string>
+<string name="AutoSpeedControl_title">Auto speed control</string>
+<string name="RemapXtreme_title">Remap top/bottom</string>
+<string name="RemapXtreme_summary">...to scroll more and zoom less</string>
+<string name="AndroidDoubleX_title">Touch on left half only</string>
+<string name="AndroidDoubleX_summary">As if finger were twice as far to the right</string>
+<string name="SlowStartTime_title">Slow Startup Time</string>
+<string name="SlowStartTime_summary">Time to reach full speed (0=straightaway)</string>
+<string name="ReverseBoost_title">Reverse Faster</string>
+<string name="ReverseBoost_summary">Boost speed of reversing (0=don't)</string>
+<string name="ColourID_title">Colour Scheme</string>
+
+<!--Calibration Strings-->
 <string name="invert">Invert</string>
 <string name="calibChange">Change...</string>
-<string name="ok">OK</string>
-<string name="cancel">Cancel</string>
 </resources>

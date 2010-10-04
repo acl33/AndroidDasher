@@ -32,7 +32,15 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
 
   public SeekBarPreference(Context context, AttributeSet attrs) { 
     super(context,attrs); 
-    mTitle=attrs.getAttributeValue(androidns, "title");
+    String temp=attrs.getAttributeValue(androidns, "title");
+    if (temp.startsWith("@")) {
+    	try {
+    		temp = getContext().getResources().getString(Integer.parseInt(temp.substring(1)));
+    	} catch (NumberFormatException e) {
+    		//hmm. any ideas?
+    	}
+    }
+    mTitle=temp;
     if (!isPersistent() || !hasKey()) throw new IllegalArgumentException("Non-persistent attribute "+mTitle);
     mSuffix = attrs.getAttributeValue(androidns,"text");
     Elp_parameters param = (Elp_parameters)EParameters.BY_NAME.get(getKey());
