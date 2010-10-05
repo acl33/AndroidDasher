@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+
+<!--Preference Strings-->
+<string name="MaxBitRateTimes100_title">Vitesse Maximum</string>
+<string name="MaxBitRateTimes100_summary">"Taux maximum de saisie de données en bits/sec"</string>
+<string name="AndroidDisplaySettings_title">Options d\'affichage</string>
+<string name="MinNodeSizeForText_title">Taille du texte</string>
+<string name="MinNodeSizeForText_summary">"Taille du plus petit recantangle ayant du texte, 4096=écran entier"</string>
+<string name="NodeBudget_title">Budget de rectangles</string>
+<string name="NodeBudget_summary">"Grand = plus de détail; petit = plus rapide"</string>
+<string name="NonLinearX_title">"Non-linéarité en X"</string>
+<string name="NonLinearX_summary">"Log compression à la gauche de la croix"</string>
+<string name="DasherFontSize_title">Taille de la police</string>
+<string name="DasherFontSize_summary">"Petit / médium / large"</string>
+<string name="MarginWidth_title">Marge</string>
+<string name="MarginWidth_summary">"Marge à droite pour son doigt"</string>
+<string name="ControlMode_title">Commandes</string>
+<string name="ControlMode_summary">Fabriquez des boîtes par ex., actions de saisie XXX IME</string>
+<string name="AlphabetID_title">"Nom d'alphabet"</string>
+<string name="AndroidTilt_title">"Accéléromètre"</string>
+<string name="OneDimensionalMode_title">"N'utilisez qu'une seule dimension"</string>
+<string name="OneDimensionalMode_summaryOff">"Deux axes indépendants"</string>
+<string name="OneDimensionalMode_summaryOn">Inclinaison vers le haut/bas trace un cercle complet</string>
+<string name="AndroidTiltHoldToGo_title">Appuyez pour avancer</string>
+<string name="AndroidTiltUsesTouchX_title">Controle horizontal par saisie tactile</string>
+<string name="CircleStart_title">"Démarrage dans le cercle"</string>
+<string name="CircleStart_summary">"Démarrer/s'arrȇter en se plaçant dans le cercle"</string>
+<string name="AndroidCalibrateTilting_title">"Calibrer l'accéléromètre"</string>
+<string name="AndroidTouch_title">Saisie tactile</string>
+<string name="AndroidTouchUsesTiltX_title">Inclinez pour bouger horizontalement</string>
+<string name="TargetOffset_title">Excentrage de la cible</string>
+<string name="TargetOffset_summary">Bouger la cible verticalement par une distance fixe relative à la position du doigt (400=hauteur de l'écran)</string>
+<string name="AutoAdjust_title">Ajuste automatiquement</string>
+<string name="AutoAdjust_summary">"Apprend l'excentrage vertical (ci-dessus) automatiquement"</string>
+<string name="TapTime_title">"Durée max. pour un clic"</string>
+<string name="TapTime_summary">"Une durée plus élevée est prise pour un glissement"</string>
+<string name="Zoomsteps_title">"Nº d'images pour animer un clic"</string>
+<string name="MaxZoom_title">Zoom max. par clic</string>
+<string name="MaxZoom_summary">Facteur maximum d'un zoom suivant un clic</string>
+<string name="AndroidBoxes_title">Modes à boîtes</string>
+<string name="AndroidBoxes_summary">"Balayez ou cliquez l'écran divisée en boîtes"</string>
+<string name="ButtonMenuBoxes_title">Nombre de boîtes</string>
+<!-- (hoping that forward is obvious once they have one too many) -->
+<string name="ButtonMenuSafety_title">Marge de sȗreté</string>
+<string name="ButtonMenuSafety_summary">"Zoom un peu moins que la boîte entière"</string>
+<string name="ButtonModeNonuniformity_title">"Nonuniformité de la taille des boîtes"</string>
+<string name="AndroidScan_title">Balayage de boîtes</string>
+<string name="AndroidScan_summaryOn">"Tapez l'écran pour choisir la boîte rouge"</string>
+<string name="AndroidScan_summaryOff">"Tapez sur la boîte pour la choisir"</string>
+<string name="ButtonScanTime_title">Temps to balayage</string>
+<string name="ButtonScanTime_summary">"0 = tapez la moitié supérieure de l'écran pour balayer"</string>
+<string name="AndroidCompass_title">Mode compas</string>
+<string name="AndroidCompass_summary">Controle par boule de commande</string>
+<string name="ButtonCompassModeRightZoom_title">Facteur de zoom</string>
+<string name="AndroidSweep_title">Mode radar</string>
+<string name="AndroidSweep_summary">"Tapez l'écran ou un bouton pour contrôler"</string>
+<string name="SweepTime_title">Temps de balayage</string>
+<string name="SweepTime_summary">Temps en ms pour une rotation</string>
+<string name="AndroidGeneralInputSettings_title">Options de saisie</string>
+<string name="AutoSpeedControl_title">Controle de vitesse automatique</string>
+<string name="RemapXtreme_title">Remap top/bottom</string>
+<string name="RemapXtreme_summary">...to scroll more and zoom less</string>
+<string name="AndroidDoubleX_title">"Saisie tacticle uniquement dans la moitié gauche"</string>
+<string name="AndroidDoubleX_summary">"Agit comme si le doigt était deux fois plus a droite"</string>
+<string name="SlowStartTime_title">"Temps de démarage ralenti"</string>
+<string name="SlowStartTime_summary">"Temps avant d'achever la vitesse maximale (0=tout de suite)"</string>
+<string name="ReverseBoost_title">Reculer rapidement</string>
+<string name="ReverseBoost_summary">"Accélérer la vitesse de recul (0=vitesse normale)"</string>
+<string name="ColourID_title">"Schéma de Couleurs"</string>
+
+<!--Calibration Strings-->
+<string name="invert">Inverser</string>
+<string name="calibChange">Changer…</string>
+</resources>
