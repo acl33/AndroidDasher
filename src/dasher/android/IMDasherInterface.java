@@ -219,10 +219,11 @@ class IMDasherInterface extends ADasherInterface
 	@Override public List<ControlAction> getControlActions() {
 		List<ControlAction> lst = super.getControlActions();
 		if (actionLabel!=null) {
+			final List<ControlAction> otherActsOrExit = new ArrayList<ControlAction>(lst);
 			ControlAction perform = new ControlAction() {
 				public String desc() {return actionLabel;}
 				public void happen(dasher.CDasherNode node) {ic.performEditorAction(actionId);}
-				public List<ControlAction> successors() {return REBUILD_OR_EXIT;}
+				public List<ControlAction> successors() {return otherActsOrExit;}
 			};
 			if (actionHard) {
 				List<ControlAction> temp = new ArrayList<ControlAction>();

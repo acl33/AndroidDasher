@@ -1257,22 +1257,11 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	
 	public final CControlManager.ControlAction PAUSE_ACTION = new ControlAction() {
 		public String desc() {return "Pause";} //TODO internationalize
-		public void happen(CDasherNode node) {SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);}
-		public List<ControlAction> successors() {return REBUILD_OR_EXIT;}
-	};
-		
-	public final CControlManager.ControlAction REBUILD_ACTION = new ControlAction() {
-		public String desc() {return "Rebuild";} //TODO internationalize
-		public void happen(CDasherNode node) {forceRebuild();}
+		public void happen(CDasherNode node) {
+			SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
+			forceRebuild();
+		}
 		public List<ControlAction> successors() {return Collections.emptyList();}
 	};
-	
-	public final List<CControlManager.ControlAction> REBUILD_OR_EXIT;
-	/** Initializer - make REBUILD_OR_EXIT as unmodifiableList */
-	{
-		List<ControlAction> acts = new ArrayList<ControlAction>();
-		acts.add(REBUILD_ACTION);
-		acts.add(null);
-		REBUILD_OR_EXIT = Collections.unmodifiableList(acts);
-	}
+
 }
