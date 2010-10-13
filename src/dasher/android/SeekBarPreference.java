@@ -8,6 +8,7 @@ package dasher.android;
 import dasher.EParameters;
 import dasher.Elp_parameters;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.View;
@@ -53,11 +54,10 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
   @Override public void onAttachedToHierarchy(PreferenceManager pm) {
 	  super.onAttachedToHierarchy(pm);
 	  lValue = getPersistedLong(lDef);
-	  updateText();
+	  updateTitle();
   }
   @Override 
   protected View onCreateDialogView() {
-    
     LinearLayout layout = new LinearLayout(getContext());
     layout.setOrientation(LinearLayout.VERTICAL);
     layout.setPadding(6,6,6,6);
@@ -65,14 +65,13 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
     mValueText = new TextView(getContext());
     mValueText.setGravity(Gravity.CENTER_HORIZONTAL);
     mValueText.setTextSize(32);
-    updateText();
     
     mSeekBar = new SeekBar(getContext());
     mSeekBar.setOnSeekBarChangeListener(this);
     layout.addView(mSeekBar, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
     mSeekBar.setMax(lMax-lMin);
-    mSeekBar.setProgress((int)(lValue-lMin));
+    //onBindDialogView sets current value (=>calls onProgressChanged =>sets mValueText)
     
     layout.addView(mValueText, new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.FILL_PARENT, 
@@ -83,7 +82,6 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
   @Override 
   protected void onBindDialogView(View v) {
     super.onBindDialogView(v);
-    mSeekBar.setMax(lMax-lMin);
     mSeekBar.setProgress((int)(lValue-lMin));
   }
   
@@ -96,30 +94,32 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
   }
   
   public void onProgressChanged(SeekBar seek, int value, boolean fromTouch) {
-    persistLong(lValue = (value+lMin));
+    lValue = value+lMin;
     callChangeListener(new Integer(value));
-    updateText();
+    String t=valueText();
+    mValueText.setText(mSuffix==null ? t : t.concat(mSuffix));
   }
   
-  private void updateText() {
-    String t = (lDiv==1) ? String.valueOf(lValue) : String.valueOf(lValue/(double)lDiv);
-    setTitle(mTitle+": "+t);
-    if (mValueText!=null) mValueText.setText(mSuffix == null ? t : t.concat(mSuffix));
+  private String valueText() {
+	  return (lDiv==1) ? String.valueOf(lValue) : String.valueOf(lValue/(double)lDiv);
   }
   
-  public void onStartTrackingTouch(SeekBar seek) {}
-  public void onStopTrackingTouch(SeekBar seek) {}
+  private void updateTitle() {
+	  setTitle(mTitle+": "+valueText());
+  }
+  @Override public void onClick(DialogInterface dialog, int button) {
+	  if (button==DialogInterface.BUTTON1) {
+		  //ok button. Store result of sliding, and set the title text
+		  persistLong(lValue);
+		  updateTitle();
+	  } else {
+		  //cancel button. Restore old value, leave title text alone.
+		  lValue = getPersistedLong(lDef);
+	  }
+  }
 
-  public void setMax(int max) { lMax = max; }
-  public long getMax() { return lMax; }
-  public void setMin(int min) { lMin = min; }
-  public long getMin() { return lMin; }
+  public void onStartTrackingTouch(SeekBar seekBar) {}
 
-  public void setProgress(long progress) { 
-    lValue = progress;
-    if (mSeekBar != null)
-      mSeekBar.setProgress((int)(progress-lMin)); 
-  }
-  
-  public long getProgress() { return lValue; }
+  public void onStopTrackingTouch(SeekBar seekBar) {}
+
 }
