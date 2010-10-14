@@ -45,13 +45,12 @@ public abstract class CStartHandler extends CDasherComponent {
 	/**
 	 * Creates a new start handler which controls a given Interface
 	 * 
-	 * @param EventHandler Event handler with which to register ourselves
+	 * @param Interface Event handler, and interface this Start Handler should control
 	 * @param SettingsStore Settings repository to use
-	 * @param Interface Interface this Start Handler should control
 	 */
-	public CStartHandler(CEventHandler EventHandler, CSettingsStore SettingsStore, CDasherInterfaceBase Interface)  {
-		super(EventHandler, SettingsStore);
-		m_Interface = Interface;
+	public CStartHandler(CDasherInterfaceBase pIntf, CSettingsStore pSettingsStore) {
+		super(pIntf, pSettingsStore);
+		m_Interface = pIntf;
 	}
 	
 	/**
@@ -69,24 +68,12 @@ public abstract class CStartHandler extends CDasherComponent {
 	
 	/**
 	 * Fired during the start handler's parent input filter's
-	 * Timer event. This is when the start handler should interact
-	 * with the Model if necessary. Despite the availability of a
-	 * View, no drawing should be done at this stage; if this event
-	 * makes drawing necessary it should be stored in the class'
-	 * state for now and drawn at the next call to DecorateView.
+	 * Timer event. 
 	 * 
 	 * @param iTime Current system time as a unix timestamp
-	 * @param pView View which we may use for co-ordinate transforms
-	 * @param pInput Current input device from which to get input co-ordinates
-	 * @param pModel Model which may be modified if we wish
+	 * @param inputCoords (Transformed) user input coordinates (Dasher coords)
+	 * @param pView For converting coordinates into screen-space, if necessary.
 	 */
-	public abstract void Timer(long iTime, CDasherView pView, CDasherInput pInput, CDasherModel pModel);
-
-	/**
-	 * Event handler
-	 * 
-	 * @see CEventHandler
-	 */
-	public abstract void HandleEvent(CEvent Event);
+	public abstract void Timer(long iTime, long[] inputCoords, CDasherView pView);
 	
 }

@@ -41,23 +41,16 @@ package dasher;
 
 public class CCircleStartHandler extends CStartHandler{
 	
+	protected boolean inCircle;
 	/**
-	 * Current status of the handler.
+	 * Time (recorded as a UNIX timestamp) when we last entered the start circle
 	 */
-	protected int m_iStatus;
+	protected long m_iEnterTime;
+	
 	/**
-	 * Time (recorded as a UNIX timestamp) when the status
-	 * last changed.
-	 */
-	protected long m_iChangeTime;
-	/**
-	 * Radius of the displayed circle in Dasher co-ordinates. 
+	 * Radius of the displayed circle in screen co-ordinates; -1 = needs recomputing
 	 */	
-	protected int m_iCircleRadius;
-	/**
-	 * Radius of the circle in screen co-ordinates.
-	 */
-	protected int m_iScreenRadius;
+	private int m_iScreenRadius=-1;
 	
 	/**
 	 * Sole constructor. Creates a start handler in its default start state.
@@ -67,12 +60,23 @@ public class CCircleStartHandler extends CStartHandler{
 	 * @param SettingsStore
 	 * @param Interface
 	 */
-	public CCircleStartHandler(CEventHandler EventHandler, CSettingsStore SettingsStore, CDasherInterfaceBase Interface) 
-    {
-		super(EventHandler, SettingsStore, Interface);
-		m_iStatus = -1;
-		m_iChangeTime = 0;
-		m_iCircleRadius = (int)(GetLongParameter(Elp_parameters.LP_MAX_Y) * GetLongParameter(Elp_parameters.LP_CIRCLE_PERCENT) / 100);
+	public CCircleStartHandler(CDasherInterfaceBase intf, CSettingsStore setStore) { 
+    	super(intf, setStore);
+	}
+	
+	private CDasherView.Point screenCircleCenter;
+	
+	/** Return the center of the circle in screen coordinates */
+	protected CDasherView.Point getScreenCenter(CDasherView pView) {
+		if (screenCircleCenter==null)
+			screenCircleCenter = pView.Dasher2Screen(GetLongParameter(Elp_parameters.LP_OX), GetLongParameter(Elp_parameters.LP_OY));
+		return screenCircleCenter;
+	}
+	
+	protected int getScreenRadius(CDasherView pView) {
+		if (m_iScreenRadius==-1)
+			m_iScreenRadius = (int)(Math.min(pView.Screen().GetWidth(), pView.Screen().GetHeight()) * GetLongParameter(Elp_parameters.LP_CIRCLE_PERCENT)/100);
+		return m_iScreenRadius;
 	}
 	
 	/**
@@ -83,19 +87,11 @@ public class CCircleStartHandler extends CStartHandler{
 	 */
 	@Override public boolean DecorateView(CDasherView View, CDasherInput pInput) {
 				
-		CDasherView.Point C = View.Dasher2Screen(2048, 2048);
+		CDasherView.Point C = getScreenCenter(View);
+		int rad = getScreenRadius(View);
+		boolean bStarting = GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) && inCircle && m_iEnterTime!=Integer.MAX_VALUE;
+		View.Screen().DrawCircle(C.x, C.y, rad, bStarting ? 1 : 0, GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED));
 		
-		CDasherView.Point C2 = View.Dasher2Screen(2048, 2048 + m_iCircleRadius);
-		
-		m_iScreenRadius = C2.y - C.y;
-		
-		if((m_iStatus == 0) || (m_iStatus == 2))
-			View.Screen().DrawCircle(C.x, C.y, m_iScreenRadius, 0, true);
-		else if(m_iStatus == 5)
-			View.Screen().DrawCircle(C.x, C.y, m_iScreenRadius, 1, true);
-		else
-			View.Screen().DrawCircle(C.x, C.y, m_iScreenRadius, 0, false);
-					
 		return true;
 	}
 	
@@ -113,95 +109,35 @@ public class CCircleStartHandler extends CStartHandler{
 	 * @param m_DasherView View against which co-ordinate transforms should be performed.
 	 * @param m_DasherModel Model to which commands should be passed.
 	 */
-	@Override public void Timer(long iTime, CDasherView m_DasherView, CDasherInput pInput, CDasherModel m_DasherModel) {
+	@Override public void Timer(long iTime, long[] lastInputCoords, CDasherView pView) {
 
-		CDasherView.Point C = m_DasherView.Dasher2Screen(2048, 2048);
-		
-		pInput.GetScreenCoords(m_DasherView,coords);
-		
-		double dR;
-		
-		dR = Math.sqrt(Math.pow((double)(C.x - coords[0]), 2.0) + Math.pow((double)(C.y - coords[1]), 2.0));
-		
-		int iNewStatus = 0;
-		
-		// Status flags:
-		// -1 undefined
-		// 0 = out of circle, stopped
-		// 1 = out of circle, started
-		// 2 = in circle, stopped
-		// 3 = in circle, started
-		// 4 = in circle, stopping
-		// 5 = in circle, starting
-		
-		// TODO - need to check that these respond correctly to (eg) external pauses
-		
-		if(dR < m_iScreenRadius) {
-			switch(m_iStatus) {
-			case -1:
-				if(m_Interface.GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
-					iNewStatus = 2;
-				else
-					iNewStatus = 3;
-				break;
-			case 0:
-				iNewStatus = 5;
-				break;
-			case 1:
-				iNewStatus = 4;
-				break;
-			case 2:
-			case 3:
-			case 4:
-			case 5:
-				iNewStatus = m_iStatus;
-				break;
+		coords[0] = lastInputCoords[0]; coords[1] = lastInputCoords[1];
+		pView.Dasher2Screen(coords);
+		CDasherView.Point ctr = getScreenCenter(pView);
+		long xdist = ctr.x - coords[0], ydist = ctr.y - coords[1], rad=getScreenRadius(pView);
+		boolean inCircleNow = (xdist*xdist + ydist*ydist) < rad*rad; 
+		if (inCircleNow) {
+			if (inCircle) {
+				//still in circle. Note test against MAX_VALUE here because overflow not doing what I expect (?!)
+				if (m_iEnterTime!=Integer.MAX_VALUE && iTime-m_iEnterTime > 1000) {
+					//activate!
+					if (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
+						m_Interface.Unpause(iTime);
+					else
+						m_Interface.PauseAt(0, 0);
+					//note BP_DASHER_PAUSED event handler sets 
+					// m_iEnterTime = Integer.MAX_VALUE;
+					//meaning we will not trigger again, until we leave the circle and then enter again
+				}
+			} else {
+				//just entered circle
+				inCircle=true;
+				m_iEnterTime = iTime;
 			}
+		} else {
+			//currently out of circle
+			inCircle=false;
 		}
-		else {
-			switch(m_iStatus) {
-			case -1:
-				if(m_Interface.GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
-					iNewStatus = 0;
-				else
-					iNewStatus = 1;
-				break;
-			case 0:
-			case 1:
-				iNewStatus = m_iStatus;
-				break;
-			case 2:
-				iNewStatus = 0;
-				break;
-			case 3:
-				iNewStatus = 1;
-				break;
-			case 4:
-				iNewStatus = 1;
-				break;
-			case 5:
-				iNewStatus = 0;
-				break;
-			}
-		}
-		
-		if(iNewStatus != m_iStatus) {
-			m_iChangeTime = iTime;
-		}
-		
-		if(iTime - m_iChangeTime > 1000) {
-			if(iNewStatus == 4) {
-				iNewStatus = 2;
-				m_Interface.PauseAt(0, 0);
-			} 
-			else if(iNewStatus == 5) {
-				iNewStatus = 3;
-				m_Interface.Unpause(iTime);
-			}
-		}
-		
-		m_iStatus = iNewStatus;
-		
 	}
 	
 	private final long[] coords = new long[2];
@@ -215,9 +151,12 @@ public class CCircleStartHandler extends CStartHandler{
 	public void HandleEvent(CEvent Event) {
 		if(Event instanceof CParameterNotificationEvent) {
 			CParameterNotificationEvent Evt = (CParameterNotificationEvent)Event;
-			
-			if(Evt.m_iParameter == Ebp_parameters.BP_DASHER_PAUSED) {
-				m_iStatus = -1;
+			if (Evt.m_iParameter == Elp_parameters.LP_CIRCLE_PERCENT) {
+				m_iScreenRadius=-1;
+			} else if(Evt.m_iParameter == Ebp_parameters.BP_DASHER_PAUSED) {
+				//if we're in the circle, reset our entry time - so the circle won't
+				// be triggered (again) unless we leave the circle then enter again.
+				m_iEnterTime = Integer.MAX_VALUE;
 			}
 		}
 	}

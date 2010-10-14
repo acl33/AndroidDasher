@@ -170,7 +170,7 @@ public class CDefaultFilter extends CInputFilter {
 			bDidSomething = false;
 		}
 		if(m_StartHandler != null) {
-			m_StartHandler.Timer(Time, pView, pInput, m_DasherModel);
+			m_StartHandler.Timer(Time, lastInputCoords, pView);
 		}
 		return bDidSomething;
 	}
@@ -325,7 +325,7 @@ public class CDefaultFilter extends CInputFilter {
 	protected void CreateStartHandler() {
 				
 		if(GetBoolParameter(Ebp_parameters.BP_CIRCLE_START)) {
-			m_StartHandler = new CCircleStartHandler(m_EventHandler, m_SettingsStore, m_Interface);
+			m_StartHandler = new CCircleStartHandler(m_Interface, m_SettingsStore);
 		}
 		else if(GetBoolParameter(Ebp_parameters.BP_MOUSEPOS_MODE)) {
 			/* m_StartHandler = new CTwoBoxStartHandler(m_EventHandler, m_SettingsStore, m_Interface); */

@@ -21,6 +21,8 @@ public class COneDimensionalFilter extends CDefaultFilter {
 			super.ApplyTransform(pView, coords);
 	}
 	
+	private final int forwardmax=(int)(GetLongParameter(Elp_parameters.LP_MAX_Y)/2.5); //of 1D transform
+	
 	/**
 	 * Applies the 1D remapping: as Y increases from 0 to LP_MAX_Y, starts & ends at the origin,
 	 * then moves in two semicircles round the back, joined by a larger semicircle allowing forwards motion.
@@ -34,7 +36,7 @@ public class COneDimensionalFilter extends CDefaultFilter {
 		// The distance between the Y coordinate and the centreline in pixels
 		final long disty=GetLongParameter(Elp_parameters.LP_OY)-coords[1];
 		  
-		final long circlesize = (long)(GetLongParameter(Elp_parameters.LP_MAX_Y)*(1.0-coords[0]/(double)pView.VisibleRegion().maxX)/2.5);
+		final long circlesize = (long)(forwardmax*(1.0-coords[0]/(double)pView.VisibleRegion().maxX));
 		final long yforwardrange = (GetLongParameter(Elp_parameters.LP_MAX_Y)*5)/16;
 		final long yfullrange = GetLongParameter(Elp_parameters.LP_MAX_Y)/2;
 		  
@@ -61,6 +63,28 @@ public class COneDimensionalFilter extends CDefaultFilter {
 		} 
 		coords[0] = GetLongParameter(Elp_parameters.LP_OX)-(long)(x*circlesize);
 		coords[1] = GetLongParameter(Elp_parameters.LP_OY)+(long)(y*circlesize);
+	}
+	
+	@Override protected void CreateStartHandler() {
+		if (GetBoolParameter(Ebp_parameters.BP_CIRCLE_START)) {
+			m_StartHandler= new CCircleStartHandler(m_Interface, m_SettingsStore) {
+				private CDasherView.Point fwdCircle;
+				@Override protected CDasherView.Point getScreenCenter(CDasherView pView) {
+					if (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)
+							&& GetBoolParameter(Ebp_parameters.BP_ONE_DIMENSIONAL_MODE)) {
+						//move circle
+						if (fwdCircle==null) {
+							long rad = GetLongParameter(Elp_parameters.LP_CIRCLE_PERCENT)*GetLongParameter(Elp_parameters.LP_OY)/100;
+							fwdCircle = pView.Dasher2Screen(GetLongParameter(Elp_parameters.LP_OX)-forwardmax+rad, GetLongParameter(Elp_parameters.LP_OY));
+							
+						}
+						return fwdCircle;
+					}
+					return super.getScreenCenter(pView);
+				}
+			};
+		} else
+			super.CreateStartHandler();
 	}
 	
 }
