@@ -33,6 +33,8 @@ import java.util.List;
 import java.util.ListIterator;
 import java.io.*;
 
+import org.xml.sax.SAXException;
+
 import dasher.CControlManager.ControlAction;
 
 /**
@@ -158,27 +160,28 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	protected boolean m_bConnectLock; // Connecting to server.
 	
 	/**
-	 * Somehow determines which alphabet XML files to parse.
+	 * Look for XML files whose name matches the specified prefix;
+	 * feed them into the specified parser. Both "system" and "user"
+	 * files/locations should be scanned.
 	 * 
-	 * @param mAlphIO List to fill with filenames to process.
+	 * @param parser XMLFileParser to use to process all files found.
+	 * (On systems where this is relevant, "system" files should be
+	 * processed with <code>parser.parseFile(&lt;file&gt;,false)</code>,
+	 * to load them as immutable, whereas "user" files with <code>true</code>,
+	 * to allow them to be edited.)
+	 *
+	 * @param prefix Only process files whose name begins with this
 	 */
-	public abstract void ScanAlphabetFiles(CAlphIO mAlphIO);
+	protected abstract void ScanXMLFiles(XMLFileParser parser, String prefix);
 	
 	/**
-	 * Somehow determine which colour XML files to parse
+	 * Open a specified file or file(s), from as many locations as contain it - e.g.
+	 * system and user locations, JAR-packed resources, remote network locations, etc.
 	 * 
-	 * @param mColourIO CColourIO to which all files should be passed
+	 * @param fname filename, e.g. "training_english_GB.txt"
+	 * @param into Collection to which inputstreams for all files found should be added. 
 	 */
-	public abstract void ScanColourFiles(CColourIO mColourIO);
-	
-	/**
-	 * Should setup the system and user locations; called
-	 * early in the startup sequence.
-	 * <p>
-	 * These correspond to the string parameters SP_SYSTEM_LOC
-	 * and SP_USER_LOC respectively.
-	 */
-	public abstract void SetupPaths();
+	protected abstract void GetStreams(String fname, Collection<InputStream> into);
 	
 	/**
 	 * Called at realization time to make the settings store.
@@ -243,17 +246,12 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	protected void Realize() {
 		m_SettingsStore = createSettingsStore();
-		SetupPaths();
 		
 		m_AlphIO = new CAlphIO(this);
-		ScanAlphabetFiles(m_AlphIO);
+		ScanXMLFiles(m_AlphIO, "alphabet");
 		
 		m_ColourIO = new CColourIO(this);
-		ScanColourFiles(m_ColourIO);
-		
-		/* CSFS: Added a back-pointer to each of these so they can use the Interface's
-		 * centralised GetResource method.
-		 */
+		ScanXMLFiles(m_ColourIO, "colour");
 		
 		m_DasherModel = new CDasherModel(this, m_SettingsStore);
 		
@@ -475,22 +473,10 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		
 		if (m_pNCManager!=null) m_pNCManager.UnregisterComponent();
 		
-		// Train the new language model
-		SetBoolParameter( Ebp_parameters.BP_TRAINING, true );
-		
-		CLockEvent evt = new CLockEvent("Training Dasher", true, 0); 
-		InsertEvent(evt);
-		
 		m_pNCManager = new CNodeCreationManager(this, m_SettingsStore);
 		
 		// SP_TRAIN_FILE parameter set by CNodeCreationManager constructor... 
-		train(GetStringParameter(Esp_parameters.SP_TRAIN_FILE),evt);
-		
-		evt.m_bLock = false;
-		InsertEvent(evt);
-		
-		SetBoolParameter( Ebp_parameters.BP_TRAINING, false );
-		forceRebuild();
+		train(GetStringParameter(Esp_parameters.SP_TRAIN_FILE));
 	}
 	
 	/**
@@ -794,13 +780,46 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		m_AlphIO.Delete(AlphID);
 	}
 		
-	/** Subclasses should implement to train the model with both user &amp; system texts.
-	 * Progress updates are an optional extra for subclasses, albeit desirable.
+	/** Called to train the model with all available files of the specified name
+	 * (obtained via {@link #GetStreams(String, Collection)}. Begins by setting
+	 * BP_TRAINING to true and broadcasting a CLockEvent; finishes by clearing
+	 * BP_TRAINING and broadcasting another CLockEvent (with m_bLock==false),
+	 * then calls {@link #forceRebuild()}.
 	 * 
 	 * @param T alphabet-provided name of training file, e.g. "training_english_GB.txt"
-	 * @param evt Event to use to notify of progress updates (null =&gt; no updates) by filling in m_iPercent field
 	 */
-	protected abstract void train(String T, CLockEvent evt);
+	protected void train(String T) {
+		// Train the new language model
+		SetBoolParameter( Ebp_parameters.BP_TRAINING, true );
+		
+		CLockEvent evt = new CLockEvent("Training Dasher", true, 0); 
+		InsertEvent(evt);		
+
+		int iTotalBytes=0;
+		List<InputStream> streams=new ArrayList<InputStream>();
+		GetStreams(T,streams);
+		for (InputStream in : streams)
+			try {
+				iTotalBytes+=in.available();
+			} catch (IOException e) {
+				//Hmmm. Ignore? Or...how about:
+				iTotalBytes = Integer.MAX_VALUE; //i.e. we won't get progress - because we can't...
+				break;
+			}
+			
+		int iRead = 0;
+		for (InputStream in : streams) {
+			try {
+				iRead = m_pNCManager.TrainStream(in, iTotalBytes, iRead, evt);
+			} catch (IOException e) {
+				InsertEvent(new CMessageEvent("Error "+e+" in training - rest of text skipped", 0, 1)); // 0 = message ID ?!?!
+			}
+		}
+		evt.m_bLock = false;
+		InsertEvent(evt);
+		SetBoolParameter( Ebp_parameters.BP_TRAINING, false );
+		forceRebuild();
+	}
 	
 	/**
 	 * Retrieves a list of available font sizes. This class
@@ -1197,24 +1216,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		/* Empty method: at the platform-independent level
 		 * we can't know how to write the file.
 		 */
-	}
-	
-	/**
-	 * This will be called by a number of file I/O methods when
-	 * ordinary file I/O fails; it is intended for implementations
-	 * to override it if they wish to return a stream pointing to
-	 * JAR-packed files, remote network locations, etc.
-	 * <p>
-	 * By default it ignores its arguments and returns null.
-	 * <p>
-	 * Overriding is optional; ordinary file I/O will still be
-	 * tried before calling this method.
-	 * 
-	 * @param filename File to be opened
-	 * @return InputStream if it could be opened, or null if not.
-	 */
-	public InputStream getResourceStream(String filename) {
-		return null;
 	}
 	
 	/**

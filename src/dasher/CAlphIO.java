@@ -46,7 +46,7 @@ import javax.xml.parsers.SAXParser;
  * a full list of available alphabets.
  *
  */
-public class CAlphIO implements XMLFileParser {
+public class CAlphIO extends XMLFileParser {
 
 	/* CSFS: I'm not exactly sure which of these strings are plain ASCII used internally
 	 * and which are UTF-8. For now I've made mostly everything UTF-8 except for filenames.
@@ -55,14 +55,6 @@ public class CAlphIO implements XMLFileParser {
 	/* CSFS: I have added comments detailing which XML field corresponds
 	 * to each variable.
 	 */
-	
-	/**
-	 * Pointer to the DasherInterfaceBase which requested this enumeration.
-	 * This is only used for the purposes of trying Applet-style
-	 * resource retrieval, and may safely be set to null if this
-	 * is not required. 
-	 */
-	public CDasherInterfaceBase m_Interface;
 	
 	/**
 	 * Map from Strings to AlphInfo objects, used in getting
@@ -221,8 +213,8 @@ public class CAlphIO implements XMLFileParser {
 	 * @param Fnames Filenames to parse; these may be relative or absolute.
 	 * @param Interface Reference to the InterfaceBase parent class for applet-style IO. Optional; if not supplied, applet-style IO will fail.
 	 */
-	public CAlphIO(CDasherInterfaceBase Interface) {
-		m_Interface = Interface;
+	public CAlphIO(CDasherInterfaceBase intf) {
+		super(intf);
 		CreateDefault();
 		
 		SAXParserFactory factory = SAXParserFactory.newInstance();
@@ -568,19 +560,10 @@ public class CAlphIO implements XMLFileParser {
 			}
 
 			public InputSource resolveEntity(String publicName, String systemName) throws IOException, SAXException {
-				
-				if(systemName.contains("alphabet.dtd")) {
-					return new InputSource(m_Interface.getResourceStream("alphabet.dtd"));
-				}
-				else {
-					return null;
-				}
-				
-				
-				/* CSFS: This is here because SAX will by default look in a system location
-				 * first, which throws a security exception when running as an Applet.
+				/* This is here because SAX will by default look in a system location first,
+				 * which throws a security exception when running as an Applet.
 				 */
-			
+				return systemName.contains("alphabet.dtd") ? getStream("alphabet.dtd") : null;
 			}
 			
 		};

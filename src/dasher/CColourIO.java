@@ -51,18 +51,13 @@ import org.xml.sax.helpers.DefaultHandler;
  * a full list of available colour schemes.
  *
  */
-public class CColourIO implements XMLFileParser {
+public class CColourIO extends XMLFileParser {
 
 	/**
 	 * Map from colour scheme names to their ColourInfo objects.
 	 */
 	protected HashMap<String, ColourInfo> Colours = new HashMap<String,ColourInfo>(); // map short names (file names) to descriptions
 		
-	/**
-	 * Interface which will be used for Applet style I/O.
-	 */
-	private final CDasherInterfaceBase m_Interface;
-	
 	/**
 	 * SAXParser used to read XML files.
 	 */
@@ -111,8 +106,7 @@ public class CColourIO implements XMLFileParser {
 	 * @param dib Interface against which we can perform applet-style IO. Optional; if null, applet-style IO will not be attempted.
 	 */
 	public CColourIO(CDasherInterfaceBase dib) {
-				
-		m_Interface = dib;
+		super(dib);
 		
 		SAXParserFactory factory = SAXParserFactory.newInstance();
 		try {
@@ -177,12 +171,7 @@ public class CColourIO implements XMLFileParser {
 				/* CSFS: This is here because SAX will by default look in a system location
 				 * first, which throws a security exception when running as an Applet.
 				 */
-				if(systemName.contains("colour.dtd")) {
-					return new InputSource(m_Interface.getResourceStream("colour.dtd"));
-				}
-				else {
-					return null;
-				}
+				return systemName.contains("colour.dtd") ? getStream("colour.dtd") : null;
 			}
 			
 		};

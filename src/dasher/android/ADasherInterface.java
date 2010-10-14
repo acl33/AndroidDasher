@@ -261,22 +261,6 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 					 sp.getFloat(CalibPreference.ANDROID_TILT_MAX_Y, 9.0f));
 	}
 	
-	@Override
-	public void SetupPaths() {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void ScanColourFiles(CColourIO colourIO) {
-		ScanXMLFiles(colourIO, "colour");
-	}
-
-	@Override
-	public void ScanAlphabetFiles(CAlphIO alphIO) {
-		ScanXMLFiles(alphIO,"alphabet");
-	}
-	
 	@Override public void ChangeScreen(CDasherScreen surf) {
 		if (surf==null) {
 			m_DasherScreen=null;
@@ -290,62 +274,49 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			throw new IllegalArgumentException(surf+" is not a DasherCanvas!");
 	}
 
-	private void ScanXMLFiles(XMLFileParser parser, String prefix) {
+	@Override protected void ScanXMLFiles(XMLFileParser parser, String prefix) {
 		AssetManager assets = androidCtx.getAssets();
 		try {
 			for (String aFile : assets.list("")) {//DasherActivity.this.fileList()) {
 				if (aFile.contains(prefix) && aFile.endsWith(".xml"))
 					try {parser.ParseFile(assets.open(aFile), false);}
 					catch (Exception e) {
-						System.err.println("Could not parse/read asset "+aFile+": "+e);
+						android.util.Log.e("DasherIME", "Could not parse/read asset "+aFile,e);
 					}
 			}
 		} catch (IOException e) {
-			System.err.println("Could not list assets: " + e.toString());
+			android.util.Log.e("DasherIME", "Could not list assets: ",e);
 		}
 		if (USER_DIR.exists()) {
 			for (String aFile : USER_DIR.list()) {
 				if (aFile.contains(prefix) && aFile.endsWith(".xml"))
 					try {parser.ParseFile(new FileInputStream(new File(USER_DIR,aFile)), true);}
 					catch (Exception e) {
-						System.err.println("Could not parse/read user file "+aFile+": "+e);
+						android.util.Log.e("DasherIME","Could not parse/read user file "+aFile,e);
 					}
 			}
 		}
 	}
 
-	protected void train(String trainFileName, CLockEvent evt) {
-		int iTotalBytes=0;
-		List<InputStream> streams=new ArrayList<InputStream>();
+	@Override
+	public void GetStreams(String fname, Collection<InputStream> into) {
 		//1. system file...
 		try {
-			InputStream in = androidCtx.getAssets().open(trainFileName);
-			iTotalBytes+=in.available();
-			streams.add(in);
-			//AssetFileDescriptor fd = androidCtx.getAssets().openFd(trainFileName);
-			//iTotalBytes += fd.getLength();
+			InputStream in = androidCtx.getAssets().open(fname);
+			into.add(in);
+			//AssetFileDescriptor fd = androidCtx.getAssets().openFd(fname);
 			//streams.add(fd.createInputStream());
 		} catch (IOException e) {
 			//no system training file present. Which is fine; silently skip.
 		}
 		//2. user file
-		File f = new File(USER_DIR,trainFileName);
+		File f = new File(USER_DIR,fname);
 		if (f.exists()) {
 			try {
-			iTotalBytes += f.length();
-				streams.add(new FileInputStream(f));
+				into.add(new FileInputStream(f));
 			} catch (FileNotFoundException fnf) {
 				//we checked f.exists()...
 				throw new AssertionError();
-			}
-		}
-		
-		int iRead = 0;
-		for (InputStream in : streams) {
-			try {
-				iRead = m_pNCManager.TrainStream(in, iTotalBytes, iRead, evt);
-			} catch (IOException e) {
-				android.util.Log.e("Dasher", "error in training - rest of text skipped", e);
 			}
 		}
 	}
