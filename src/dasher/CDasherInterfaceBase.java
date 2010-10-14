@@ -143,12 +143,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	protected CModuleManager m_oModuleManager;
 	
 	/**
-	 * Lock engaged when Dasher should not respond to
-	 * commands for unspecified reason
-	 */
-	protected boolean m_bGlobalLock; // The big lock
-	
-	/**
 	 * Lock engaged when Dasher is being destroyed
 	 */
 	protected boolean m_bShutdownLock;
@@ -158,6 +152,9 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * to a remote language model
 	 */
 	protected boolean m_bConnectLock; // Connecting to server.
+	
+	/** Message supplied in any CLockEvent causing BP_TRAINING to be set */
+	protected String m_sLockMsg;
 	
 	/**
 	 * Look for XML files whose name matches the specified prefix;
@@ -387,8 +384,8 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * <i>SP_INPUT_DEVICE</i>: Runs CreateInput() to create the requested
 	 * input device.
 	 * <p>
-	 * It also responds to LockEvents by setting m_bGlobalLock to the value
-	 * indicated.
+	 * It also responds to LockEvents by setting BP_TRAINING to the value
+	 * indicated and storing their message&progress in m_sLockMsg.
 	 * 
 	 * @param Event The event the interface is to process.
 	 */
@@ -427,6 +424,9 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 				CreateInput();
 			} else if(Evt.m_iParameter == Esp_parameters.SP_INPUT_FILTER) {
 				CreateInputFilter();
+			} else if (Evt.m_iParameter == Ebp_parameters.BP_TRAINING) {
+				if (!GetBoolParameter(Ebp_parameters.BP_TRAINING))
+					forceRebuild();
 			}
 				
 		}
@@ -446,8 +446,14 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		}
 		else if(Event instanceof CLockEvent) {
 			// TODO: 'Reference counting' for locks?
-			CLockEvent LockEvent = ((CLockEvent)(Event));
-			m_bGlobalLock = LockEvent.m_bLock;
+			CLockEvent LockEvent = (CLockEvent)Event;
+			SetBoolParameter(Ebp_parameters.BP_TRAINING,LockEvent.m_bLock);
+			if (LockEvent.m_bLock) {
+				m_sLockMsg = (LockEvent.m_strMessage==null) ? "Training" : LockEvent.m_strMessage;
+				if (LockEvent.m_iPercent!=0) m_sLockMsg+=" "+LockEvent.m_iPercent;
+			} else
+				m_sLockMsg = null;
+			Redraw(false); //assume %age or m_bLock has changed... 
 		}
 	}
 	
@@ -573,59 +579,40 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * @param iTime Current system time as a UNIX time stamp.
 	 */
 	public void NewFrame(long iTime) {
-		// Fail if Dasher is locked
+		// Fail if Dasher is locked...
+		if(m_bShutdownLock || m_bConnectLock) return;
 		
+		//...or we have no graphics...
+		if (m_DasherView == null || m_DasherScreen==null) return;
 		
-		if(m_bGlobalLock || m_bShutdownLock || m_bConnectLock) return;
-			
-			boolean bChanged = false;
-		
-		
-		if(m_DasherView != null) {
-			if(!GetBoolParameter(Ebp_parameters.BP_TRAINING)) {
-				if(m_InputFilter != null) {
-					bChanged = m_InputFilter.Timer(iTime, m_DasherView, m_Input, m_DasherModel); // FIXME - need logging stuff here
-				}
-					
-				/*Logging code. TODO: capture int iNumDeleted / Vector<CSymbolProb>
-				 * from information broadcast in CEditEvents; then:
-				 *    if (iNumDeleted > 0)
-				 *        m_UserLog.DeleteSymbols(iNumDeleted);
-				 *    if (vAdded.size() > 0)
-				 *        m_UserLog.AddSymbols(vAdded);
-				 */
-				
-			}
+		if(GetBoolParameter(Ebp_parameters.BP_TRAINING)) {
+			final int w = m_DasherScreen.GetWidth(), h=m_DasherScreen.GetHeight();
+			m_DasherScreen.DrawRectangle(0, 0, w, h, 0, 0, 0); //fill in colour 0 = white
+			String msg = m_sLockMsg==null ? "Please Wait" : m_sLockMsg;
+			CDasherView.Point p = m_DasherScreen.TextSize(msg, 14);
+			m_DasherScreen.DrawString(msg, (m_DasherScreen.GetWidth()-p.x)/2, (m_DasherScreen.GetHeight()-p.y)/2, 14);
+			return;
 		}
 		
-		Draw(bChanged);
-	}
-	
-	/**
-	 * Completely draws the screen based on the current state
-	 * of the model, taking into account whether the model
-	 * has changed since the last frame.
-	 * <p>
-	 * This breaks down to calling the Model's RenderToView
-	 * method if we need to draw the nodes, and then calling the
-	 * InputFilter's DecorateView method.
-	 * <p>
-	 * The View's Display() method is called only in the event
-	 * that anything has changed.
-	 * <p>
-	 * At present, this is hacked such that it always does a full
-	 * redraw if Dasher is unpaused, owing to the fact that the
-	 * Java front-end must receive a frame every time it calls
-	 * Draw. See the documentation for applet.JDasherScreen for details.
-	 *  
-	 * @param bRedrawNodes True if the Model has changed since the last frame.
-	 * @see dasher.applet.JDasherScreen
-	 */
-	public void Draw(boolean bRedrawNodes) {
+		//ok, we want to render some nodes...if there are any...
+		if (m_DasherModel == null) return;
 		
-		if(m_DasherView == null || m_DasherModel == null)
-			return;
-		boolean bChanged = false;
+		boolean bRedrawNodes = false;
+		
+		if(m_InputFilter != null) {
+			bRedrawNodes = m_InputFilter.Timer(iTime, m_DasherView, m_Input, m_DasherModel); // FIXME - need logging stuff here
+		}
+					
+		/*Logging code. TODO: capture int iNumDeleted / Vector<CSymbolProb>
+		 * from information broadcast in CEditEvents; then:
+		 *    if (iNumDeleted > 0)
+		 *        m_UserLog.DeleteSymbols(iNumDeleted);
+		 *    if (vAdded.size() > 0)
+		 *        m_UserLog.AddSymbols(vAdded);
+		 */
+		
+	
+		boolean bChanged = false; //do we need another frame after this?
 		if (m_MarkerScreen!=null) {
 			if (bRedrawNodes) {
 				m_MarkerScreen.SendMarker(0);
@@ -780,21 +767,28 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		m_AlphIO.Delete(AlphID);
 	}
 		
-	/** Called to train the model with all available files of the specified name
-	 * (obtained via {@link #GetStreams(String, Collection)}. Begins by setting
-	 * BP_TRAINING to true and broadcasting a CLockEvent; finishes by clearing
-	 * BP_TRAINING and broadcasting another CLockEvent (with m_bLock==false),
-	 * then calls {@link #forceRebuild()}.
+	/** Called to train the model. This method creates and broadcasts
+	 * a CLockEvent, then calls {@link #train(String, CLockEvent)},
+	 * then clears the event's {@link CLockEvent#m_bLock} and broadcasts it again.
 	 * 
 	 * @param T alphabet-provided name of training file, e.g. "training_english_GB.txt"
 	 */
 	protected void train(String T) {
 		// Train the new language model
-		SetBoolParameter( Ebp_parameters.BP_TRAINING, true );
-		
 		CLockEvent evt = new CLockEvent("Training Dasher", true, 0); 
 		InsertEvent(evt);		
-
+		train(T,evt);
+		evt.m_bLock = false;
+		InsertEvent(evt);
+	}
+	
+	/**
+	 * Called to train the model with all available files of the specified name
+	 * (obtained via {@link #GetStreams(String, Collection)}.
+	 * @param T alphabet-provided name of training file, e.g. "training_english_GB.txt"
+	 * @param evt CLockEvent to use to broadcast %progress (only - not finish/unlock)
+	 */
+	protected void train(String T,CLockEvent evt) {
 		int iTotalBytes=0;
 		List<InputStream> streams=new ArrayList<InputStream>();
 		GetStreams(T,streams);
@@ -815,10 +809,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 				InsertEvent(new CMessageEvent("Error "+e+" in training - rest of text skipped", 0, 1)); // 0 = message ID ?!?!
 			}
 		}
-		evt.m_bLock = false;
-		InsertEvent(evt);
-		SetBoolParameter( Ebp_parameters.BP_TRAINING, false );
-		forceRebuild();
 	}
 	
 	/**

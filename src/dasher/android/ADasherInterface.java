@@ -119,6 +119,24 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			taskThread.interrupt();
 	}
 	
+	@Override protected void train(final String filename) {
+		final CLockEvent evt = new CLockEvent("Training Dasher", true, 0);
+		InsertEvent(evt);
+		//train asynchronously...
+		new Thread() {
+			public void run() {
+				train(filename,evt);
+				//but broadcast the C(Un)LockEvent synchronously...
+				enqueue(new Runnable() {
+					public void run() {
+						evt.m_bLock=false;
+						InsertEvent(evt);
+					}
+				});
+			}
+		}.start();
+	}
+	
 	/*@Override
 	public void StartShutdown() {
 		if (taskThread == null) throw new IllegalStateException("Already started shutdown, or never Realize()d!");
