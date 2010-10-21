@@ -28,6 +28,7 @@ package dasher;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Stack;
 import java.io.*;
 
 import org.xml.sax.*;
@@ -48,36 +49,8 @@ import javax.xml.parsers.SAXParser;
  */
 public class CAlphIO extends XMLFileParser {
 
-	/* CSFS: I'm not exactly sure which of these strings are plain ASCII used internally
-	 * and which are UTF-8. For now I've made mostly everything UTF-8 except for filenames.
-	 */
-	
-	/* CSFS: I have added comments detailing which XML field corresponds
-	 * to each variable.
-	 */
-	
-	/**
-	 * Map from Strings to AlphInfo objects, used in getting
-	 * an alphabet by name.
-	 */
+	/** Map from {@link CAlphIO.AlphInfo#name} to AlphInfo object */
 	protected HashMap <String, AlphInfo> Alphabets = new HashMap<String, AlphInfo>(); 
-	// map short names (file names) to descriptions
-	
-	/**
-	 * Map from String alphabet types to enumerated constants
-	 * (members of Opts.AlphabetTypes).
-	 */
-	public HashMap <String, Integer> StoT = new HashMap<String, Integer>();
-	
-	/**
-	 * Map from Opts.AlphabetTypes constants to their String names.
-	 */
-	public HashMap <Integer, String> TtoS = new HashMap<Integer, String>();
-		
-	/**
-	 * Whether the loaded alphabet may be altered.
-	 */
-	public boolean LoadMutable;
 	
 	/**
 	 * Parser to be used to import XML data.
@@ -87,118 +60,208 @@ public class CAlphIO extends XMLFileParser {
 	/**
 	 * Simple struct representing an alphabet.
 	 */
-	static class AlphInfo {
-		// Basic information
+	public static class AlphInfo {
+		private AlphInfo(String name) {this.name=name;}
 		/**
-		 * Alphabet name
+		 * This alphabet's default orientation. Valid values are
+		 * specified by Opts.AlphabetTypes, and indicate
+		 * left-to-right, right-to-left, top-to-bottom or
+		 * bottom-to-top screen orientation. Defaults to LeftToRight if
+		 * the XML does not specify any.
 		 */
-		String AlphID; // <alphabet name="[AlphID]">
+		private int m_Orientation=Opts.ScreenOrientations.LeftToRight;
+		
+		/** The symbol number of the new-paragraph character, -1 for none */
+		private int m_ParagraphSymbol=-1;
+		
+		/** The symbol number of the space character, -1 for none */
+		private int m_SpaceSymbol=-1;
 		
 		/**
-		 * Whether this alphabet may be altered. At present this
-		 * isn't used in Dasher, but may in the future be used
-		 * to support user-created alphabets.
+		 * Path of a file containing training text relevant
+		 * to this alphabet.
 		 */
-		boolean Mutable;  // If from user we may play. If from system defaults this is immutable. User should take a copy.
+		private String m_TrainingFile;
 		
-		// Complete description of the alphabet:
+		// Undocumented as the future of this isn't decided.
+		private String m_GameModeFile;
+		
 		/**
-		 * Training file to be used to train a language model
-		 * which uses this alphabet as its symbol-set.
+		 * Name of the colour scheme which this alphabet
+		 * 'prefers' to use. This class does not enforce its
+		 * use.
 		 */
-		String TrainingFile;
-		
-		// Undocumented pending changes
-		String GameModeFile;
-		
+		private String m_DefaultPalette="";
+			
 		/**
-		 * Preferred colour scheme of this alphabet.
+		 * Symbols' representations when typed. These are Strings in order to support
+		 * (a) unicode characters beyond 0xFFFF and (b) "\r\n" as the paragraph character
+		 * on Windows. (Hence note the latter is special-cased in many places). 
+		 * Alphabets may <em>not</em> in general define multi-character symbols.
 		 */
-		String PreferredColours;
-		
-		// FIXME: Redundant; should be removed.
-		int Encoding;
-		int Type; // <alphabet><encoding type="[Type]">
-		// Needs converting to the appropriate member of
-		// Opts.AlphabetTypes. The table for this is at the top of the
-		// CPP file.
+		private final ArrayList<String> m_Characters = new ArrayList<String>();
 		
 		/**
-		 * Preferred orientation of this alphabet. Should be
-		 * set to a member of Opts.ScreenOrientations.
+		 * Symbols' representations on screen. In many cases this is the same as m_Characters,
+		 * but differs for e.g. space, paragraph, apostrophe, etc.
 		 */
-		int Orientation; // <alphabet><orientation type="[Orientation]">
-		// Needs converting from eg. "RL" to Opts.ScreenOrientations.RighttoLeft.
-		
-		/** Number of child nodes: top-level groups and symbols not in a group */
-		int iNumChildNodes;
+		protected final ArrayList<String> m_Display = new ArrayList<String>();
 		
 		/**
-		 * List of groups into which this alphabet's symbols
-		 * are categorised.
+		 * Symbols' background colours, where particular colours are specified
+		 * (in such cases, the same colour will be used for all occurrences of that symbol).
+		 * Most symbols do not specify a colour (in XML), in which case this
+		 * array will store '-1', and a colour dependent upon both symbol number and <em>phase</em>
+		 * will be used. All colours are indices into a table stored in a CCustomColours object
+		 * which must be used to retrieve actual RGB colours.
 		 */
-		ArrayList<SGroupInfo> m_vGroups = new ArrayList<SGroupInfo>(); // Enumeration of <Group name="..." b="...">
-		// Name attribute is currently ignored.
-		// Potential "label" and "visible" attributes also. Visible defaults
-		// to false for the first group, and true for all others.
+		protected final ArrayList<Integer> m_Colours = new ArrayList<Integer>();
 		
 		/**
-		 * Root group; contains all groups.
+		 * Stores the foreground colour of the symbols, where specified. Not actually used at present...
 		 */
-		SGroupInfo m_BaseGroup;
+		protected final ArrayList<Integer> m_Foreground = new ArrayList<Integer>();   // stores the colour of the character foreground
 		
 		/**
-		 * List of characters in this alphabet, each of which
-		 * is represented by a small character struct.
+		 * Root of the group tree, i.e. <em>first</em> group at toplevel (there may be others
+		 * accessed via {@link SGroupInfo#Next}).
+		 */
+		private SGroupInfo m_BaseGroup;
+		/** Number of nodes at top level, i.e. groups plus (symbols not in a group) */
+		private int iNumChildNodes;
+
+		/**
+		 * Alphabet name as per xml
+		 */
+		public final String name;
+		
+		public CAlphabetMap makeMap() {
+			CAlphabetMap m = new CAlphabetMap();
+			for (int i=0; i<m_Characters.size(); i++)
+				if (m_Characters.get(i).length()>0) //ACL this check seems a bit redundant...will such ever occur????
+					m.Add(m_Characters.get(i), i);
+			return m;
+		}
+		/**
+		 * Gets number of symbols in this alphabet, including special characters.
 		 * 
-		 * @see character
+		 * @return Symbol count in this Alphabet.
 		 */
-		ArrayList<character> m_vCharacters = new ArrayList<character>();
+		
+		public int GetNumberSymbols() {
+			return m_Characters.size();
+		}
 		
 		/**
-		 * Paragraph character for this alphabet.
+		 * Gets the orientation associated with this alphabet.
+		 * Allowable values are enumerated by Opts.ScreenOrientations.
+		 * 
+		 * @return This Alphabet's preferred orientation. 
 		 */
-		character ParagraphCharacter = new character();       // display and edit text of paragraph character. Use ("", "") if no paragraph character.
+		
+		public int GetOrientation() {
+			return m_Orientation;
+		}
 		
 		/**
-		 * Space character for this alphabet.
+		 * Gets the training file to be used training a language
+		 * model which uses this alphabet.
+		 * 
+		 * @return Path to the specified training file.
 		 */
-		character SpaceCharacter = new character();   // display and edit text of Space character. Typically (" ", "_"). Use ("", "") if no space character.
-				
-	}
-	
-	/**
-	 * Simple struct representing a character in an alphabet.
-	 * <p>
-	 * The Display and Text attributes are usually the same,
-	 * but are distinguished in that Display is used when drawing
-	 * the symbol in a DasherNode on the screen, and Text when
-	 * printing it as output.
-	 * <p>
-	 * An example of a characters with a difference is most
-	 * combining accents, which commonly use a dotted circle or
-	 * other decorative item to represent the letter with which
-	 * they will combine, which of course does not appear when
-	 * it is entered as text. 
-	 */	
-	static class character {
+		
+		public String GetTrainingFile() {
+			return m_TrainingFile;
+		}
+		
+		// Undocumented pending changes to this.
+		
+		public String GetGameModeFile() {
+			return m_GameModeFile;
+		}
+		
 		/**
-		 * String representation for display purposes.
+		 * Gets the name of the colour scheme preferred by this
+		 * alphabet.
+		 * 
+		 * @return Preferred colour scheme name.
 		 */
-		String Display = ""; // <s d="...">
+		
+		public String GetPalette() {
+			return m_DefaultPalette;
+		}
+		
 		/**
-		 * String representation for typing in the edit box.
+		 * Retrieves the String which should be displayed to represent a given character.
+		 * 
+		 * @param i Index of the character to be looked up.
+		 * @return Display string for this character.
 		 */
-		String Text = ""; // <s t="...">
+		
+		public String GetDisplayText(int i) {
+			return m_Display.get(i);
+		}
+		
 		/**
-		 * Background colour
-		 */		
-		int Colour; // <s b="..."> (b for Background)
-		/**
-		 * Foreground colour
+		 * Retrieves the typed character representation of a given symbol.
+		 * 
+		 * @param i Symbol to look up
+		 * @return Character which should be typed in the edit box (for example) to represent it.
 		 */
-		String Foreground = ""; // <s f="...">
-		// Seems to represent only the name of a colour, which is always ASCII anyway.
+		
+		public String GetText(int i) {
+			return m_Characters.get(i);
+		}
+		
+		/**
+		 * Retrieves the background colour for a given symbol at a given offset
+		 * 
+		 * @param i Symbol identifier
+		 * @param offset index into text buffer - used for colour cycling (according to the low bit)
+		 * @return Background colour for this symbol.
+		 */
+		public int GetColour(int i, int offset) {
+	    	int iColour = m_Colours.get(i);
+	    	//ACL if sym==0, use colour 7???
+			// This is provided for backwards compatibility. 
+			// Colours should always be provided by the alphabet file
+			if(iColour == -1) {
+				if(i == m_SpaceSymbol) {
+					iColour = 9;
+				} /*else if(sym == ContSymbol) {
+					iColour = 8;
+				} */else {
+					iColour = (i % 3) + 10;
+				}
+			}
+
+	    	if (iColour<130 && (offset&1)==0) iColour+=130;
+	    	return iColour;
+		}
+
+		/**
+		 * Retrieves the foreground (text) colour for a given symbol.
+		 * 
+		 * @param i Symbol identifier.
+		 * @return Foreground colour for this symbol.
+		 */
+		
+		public int GetForeground(int i) {
+		      return m_Foreground.get(i);
+		} 
+		
+		/** Index of this alphabet's paragraph symbol, or -1 for none */
+		public int GetParagraphSymbol()  {
+			return m_ParagraphSymbol;
+		}
+		
+		/** Index of this alphabet's space symbol, or -1 for none */
+		
+		public int GetSpaceSymbol()  {
+			return m_SpaceSymbol;
+		}
+		public SGroupInfo getBaseGroup() {return m_BaseGroup;}
+		public int numChildNodes() {return iNumChildNodes;}
 	}
 	
 	/**
@@ -227,31 +290,19 @@ public class CAlphIO extends XMLFileParser {
 			return;
 		}
 		
-		/* CSFS: Method of translating between string representations
-		 * and numerical indentifiers altered to use a HashMap; however
-		 * this might not be optimal, will consider changing this later.
-		 */
-		
-		TtoS.put(0, "None");
-		TtoS.put(Opts.AlphabetTypes.Arabic, "Arabic");
-		TtoS.put(Opts.AlphabetTypes.Baltic, "Baltic");
-		TtoS.put(Opts.AlphabetTypes.CentralEurope, "CentralEurope");
-		TtoS.put(Opts.AlphabetTypes.ChineseSimplified, "ChineseSimplified");
-		TtoS.put(Opts.AlphabetTypes.ChineseTraditional, "ChineseTraditional");
-		TtoS.put(Opts.AlphabetTypes.Cyrillic, "Cyrillic");
-		TtoS.put(Opts.AlphabetTypes.Greek, "Greek");
-		TtoS.put(Opts.AlphabetTypes.Hebrew, "Hebrew");
-		TtoS.put(Opts.AlphabetTypes.Japanese, "Japanese");
-		TtoS.put(Opts.AlphabetTypes.Korean, "Korean");
-		TtoS.put(Opts.AlphabetTypes.Thai, "Thai");
-		TtoS.put(Opts.AlphabetTypes.Turkish, "Turkish");
-		TtoS.put(Opts.AlphabetTypes.VietNam, "VietNam");
-		TtoS.put(Opts.AlphabetTypes.Western, "Western");
-		
-		for(Map.Entry<Integer, String> m : TtoS.entrySet()) {
-			StoT.put(m.getValue(), m.getKey());
-		}
+	}
 	
+	private static String getLineSeparator() {
+		try {
+			return System.getProperty("line.separator");
+		} catch (SecurityException e) {
+			/* CSFS: This slightly odd route is used because the traditional method,
+			 * which is to read the system property 'line.seperator' is in fact
+			 * forbidden for applets! Why it's potentially dangerous to establish
+			 * how to terminate lines, I'm not sure.
+			 */
+			return String.format("%n");
+		}
 	}
 	
 	/**
@@ -260,6 +311,7 @@ public class CAlphIO extends XMLFileParser {
 	 * using GetInfo or GetAlphabets.
 	 * 
 	 * @param filename File to parse
+	 * @param bLoadMutable ignored
 	 */
 	public void ParseFile(InputStream in, final boolean bLoadMutable) throws SAXException, IOException {
 		
@@ -271,63 +323,63 @@ public class CAlphIO extends XMLFileParser {
 			protected String currentTag;
 			protected SGroupInfo currentGroup;
 			protected boolean bFirstGroup;
+			private final Stack<SGroupInfo> groupStack = new Stack<SGroupInfo>();
 			
 			public void startElement(String namespaceURI, String simpleName, String qualName, Attributes tagAttributes) throws SAXException {
 				
 				String tagName = (simpleName.equals("") ? qualName : simpleName);
 				
 				if(tagName == "alphabet") {
-					/* A new alphabet is beginnning. Initialise the data structure
-					 * and fill it with default values. */
-					
-					currentAlph = new CAlphIO.AlphInfo();
-					currentAlph.Mutable = bLoadMutable;
-				    currentAlph.SpaceCharacter.Colour = -1;
-				    currentAlph.ParagraphCharacter.Colour = -1;
-				    //currentAlph.m_iCharacters = 1; // Start at 1 as 0 is the root node symbol
-				    //currentAlph.iNumChildNodes = 1; //the root symbol...urgh :-(
-				    currentAlph.m_BaseGroup = null;
-				    
-				    bFirstGroup = true;
-				    
-				    /* Find the 'name' attribute */
+					/* A new alphabet is beginning. Find its name... */
+					String name=null;
 				    for(int i = 0; i < tagAttributes.getLength(); i++) {
 				    	String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
 				    	if(attributeName == "name") {
-				    		currentAlph.AlphID = tagAttributes.getValue(i);
+				    		name=tagAttributes.getValue(i);
 				    	}
 				    }
+					if (name==null) {
+						m_Interface.InsertEvent(new CMessageEvent("Alphabet does not have a name, ignoring", 0, 1));
+						currentAlph=null;
+					}
+					currentAlph = new AlphInfo(name);
+					
+				    bFirstGroup = true;
 				    
 				}
 				
 				else if(tagName == "orientation") {
+					//ACL TODO doesn't it make more sense for orientation to be an _attribute_ of the alphabet, not a (sub-)tag?
 					for(int i = 0; i < tagAttributes.getLength(); i++) {
 						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
 						if(attributeName == "type") {
 							String orient = tagAttributes.getValue(i);
 							if(orient == "RL") {
-								currentAlph.Orientation = Opts.ScreenOrientations.RightToLeft;
+								currentAlph.m_Orientation = Opts.ScreenOrientations.RightToLeft;
 							}
 							else if(orient == "TB") {
-								currentAlph.Orientation = Opts.ScreenOrientations.TopToBottom;
+								currentAlph.m_Orientation = Opts.ScreenOrientations.TopToBottom;
 							}
 							else if(orient == "BT") {
-								currentAlph.Orientation = Opts.ScreenOrientations.BottomToTop;
+								currentAlph.m_Orientation = Opts.ScreenOrientations.BottomToTop;
 							}
 							else {
-								currentAlph.Orientation = Opts.ScreenOrientations.LeftToRight;
+								currentAlph.m_Orientation = Opts.ScreenOrientations.LeftToRight;
 							}
 						}
 					}
 				}
 				
 				else if(tagName == "encoding") {
-					for(int i = 0; i < tagAttributes.getLength(); i++) {
-						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-						if(attributeName == "type") {
-							currentAlph.Encoding = StoT.get(tagAttributes.getValue(i));
-						}
-					}
+					/*We don't actually do anything with this, so...I don't think we need it?
+					 * for(int i = 0; i < tagAttributes.getLength(); i++) {
+					 *
+					 *	 String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+					 *	 if(attributeName == "type") {
+					 *		currentAlph.Encoding = StoT.get(tagAttributes.getValue(i));
+					 *	 }
+					 * }
+					 */
 				}
 				
 				else if(tagName == "palette") {
@@ -339,47 +391,17 @@ public class CAlphIO extends XMLFileParser {
 				}
 				
 				else if(tagName == "paragraph") {
-					for(int i = 0; i < tagAttributes.getLength(); i++) {
-						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-						if(attributeName == "d") {
-							currentAlph.ParagraphCharacter.Display = tagAttributes.getValue(i);
-							try {
-								currentAlph.ParagraphCharacter.Text = System.getProperty("line.separator");
-							} catch (SecurityException e) {
-								/* CSFS: This slightly odd route is used because the traditional method,
-								 * which is to read the system property 'line.seperator' is in fact
-								 * forbidden for applets! Why it's potentially dangerous to establish
-								 * how to terminate lines, I'm not sure.
-								 */
-								currentAlph.ParagraphCharacter.Text = String.format("%n");
-							}
-							
-						}
-						if(attributeName == "b") {
-							currentAlph.ParagraphCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
-						}
-						if(attributeName == "f") {
-							currentAlph.ParagraphCharacter.Foreground = tagAttributes.getValue(i);
-						}
-					}	
+					//note index of paragraph symbol in order to handle \n / \r\n special-casing...
+					currentAlph.m_ParagraphSymbol = currentAlph.m_Characters.size();
+					//Extract default text as the line separator...
+					//then read as any other character
+					readChar(getLineSeparator(),tagAttributes);
 				}
 				
 				else if(tagName == "space") {
-					for(int i = 0; i < tagAttributes.getLength(); i++) {
-						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-						if(attributeName == "d") {
-							currentAlph.SpaceCharacter.Display = tagAttributes.getValue(i);
-						}
-						if(attributeName == "t") {
-							currentAlph.SpaceCharacter.Text = tagAttributes.getValue(i);
-						}
-						if(attributeName == "b") {
-							currentAlph.SpaceCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
-						}
-						if(attributeName == "f") {
-							currentAlph.SpaceCharacter.Foreground = tagAttributes.getValue(i);
-						}
-					}	
+					//note index of space symbol, it gets used occassionally...
+					currentAlph.m_SpaceSymbol = currentAlph.m_Characters.size();
+					readChar(null, tagAttributes);
 				}
 				
 				else if(tagName == "control") {
@@ -440,82 +462,82 @@ public class CAlphIO extends XMLFileParser {
 				}
 				
 				else if(tagName == "group") {
-					
-					currentGroup = new SGroupInfo();
-					
-					if(bFirstGroup) {
-						currentGroup.bVisible = false;
-						bFirstGroup = false;
-					}
-					else {
-						currentGroup.bVisible = true;
-					}
-					
-					currentGroup.strLabel = "";
-					currentGroup.iColour = 0;
+					String label=""; boolean visible=!bFirstGroup; int col=0;
+					bFirstGroup=false;
 					
 					for(int i = 0; i < tagAttributes.getLength(); i++) {
 						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
 						if(attributeName == "b") {
-							currentGroup.iColour = Integer.parseInt(tagAttributes.getValue(i));
+							col = Integer.parseInt(tagAttributes.getValue(i));
 						}
 						if(attributeName == "visible") {
 							if(tagAttributes.getValue(i).equals("yes") || tagAttributes.getValue(i).equals("on")) {
-								currentGroup.bVisible = true;
+								visible = true;
 							}
 							else if(tagAttributes.getValue(i).equals("no") || tagAttributes.getValue(i).equals("off")) {						
-								currentGroup.bVisible = false;
+								visible = false;
 							}
 						}
 						if(attributeName == "label") {
-							currentGroup.strLabel = tagAttributes.getValue(i);
+							label = tagAttributes.getValue(i);
 						}
 					}
 					
-				    currentGroup.iStart = currentAlph.m_vCharacters.size();
+					SGroupInfo currentGroup = new SGroupInfo(label,col,visible);
+					
+				    currentGroup.iStart = currentAlph.m_Characters.size();
 
-				    currentGroup.Child = null;
-
-				    if(!currentAlph.m_vGroups.isEmpty()) {
-				    	SGroupInfo parent = currentAlph.m_vGroups.get(currentAlph.m_vGroups.size()-1);
-				      currentGroup.Next = parent.Child;
-				      parent.Child = currentGroup;
-				      parent.iNumChildNodes++;
-				    }
-				    else {
+				    if(!groupStack.isEmpty()) {
+				    	SGroupInfo parent = groupStack.peek();
+				    	currentGroup.Next = parent.Child;
+				    	parent.Child = currentGroup;
+				    	parent.iNumChildNodes++;
+				    } else {
 				      currentGroup.Next = currentAlph.m_BaseGroup;
 				      currentAlph.m_BaseGroup = currentGroup;
 				      currentAlph.iNumChildNodes++;
 				    }
 				    
-				    currentAlph.m_vGroups.add(currentGroup);
+				    groupStack.push(currentGroup);
 				}
 						
 				else if(tagName == "s") {
-					CAlphIO.character newChar = new CAlphIO.character();
-					newChar.Colour = -1;
-					if (currentAlph.m_vGroups.isEmpty())
-						currentAlph.iNumChildNodes++;
-					else
-						currentAlph.m_vGroups.get(currentAlph.m_vGroups.size()-1).iNumChildNodes++;
-					for(int i = 0; i < tagAttributes.getLength(); i++) {
-						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-						if(attributeName == "d") {
-							newChar.Display = tagAttributes.getValue(i);
-						}
-						if(attributeName == "t") {
-							newChar.Text = tagAttributes.getValue(i);
-						}
-						if(attributeName == "b") {
-							newChar.Colour = Integer.parseInt(tagAttributes.getValue(i));
-						}
-						if(attributeName == "f") {
-							newChar.Foreground = tagAttributes.getValue(i);
-						}
-					}
-					
-					currentAlph.m_vCharacters.add(newChar);
+					readChar(null, tagAttributes);
 				}
+			}
+			
+			private void readChar(String text,Attributes tagAttributes) {
+				String display=null; //default: use text
+				int bgcol=-1, fgcol=4;
+				
+				for(int i = 0; i < tagAttributes.getLength(); i++) {
+					String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+					if (attributeName.length()>1) continue;
+					switch (attributeName.charAt(0)) {
+					case 'd':
+						display = tagAttributes.getValue(i);
+						break;
+					case 't':
+						if (text==null)  text = tagAttributes.getValue(i);
+						else m_Interface.InsertEvent(new CMessageEvent("Unnecessary or duplicate text for character '"+text+"'", 1, 1));
+						break;
+					case 'b':
+						bgcol = Integer.parseInt(tagAttributes.getValue(i));
+						break;
+					case 'f':
+						fgcol = Integer.parseInt(tagAttributes.getValue(i));
+						break;
+					}
+				}
+				currentAlph.m_Characters.add(text);
+				currentAlph.m_Display.add(display == null ? text : display);
+				currentAlph.m_Colours.add(bgcol);
+				currentAlph.m_Foreground.add(fgcol);
+				if (groupStack.isEmpty())
+					currentAlph.iNumChildNodes++;
+				else
+					groupStack.peek().iNumChildNodes++;
+				
 			}
 			
 			public void endElement(String namespaceURI, String simpleName, String qualName) {
@@ -523,9 +545,7 @@ public class CAlphIO extends XMLFileParser {
 				
 				if(tagName == "alphabet") {
 					currentAlph.m_BaseGroup = Reverse(currentAlph.m_BaseGroup);
-					if (currentAlph.SpaceCharacter.Text != "") currentAlph.iNumChildNodes++;
-					if (currentAlph.ParagraphCharacter.Text != "") currentAlph.iNumChildNodes++;
-					Alphabets.put(currentAlph.AlphID, currentAlph);
+					Alphabets.put(currentAlph.name, currentAlph);
 				}
 				
 				else if(tagName == "palette") {
@@ -539,8 +559,7 @@ public class CAlphIO extends XMLFileParser {
 				// once the tags we're interested in have been closed.
 
 				else if(tagName == "group") {
-					currentAlph.m_vGroups.get(currentAlph.m_vGroups.size() - 1).iEnd = currentAlph.m_vCharacters.size();
-					currentAlph.m_vGroups.remove(currentAlph.m_vGroups.get(currentAlph.m_vGroups.size() - 1));
+					groupStack.pop().iEnd = currentAlph.m_Characters.size();
 				}
 				
 
@@ -550,11 +569,11 @@ public class CAlphIO extends XMLFileParser {
 			public void characters(char[] chars, int start, int length) throws SAXException {
 				
 				if(currentTag == "palette") {
-					currentAlph.PreferredColours = new String(chars, start, length);
+					currentAlph.m_DefaultPalette = new String(chars, start, length);
 				}
 				
 				if(currentTag == "train") {
-					currentAlph.TrainingFile = new String(chars, start, length);
+					currentAlph.m_TrainingFile = new String(chars, start, length);
 				}
 				
 			}
@@ -583,7 +602,7 @@ public class CAlphIO extends XMLFileParser {
 		
 		AlphabetList.clear();
 		for(Map.Entry<String, AlphInfo> m : Alphabets.entrySet()) {
-			AlphabetList.add(m.getValue().AlphID);
+			AlphabetList.add(m.getValue().name);
 		}
 	}
 	
@@ -625,41 +644,6 @@ public class CAlphIO extends XMLFileParser {
 	}
 	
 	/**
-	 * Registers a new AlphInfo object as a valid alphabet, which
-	 * will henceforth be included in enumerations of available
-	 * alphabets.
-	 * 
-	 * @param NewInfo New alphabet
-	 */
-	public void SetInfo(AlphInfo NewInfo) {
-		Alphabets.put(NewInfo.AlphID, NewInfo);
-		Save(NewInfo.AlphID);
-	}
-	
-	/**
-	 * Removes a given alphabet; it will no longer appear in
-	 * enumerations of alphabets. If it does not exist,
-	 * this method will return without error.
-	 * 
-	 * @param AlphID
-	 */
-	public void Delete(String AlphID) {
-		Alphabets.remove(AlphID);
-	}
-	
-	/**
-	 * Stub. At present Dasher does not permit users to
-	 * specify their own alphabets, but in the case that this
-	 * were introduced, this method would write out an XML
-	 * document for the new alphabet.
-	 * 
-	 * @param AlphID Name of alphabet to save.
-	 */
-	public void Save(String AlphID) {
-		// stub, for now.
-	}
-	
-	/**
 	 * Creates the default alphabet and stores as an available
 	 * alphabet. This will be returned in the case that a requested
 	 * alphabet cannot be retrieved; at present it is essentially
@@ -674,31 +658,37 @@ public class CAlphIO extends XMLFileParser {
 		// TODO I appreciate these strings should probably be in a resource file.
 		// Not urgent though as this is not intended to be used. It's just a
 		// last ditch effort in case file I/O totally fails.
-		AlphInfo Default = new AlphInfo();
-		Default.AlphID = "Default";
-		Default.Type = Opts.AlphabetTypes.Western;
-		Default.Mutable = false;
-		Default.Orientation = Opts.ScreenOrientations.LeftToRight;
-		Default.ParagraphCharacter.Display = "¶";
-		Default.ParagraphCharacter.Text = "\r\n";
-		Default.SpaceCharacter.Display = "_";
-		Default.SpaceCharacter.Text = " ";
-		Default.SpaceCharacter.Colour = 9;
-		Default.TrainingFile = "training_english_GB.txt";
-		Default.GameModeFile = "gamemode_english_GB.txt";
-		Default.PreferredColours = "Default";
+		AlphInfo Default = new AlphInfo("Default");
+		//Default.Type = Opts.AlphabetTypes.Western;
+		Default.m_Orientation = Opts.ScreenOrientations.LeftToRight;
+		
+		Default.m_TrainingFile = "training_english_GB.txt";
+		Default.m_GameModeFile = "gamemode_english_GB.txt";
+		Default.m_DefaultPalette = "Default";
+		
 		String Chars = "abcdefghijklmnopqrstuvwxyz";
 		
 		Default.m_BaseGroup = null;
-		character temp;
 		
 		for(Character c : Chars.toCharArray()) {
-			temp = new character();
-			temp.Text = c.toString();
-			temp.Display = c.toString();
-			temp.Colour = 10;
-			Default.m_vCharacters.add(temp);
+			Default.m_Characters.add(c.toString());
+			Default.m_Display.add(c.toString());
+			Default.m_Colours.add(-1); //ACL modified, was 10????
+			Default.m_Foreground.add(4);
 		}
+		
+		//paragraph
+		Default.m_ParagraphSymbol = Default.m_Characters.size();
+		Default.m_Characters.add(getLineSeparator());
+		Default.m_Display.add("¶");
+		Default.m_Colours.add(9); //ACL modified, was unspecified (=> -1)
+		Default.m_Foreground.add(4);
+		//space
+		Default.m_SpaceSymbol = Default.m_Characters.size();
+		Default.m_Characters.add(" ");
+		Default.m_Display.add("_");
+		Default.m_Colours.add(9);
+		Default.m_Foreground.add(4);
 		
 		Alphabets.put("Default", Default);
 	}

@@ -17,7 +17,7 @@ public class CNodeCreationManager extends CDasherComponent {
 	 * is alphabet-specific too (e.g. uniformity, according to #symbols)...
 	 * TODO, move more into CAlphabetManager? (but e.g. orientation, seems out of place)
 	 */
-	private final CAlphabet m_cAlphabet;
+	private final CAlphIO.AlphInfo m_cAlphabet;
 	/**
 	 * Our alphabet manager, for functions which require knowledge
 	 * of an Alphabet.
@@ -60,8 +60,7 @@ public class CNodeCreationManager extends CDasherComponent {
 		// if this is the case then the parameter value should be updated,
 		// but not in such a way that it causes everything to be rebuilt.
 		
-		CAlphIO.AlphInfo oAlphInfo = intf.GetInfo(GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
-		m_cAlphabet = new CAlphabet(oAlphInfo);
+		m_cAlphabet = intf.GetInfo(GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
 		
 		SetStringParameter(Esp_parameters.SP_TRAIN_FILE, m_cAlphabet.GetTrainingFile());
 		SetStringParameter(Esp_parameters.SP_DEFAULT_COLOUR_ID, m_cAlphabet.GetPalette());
@@ -107,11 +106,6 @@ public class CNodeCreationManager extends CDasherComponent {
 		}
 		
 		computeNormFactorNoCheck();
-	}
-	
-	public int TrainStream(InputStream FileIn, int iTotalBytes, int iOffset,
-			 CLockEvent evt) throws IOException {
-		return m_AlphabetManager.m_LanguageModel.TrainStream(FileIn, iTotalBytes, iOffset, evt);
 	}
 	
 	/**

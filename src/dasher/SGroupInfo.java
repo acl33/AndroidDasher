@@ -32,6 +32,12 @@ package dasher;
  */
 public class SGroupInfo {
 	
+	public SGroupInfo(String label, int col, boolean visible) {
+		this.strLabel = label;
+		this.iColour = col;
+		this.bVisible = visible;
+	}
+
 	/**
 	 * First child group
 	 */
@@ -45,7 +51,7 @@ public class SGroupInfo {
 	/**
 	 * Label for this group
 	 */
-	String strLabel;
+	final String strLabel;
 	
 	/**
 	 * Index of the first node contained in this group
@@ -60,12 +66,12 @@ public class SGroupInfo {
 	/**
 	 * Colour index used to draw this group
 	 */
-	int iColour;
+	final int iColour;
 	
 	/**
 	 * Should this group be drawn?
 	 */
-	boolean bVisible;
+	final boolean bVisible;
 
 	/** Number of child nodes = immediate subgroups + symbols contained directly (not in a subgroup) */ 
 	int iNumChildNodes;

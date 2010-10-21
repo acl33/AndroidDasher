@@ -749,24 +749,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		return m_AlphIO.GetInfo(AlphID);
 	}
 	
-	/**
-	 * Deferred to m_AlphIO
-	 * 
-	 * @see CAlphIO
-	 */
-	public void SetInfo(CAlphIO.AlphInfo NewInfo) {
-		m_AlphIO.SetInfo(NewInfo);
-	}
-	
-	/**
-	 * Deferred to m_AlphIO
-	 * 
-	 * @see CAlphIO
-	 */
-	public void DeleteAlphabet(String AlphID) {
-		m_AlphIO.Delete(AlphID);
-	}
-		
 	/** Called to train the model. This method creates and broadcasts
 	 * a CLockEvent, then calls {@link #train(String, CLockEvent)},
 	 * then clears the event's {@link CLockEvent#m_bLock} and broadcasts it again.
@@ -804,7 +786,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		int iRead = 0;
 		for (InputStream in : streams) {
 			try {
-				iRead = m_pNCManager.TrainStream(in, iTotalBytes, iRead, evt);
+				iRead = m_pNCManager.getAlphabetManager().TrainStream(in, iTotalBytes, iRead, evt);
 			} catch (IOException e) {
 				InsertEvent(new CMessageEvent("Error "+e+" in training - rest of text skipped", 0, 1)); // 0 = message ID ?!?!
 			}

@@ -93,7 +93,7 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 		}
 	}
 
-	public CPPMLanguageModel(CEventHandler EventHandler, CSettingsStore SettingsStore, CAlphabet alph) {
+	public CPPMLanguageModel(CEventHandler EventHandler, CSettingsStore SettingsStore, CAlphIO.AlphInfo alph) {
 
 		super(EventHandler, SettingsStore, alph); // Constructor of CLanguageModel
 

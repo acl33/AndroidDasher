@@ -25,6 +25,8 @@
 
 package dasher;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
@@ -44,47 +46,26 @@ import java.util.ListIterator;
 
 public class CAlphabetManager<C> {
 	
-		/**
+	/**
 	 * Pointer to the LanguageModel used in determining the
 	 * relative probability assigned to new Nodes. 
 	 */
 	public final CLanguageModel<C> m_LanguageModel;
 	
 	/**
-	 * Pointer to the DasherModel which performs some of the
-	 * work in the course of producing probabilities.
+	 * Pointer to the NCManager, which modifies the probabilities for uniformity and control mode
 	 */
     protected final CNodeCreationManager m_Model;
-    
-    /* Cache the alphabet's Space Symbol, as this is given a different colour */
-    protected final int SPSymbol;
     
     /**
      * Pointer to the current Alphabet, used to find out what a
      * given character looks like typed (for the purposes
      * of output) and displayed (if growing the DasherNode tree).
      */
-    protected final CAlphabet m_Alphabet;
+    protected final CAlphIO.AlphInfo m_Alphabet;
     
-    protected final ArrayList<Integer> m_Colours;
-    private int getColour(int sym, int phase) {
-    	int iColour = m_Colours.get(sym);
-    	//ACL if sym==0, use colour 7???
-		// This is provided for backwards compatibility. 
-		// Colours should always be provided by the alphabet file
-		if(iColour == -1) {
-			if(sym == SPSymbol) {
-				iColour = 9;
-			} /*else if(sym == ContSymbol) {
-				iColour = 8;
-			} */else {
-				iColour = (sym % 3) + 10;
-			}
-		}
-
-    	if (iColour<130 && (phase&1)==0) iColour+=130;
-    	return iColour;
-    }
+    protected final CAlphabetMap m_AlphabetMap;
+    
     private int getColour(CDasherNode parent, SGroupInfo group, int phase) {
     	if (group!=null) {
     		if (group.bVisible) return group.iColour;
@@ -93,35 +74,33 @@ public class CAlphabetManager<C> {
     	//colour cycle root node (only)
     	return ((phase&1)==0) ? 137 : 7;
     }
-    protected final ArrayList<String> m_DisplayText;
-    // Both undocumented (caches)
-        
+
     /**
-     * Sole constructor: produces an AlphabetManager linked to a
-     * given Model and LanguageModel. These cannot be set after
-     * the Manager has been created; as such the Manager must
-     * be created last of these three.
+     * Construct an AlphabetManager!
      * 
-     * @param Model Linked DasherModel
-     * @param LanguageModel Linked LanguageModel
+     * @param pNCManager NodeCreationManager in charge of this AlphabetManager; will be used
+     * to modify probabilities for control mode, etc.
+     * @param LanguageModel LanguageModel to use to determine relative sizes of child nodes
      */
-    
     public CAlphabetManager( CNodeCreationManager pNCManager, CLanguageModel<C> LanguageModel) {
     	
     	this.m_LanguageModel = LanguageModel;
     	this.m_Model = pNCManager;
     	
     	m_Alphabet = LanguageModel.getAlphabet();
-    	m_Colours = m_Alphabet.GetColours();
-    	m_DisplayText = m_Alphabet.GetDisplayTexts();
+    	m_AlphabetMap = m_Alphabet.makeMap();
     	
-    	SPSymbol = m_Alphabet.GetSpaceSymbol();
-    	
-    	/* Caching these as the repeated requests which were twice deferred were
-    	 * actually taking 5% of our runtime
-    	 */
+    	//ACL TODO: CSFS wrote that repeated requests to CAlphIO.AlphInfo (then CAlphabet)::GetColour,
+    	// GetSpaceSymbol and GetDisplayText, were taking up 5% of our runtime; and hence, he cached
+    	// the ArrayList<Integer>s here. I'm trying to improve encapsulation and hence have ended this,
+    	// but ought to check that this is efficient enough...
     }
 
+    public int TrainStream(InputStream FileIn, int iTotalBytes, int iOffset,
+			 CLockEvent evt) throws IOException {
+		return m_AlphabetMap.TrainStream(m_LanguageModel, FileIn, iTotalBytes, iOffset, evt);
+	}
+	
     /**
      * Creates a new root CDasherNode with the supplied parameters.
      * @param iOffset index of character which this root should be considered as entering;
@@ -133,10 +112,10 @@ public class CAlphabetManager<C> {
     	ListIterator<Character> previousChars = m_Model.m_DasherInterface.getContext(iOffset);
     	assert iOffset>=0 || !previousChars.hasPrevious();
     	CAlphNode NewNode;
-    	ListIterator<Integer> previousSyms = m_Alphabet.GetSymbols(previousChars);
+    	ListIterator<Integer> previousSyms = m_AlphabetMap.GetSymbols(previousChars);
     	if (bEnteredLast && previousSyms.hasPrevious()) {
     		int iSym = previousSyms.previous();
-    		if (iSym==CAlphabet.UNDEFINED) {
+    		if (iSym==CAlphabetMap.UNDEFINED) {
     			NewNode = new SpecialNode(Parent,iOffset, previousChars.next(),iLower,iUpper,m_LanguageModel.EmptyContext());
     		} else {
         		NewNode = allocSymbol(Parent,iOffset,iSym,iLower,iUpper, 
@@ -144,13 +123,13 @@ public class CAlphabetManager<C> {
     		}
     	} else {
     		//don't use previous symbol (if any)
+    		C ctx = m_LanguageModel.EmptyContext();
+			ArrayList <Integer> Symbols = new ArrayList<Integer>();
 	    	//TODO should get a default start-of-sentence context from the alphabet.
-    		// Note that for (escaping from) Control Mode, etc., we'll need an extra param
-    		// to enforce jumping here; and we'll then need to attempt to build a context
-	    	NewNode = allocGroup(Parent, iOffset, null, iLower, iUpper,
-	        		(previousSyms.hasPrevious())
-	        			? m_LanguageModel.BuildContext(previousSyms)
-	        			: m_LanguageModel.ContextWithText(m_LanguageModel.EmptyContext(), ". "));
+			m_AlphabetMap.GetSymbols(Symbols, ". "); // UTF8 bytes become Unicode Integers
+			for(int i = 0; i < Symbols.size(); i++)
+				ctx=m_LanguageModel.ContextWithSymbol(ctx, Symbols.get(i));
+			NewNode = allocGroup(Parent, iOffset, null, iLower, iUpper, ctx);
     	}
     	
     	return NewNode;
@@ -181,7 +160,7 @@ public class CAlphabetManager<C> {
 		}
         
         @Override public int ExpectedNumChildren() {
-        	return m_Alphabet.iNumChildNodes;
+        	return m_Alphabet.numChildNodes();
         }
         @Override
 		public void DeleteNode() {
@@ -301,7 +280,7 @@ public class CAlphabetManager<C> {
     		throw new RuntimeException("Use (CDasherNode, int, int, long, long, C) instead");
     	}
     	void initNode(CDasherNode Parent, int iOffset, int symbol, long ilbnd, long ihbnd, C context) {
-			super.initNode(Parent, iOffset, ilbnd, ihbnd, getColour(symbol, iOffset), context, m_DisplayText.get(symbol));
+			super.initNode(Parent, iOffset, ilbnd, ihbnd, m_Alphabet.GetColour(symbol, iOffset), context, m_Alphabet.GetDisplayText(symbol));
 			this.m_Symbol = symbol;
 		}
 
@@ -528,7 +507,7 @@ public class CAlphabetManager<C> {
     	  // Create child nodes and add them
     	  
     	  int i=iMin; //lowest index of child which we haven't yet added
-    	  SGroupInfo group = (parentGroup==null) ? m_Alphabet.m_BaseGroup : parentGroup.Child;
+    	  SGroupInfo group = (parentGroup==null) ? m_Alphabet.getBaseGroup() : parentGroup.Child;
     	  // The SGroupInfo structure has something like linked list behaviour
     	  // Each SGroupInfo contains a pNext, a pointer to a sibling group info
     	  while (i < iMax) {

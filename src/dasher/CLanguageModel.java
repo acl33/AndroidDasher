@@ -61,7 +61,7 @@ public abstract class CLanguageModel<C> extends CDasherComponent {
 	/**
 	 * Alphabet in which we make predictions
 	 */
-	protected final CAlphabet m_Alphabet;
+	protected final CAlphIO.AlphInfo m_Alphabet;
 	
 	/**
 	 * Creates a LanguageModel working in a given alphabet.
@@ -71,7 +71,7 @@ public abstract class CLanguageModel<C> extends CDasherComponent {
 	 * @param Alphabet Alphabet to work in
 	 */
 	
-	public CLanguageModel(CEventHandler EventHandler, CSettingsStore SettingsStore, CAlphabet Alphabet) {
+	public CLanguageModel(CEventHandler EventHandler, CSettingsStore SettingsStore, CAlphIO.AlphInfo Alphabet) {
 	  super(EventHandler, SettingsStore);
 	  m_Alphabet = Alphabet;
 	}
@@ -177,29 +177,10 @@ public abstract class CLanguageModel<C> extends CDasherComponent {
 	 * 
 	 * @return m_Alphabet
 	 */
-	public CAlphabet getAlphabet() {
+	public CAlphIO.AlphInfo getAlphabet() {
 	    return m_Alphabet;
 	}
 
-	/**
-	 * Extends a given language model context without modifying
-	 * the model itself.
-	 * <p>
-	 * The bulk of the work itself is deferred to the LanguageModel's
-	 * EnterSymbol method.
-	 *  
-	 * @param cDasherModel TODO
-	 * @param context Context to extend
-	 * @param TheText Text to add
-	 */
-	public C ContextWithText(C ctx, String TheText) {
-		ArrayList <Integer> Symbols = new ArrayList<Integer>();
-		m_Alphabet.GetSymbols(Symbols, TheText); // UTF8 bytes become Unicode Integers
-		for(int i = 0; i < Symbols.size(); i++)
-			ctx=ContextWithSymbol(ctx, Symbols.get(i)); // FIXME - conversion to symbol alphabet
-		return ctx;
-	}
-	
 	public final C BuildContext(ListIterator<Integer> previousSyms) {
 		return BuildContext(previousSyms,0);
 	}
@@ -207,72 +188,10 @@ public abstract class CLanguageModel<C> extends CDasherComponent {
 	protected C BuildContext(ListIterator<Integer> previousSyms, int countSoFar) {
 		if (previousSyms.hasPrevious()) {
 			int sym = previousSyms.previous();
-			if (sym!=CAlphabet.UNDEFINED)
+			if (sym!=CAlphabetMap.UNDEFINED)
 				return ContextWithSymbol(BuildContext(previousSyms,countSoFar+1),sym);
 		}
 		return EmptyContext();
-	}
-
-	/**
-	 * Trains the language model from a given InputStream, which
-	 * must be UTF-8 encoded.
-	 * <p>
-	 * LockEvents will be inserted every 1KB of data read, informing
-	 * components and the interface of the progress made in reading
-	 * the file.
-	 * 
-	 * @param FileIn InputStream from which to read.
-	 * @param iTotalBytes Number of bytes to read.
-	 * @param iOffset Offset at which to start reading.
-	 * @return Number of bytes read
-	 * @throws IOException 
-	 */	
-	public int TrainStream(InputStream FileIn, int iTotalBytes, int iOffset, CLockEvent evt) throws IOException {
-		
-		class CountStream extends InputStream {
-			/*package*/ int iTotalRead;
-			private final InputStream in;
-			CountStream(InputStream in, int iStartBytes) {this.in=in; this.iTotalRead=iStartBytes;}
-			@Override public int available() throws IOException {return in.available();}
-			@Override public int read() throws IOException {
-				int res = in.read();
-				if (res != -1) iTotalRead++;
-				return res;
-			}
-			@Override public int read(byte[] buf) throws IOException {return read(buf,0,buf.length);}
-			@Override public int read(byte[] buf, int start, int len) throws IOException {
-				int res = in.read(buf,start,len);
-				if (res>0) iTotalRead+=res; //-1 = EOF
-				return res;
-			}
-			@Override public long skip(long n) throws IOException {//should never be called?
-				long res=super.skip(n);
-				if (res>0) iTotalRead+=res;
-				return res;
-			}
-		};
-		CountStream count = new CountStream(FileIn, iOffset);
-		Reader chars = new BufferedReader(new InputStreamReader(count));
-		C trainContext = EmptyContext();
-		CAlphabetMap alphSyms = m_Alphabet.GetAlphabetMap();
-		
-		try {
-			while (true) {
-				int sym = alphSyms.GetNext(chars);
-				trainContext = ContextLearningSymbol(trainContext, sym);
-				if (evt!=null) {
-					int iNPercent = (count.iTotalRead *100)/iTotalBytes;
-					if (iNPercent != evt.m_iPercent) {
-						evt.m_iPercent = iNPercent;
-						InsertEvent(evt);
-					}
-				}
-			}
-		} catch (EOFException e) {
-			//that's fine!
-		}
-		return count.iTotalRead;
-		
 	}
 	
 }

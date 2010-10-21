@@ -25,19 +25,26 @@
 
 package dasher;
 
+import java.io.BufferedReader;
 import java.io.EOFException;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PushbackReader;
 import java.io.Reader;
+import java.io.StringReader;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
-import static dasher.CAlphabet.UNDEFINED;
+import java.util.ListIterator;
 
 /**
  * Map from the textual representation of alphabet symbols
  * (which can be multiple characters!) to symbol numbers.
  */
 public class CAlphabetMap {
+	public static final int UNDEFINED = -1;
 
 	/** Value used (internally) to indicate that the text/etc. is a prefix of the
 	 * string for a symbol (or more than one) but does not make up a symbol itself. */
@@ -119,6 +126,49 @@ public class CAlphabetMap {
 	}
 	
 	/**
+	 * Converts a string of text into a list of symbol indentifiers.
+	 * Typically used in the course of training a language model,
+	 * this fills the Symbols Collection with a seqeunce of integer
+	 * symbol identifiers. Each character is individually
+	 * used as a key into TextMap to determine its symbol number;
+	 * as such their is no support for multi-character symbols
+	 * at present. 
+	 * 
+	 * @param Symbols Collection to be filled with symbol identifiers.
+	 * @param Input String to be converted.
+	 * @param IsMore Redundant parameter; used to signal that the last
+	 * 			 	 input character may be an incomplete UTF-8
+	 * 				 character, but redundant since UTF-16 is now
+	 * 				 used internally.
+	 */
+	
+	public void GetSymbols(Collection<Integer> Symbols, String input) {
+		StringReader rdr=new StringReader(input);
+		while (true) {
+			try {
+				Symbols.add(GetNext(rdr));
+			} catch (IOException e) {
+				assert (e instanceof FileNotFoundException);
+				break;
+			}
+		}
+	}
+	
+	public ListIterator<Integer> GetSymbols(final ListIterator<Character> previousChars) {
+		//assume characters are 1:1 with symbols....NOT A SAFE ASSUMPTION
+		return new ListIterator<Integer>() {
+			public boolean hasPrevious() {return previousChars.hasPrevious();}
+			public Integer previous() {return GetSingleChar(previousChars.previous());}
+			public int previousIndex() {return previousChars.previousIndex();}
+			public boolean hasNext() {return previousChars.hasNext();}
+			public Integer next() {return GetSingleChar(previousChars.next());}
+			public int nextIndex() {return previousChars.nextIndex();}
+			public void add(Integer i) {throw new UnsupportedOperationException("Immutable");}
+			public void remove() {throw new UnsupportedOperationException("Immutable");}
+			public void set(Integer i) {throw new UnsupportedOperationException("Immutable");}
+		};
+	}
+	/**
 	 * Retrieves the next symbol in a stream of characters. Characters are read
 	 * from the stream until a complete representation of a symbol is obtained,
 	 * tho this may require skipping over earlier characters which are not part
@@ -176,5 +226,67 @@ public class CAlphabetMap {
 	public int GetSingleChar(char c) {
 		if (!multiChars.isEmpty()) throw new RuntimeException("Not Yet Implemented");
 		return singleChars[(int)c & CHAR_MASK];
+	}
+	
+	
+	/**
+	 * Trains the language model from a given InputStream, which
+	 * must be UTF-8 encoded.
+	 * <p>
+	 * LockEvents will be inserted every 1KB of data read, informing
+	 * components and the interface of the progress made in reading
+	 * the file.
+	 * 
+	 * @param FileIn InputStream from which to read.
+	 * @param iTotalBytes Number of bytes to read.
+	 * @param iOffset Offset at which to start reading.
+	 * @return Number of bytes read
+	 * @throws IOException 
+	 */	
+	public <C> int TrainStream(CLanguageModel<C> model, InputStream FileIn, int iTotalBytes, int iOffset, CLockEvent evt) throws IOException {
+		
+		class CountStream extends InputStream {
+			/*package*/ int iTotalRead;
+			private final InputStream in;
+			CountStream(InputStream in, int iStartBytes) {this.in=in; this.iTotalRead=iStartBytes;}
+			@Override public int available() throws IOException {return in.available();}
+			@Override public int read() throws IOException {
+				int res = in.read();
+				if (res != -1) iTotalRead++;
+				return res;
+			}
+			@Override public int read(byte[] buf) throws IOException {return read(buf,0,buf.length);}
+			@Override public int read(byte[] buf, int start, int len) throws IOException {
+				int res = in.read(buf,start,len);
+				if (res>0) iTotalRead+=res; //-1 = EOF
+				return res;
+			}
+			@Override public long skip(long n) throws IOException {//should never be called?
+				long res=super.skip(n);
+				if (res>0) iTotalRead+=res;
+				return res;
+			}
+		};
+		CountStream count = new CountStream(FileIn, iOffset);
+		Reader chars = new BufferedReader(new InputStreamReader(count));
+		C trainContext = model.EmptyContext();
+		
+		try {
+			while (true) {
+				int sym = GetNext(chars);
+				trainContext = model.ContextLearningSymbol(trainContext, sym);
+				if (evt!=null) {
+					int iNPercent = (count.iTotalRead *100)/iTotalBytes;
+					if (iNPercent != evt.m_iPercent) {
+						evt.m_iPercent = iNPercent;
+						model.InsertEvent(evt);
+					}
+				}
+			}
+		} catch (EOFException e) {
+			//that's fine!
+		}
+		return count.iTotalRead;
+		
 	}
 }
