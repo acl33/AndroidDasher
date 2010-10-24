@@ -137,9 +137,10 @@ public class CAlphIO extends XMLFileParser {
 		
 		public CAlphabetMap makeMap() {
 			CAlphabetMap m = new CAlphabetMap();
-			for (int i=0; i<m_Characters.size(); i++)
-				if (m_Characters.get(i).length()>0) //ACL this check seems a bit redundant...will such ever occur????
-					m.Add(m_Characters.get(i), i);
+			if (m_ParagraphSymbol!=CAlphabetMap.UNDEFINED) m.AddParagraphSymbol(m_ParagraphSymbol);
+			for (int i=0; i<m_Characters.size(); i++) {
+				if (i!=m_ParagraphSymbol) m.Add(m_Characters.get(i), i);
+			}
 			return m;
 		}
 		/**
@@ -518,7 +519,13 @@ public class CAlphIO extends XMLFileParser {
 						display = tagAttributes.getValue(i);
 						break;
 					case 't':
-						if (text==null)  text = tagAttributes.getValue(i);
+						if (text==null) {
+							text = tagAttributes.getValue(i);
+							if (text.codePointCount(0, text.length())!=1) {
+								m_Interface.InsertEvent(new CMessageEvent("Illegal character \""+text+"\" - should be exactly one unicode char. Skipping...", 2, 1));
+								return;
+							}
+						}
 						else m_Interface.InsertEvent(new CMessageEvent("Unnecessary or duplicate text for character '"+text+"'", 1, 1));
 						break;
 					case 'b':

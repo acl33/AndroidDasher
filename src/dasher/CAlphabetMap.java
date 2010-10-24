@@ -46,186 +46,158 @@ import java.util.ListIterator;
 public class CAlphabetMap {
 	public static final int UNDEFINED = -1;
 
-	/** Value used (internally) to indicate that the text/etc. is a prefix of the
-	 * string for a symbol (or more than one) but does not make up a symbol itself. */
-	private static final int PREFIX = -2;
+	/** Symbol value of the paragraph symbol, to which both "\r\n" and "\n" are mapped.
+	 * (if {@link #UNDEFINED}, no special mapping for "\r\n" is applied.)
+	 */
+	private int m_ParagraphSymbol=UNDEFINED;
 	
-	/** Map to symbol number from string representing display text,
-	 * but <emph>only</emph> for symbols whose display text is more than
-	 * one character long. Note that all prefixes, of strings that are symbols,
-	 * are also stored in the map with value {@link #PREFIX}.
+	/**
+	 *  Map from unicode "code point" (a 32-bit int representing a single output text character),
+	 * to Dasher's internal symbol number, but <emph>only</emph> for characters outside the range 0-255.
 	 * @see #singleChars
 	 */
-	private final HashMap<String, Integer> multiChars = new HashMap<String, Integer>();
+	private final HashMap<Integer, Integer> multiChars = new HashMap<Integer, Integer>();
 	
 	/**
-	 * Map to symbol number from display text, but <emph>only</emph> for
-	 * symbols whose display text is a single character. (However prefixes
-	 * of multicharacter symbols are also stored, with value {@link #PREFIX}).
+	 * Map to symbol number from output text, for symbols whose unicode value is <=255.
+	 * @see #multiChars
 	 */
-	private int[] singleChars = new int[0];
+	private int[] singleChars = new int[256];
 	
+	public CAlphabetMap() {
+		Arrays.fill(singleChars, UNDEFINED);
+	}
+	
+	public void AddParagraphSymbol(int value) {
+		if (m_ParagraphSymbol!=UNDEFINED)
+			throw new IllegalStateException("Paragraph symbol already defined as "+m_ParagraphSymbol);
+		if (singleChars['\r']!=UNDEFINED) throw new IllegalStateException("Can't add paragraph symbol, \r already defined");
+		if (singleChars['\n']!=UNDEFINED) throw new IllegalStateException("Can't add paragraph symbol, \n already defined");
+		singleChars['\n']=m_ParagraphSymbol=value;
+	}
 	/**
-	 * Adds a symbol to the map
-	 * @param key the text for the symbol
-	 * @param value unique code of the symbol
-	 * @throws IllegalArgumentException if <code>value&lt;0</code>, if there is another symbol
-	 * with the same text, or if another symbol is a prefix of this one or vice versa.
+	 * Adds a symbol to the map.
+	 * <p>Note it is possible for the same value to be present under multiple keys,
+	 * in which case any occurrence of any of those keys in the input, will be mapped
+	 * to the same value (symbol number). However, the expected common-case of the
+	 * paragraph symbol, should <em>not</em> be handled this way - it should be added
+	 * via {@link AddParagraphSymbol}, so that occurrences of both <code>"\n"</code>
+	 * and <code>"\r\n"</code> will be mapped to the appropriate value.
+	 * @param key the text for the symbol - a single unicode character (possibly two Java "char"s)
+	 * @param value Internal-to-Dasher number of the symbol
+	 * @throws IllegalArgumentException if <code>key</code> is not a single unicode character,
+	 * if <code>value&lt;0</code>, or if there is another symbol with the same text. 
 	 */
 	public void Add(String key, int value) {
-		if (key.length()==1) {Add(key.charAt(0), value); return;}
+		if (key.codePointCount(0, key.length())!=1) throw new IllegalArgumentException("Not a single character "+key);
 		if (value<0) throw new IllegalArgumentException("Illegal symbol number "+value + " for display text "+key);
-		if (multiChars.containsKey(key))
-			throw new IllegalArgumentException(
-					(multiChars.get(key)==PREFIX) ? "symbol "+value+" with display text "+key+" is prefix of another symbol"
-							: "symbols "+value+" and "+multiChars.get(key)+" share display text "+key);
-		StringBuilder sb = new StringBuilder(key);
-		for (;;) {
-			sb.deleteCharAt(sb.length()-1);
-			if (sb.length()==1) break;
-			Integer existing=multiChars.get(sb.toString());
-			if (existing!=null && existing.intValue() != PREFIX)
-				throw new IllegalArgumentException("symbol "+value+" with display text "+key+" is suffix of symbol "+existing+" with displaytext "+sb);
-			multiChars.put(sb.toString(), PREFIX);
+		if (key.charAt(0)<256) {
+			assert (key.length()==1);
+			if (singleChars[key.charAt(0)]!=UNDEFINED) throw new IllegalArgumentException("Char "+key.charAt(0)+" already mapped to symbol number "+singleChars[key.charAt(0)]);
+			if (key.charAt(0)=='\r' && m_ParagraphSymbol!=UNDEFINED) throw new IllegalArgumentException("Can't define \r if paragraph symbol exists");
+			singleChars[key.charAt(0)]=value;
+		} else {
+			assert (key.length()==1 && !Character.isHighSurrogate(key.charAt(0)) && !Character.isLowSurrogate(key.charAt(0)))
+				|| (key.length()==2 && Character.isSurrogatePair(key.charAt(0), key.charAt(1)));
+			int codePoint=key.codePointAt(0);
+			if (multiChars.get(codePoint)!=null)
+				throw new IllegalArgumentException("Key \""+key+"\" already mapped to symbol number "+multiChars.get(codePoint));
+			multiChars.put(codePoint, value);
 		}
-		char first = sb.charAt(0);
-		if (singleChars.length>first && singleChars[first]>=0)
-			throw new IllegalArgumentException("symbol "+value+" with display text "+key+" is suffix of symbol "+singleChars[first]+" with displaytext "+first);
-		multiChars.put(key,value);
-	}
-
-	/**
-	 * Adds a symbol to the map
-	 * @param key the text for the symbol
-	 * @param value unique code of the symbol
-	 * @throws IllegalArgumentException if <code>value&lt;0</code>, if there is another symbol
-	 * with the same text, or if this symbol is a prefix of another symbol added previously.
-	 */
-	public void Add(char key,int value) {
-		if (value<0) throw new IllegalArgumentException("Illegal symbol number "+value + " for display text "+key);
-		if (key >= singleChars.length) {
-			int[] old = singleChars;
-			singleChars = new int[Math.max(old.length*2+1, key+1)];
-			System.arraycopy(old, 0, singleChars, 0, old.length);
-			Arrays.fill(singleChars, old.length, singleChars.length, UNDEFINED);
-		} else if (singleChars[key]!=UNDEFINED)
-			throw new IllegalArgumentException(
-					(singleChars[key]==PREFIX) ? "Symbol "+value+" with display text "+key+" is prefix of anothr symbol"
-							: "Symbols "+value+" and "+singleChars[key]+" share display text "+key
-					);
-		singleChars[key]=value;
-	}
-	
-	private int get(String s) {
-		if (s.length()==1) {
-			char c=s.charAt(0);
-			return (c < singleChars.length) ? singleChars[c] : UNDEFINED;
-		}
-		Integer i = multiChars.get(s);
-		return (i==null) ? UNDEFINED : i;
 	}
 	
 	/**
 	 * Converts a string of text into a list of symbol indentifiers.
-	 * Typically used in the course of training a language model,
-	 * this fills the Symbols Collection with a seqeunce of integer
-	 * symbol identifiers. Each character is individually
-	 * used as a key into TextMap to determine its symbol number;
-	 * as such their is no support for multi-character symbols
-	 * at present. 
 	 * 
 	 * @param Symbols Collection to be filled with symbol identifiers.
 	 * @param Input String to be converted.
-	 * @param IsMore Redundant parameter; used to signal that the last
-	 * 			 	 input character may be an incomplete UTF-8
-	 * 				 character, but redundant since UTF-16 is now
-	 * 				 used internally.
-	 */
-	
+	 */	
 	public void GetSymbols(Collection<Integer> Symbols, String input) {
-		StringReader rdr=new StringReader(input);
-		while (true) {
-			try {
-				Symbols.add(GetNext(rdr));
-			} catch (IOException e) {
-				assert (e instanceof FileNotFoundException);
-				break;
-			}
+		for (int nextIdx=0; nextIdx<input.length(); nextIdx++) {
+			char c = input.charAt(nextIdx);
+			int codePoint;
+			if (Character.isHighSurrogate(c)) {
+				if (nextIdx+1 < input.length() && Character.isLowSurrogate(input.charAt(nextIdx+1))) {
+					codePoint = input.codePointAt(nextIdx);
+					//and fallthrough to multiChars lookup
+				} else {
+					System.err.println("High surrogate "+c+" not followed by low surrogate, skipping");
+					continue;
+				}
+			} else if (m_ParagraphSymbol!=UNDEFINED && c=='\r') {
+				if (nextIdx+1 < input.length() && input.charAt(nextIdx+1)=='\n') {
+					Symbols.add(m_ParagraphSymbol);
+					nextIdx++; //skip \n
+				} else {
+					System.err.println("Carriage return not followed by newline, skipping");
+				}
+				continue;
+			} else if (c<256) {
+				Symbols.add(singleChars[c]);
+				continue;
+			} else codePoint=c;
+			Integer i = multiChars.get(codePoint);
+			Symbols.add(i==null ? UNDEFINED : i);
 		}
 	}
 	
 	public ListIterator<Integer> GetSymbols(final ListIterator<Character> previousChars) {
-		//assume characters are 1:1 with symbols....NOT A SAFE ASSUMPTION
 		return new ListIterator<Integer>() {
+			/** This'll give a false positive iff we have a bad unicode encoding underneath. */
 			public boolean hasPrevious() {return previousChars.hasPrevious();}
-			public Integer previous() {return GetSingleChar(previousChars.previous());}
-			public int previousIndex() {return previousChars.previousIndex();}
+			public Integer previous() {
+				char prev = previousChars.previous();
+				if (Character.isLowSurrogate(prev)) {
+					if (previousChars.hasPrevious()) { 
+						char p=previousChars.previous();
+						if (Character.isHighSurrogate(p)) {
+							Integer i = multiChars.get(Character.toCodePoint(p,prev));
+							return (i==null) ? UNDEFINED : i;
+						}
+						previousChars.next(); //push it back
+					}
+					System.err.println("Ignoring low surrogate "+prev+" as not preceded by high surrogate");
+					return previous();
+				} else if (m_ParagraphSymbol!=UNDEFINED && prev=='\n') {
+					if (previousChars.hasPrevious())
+						if (previousChars.previous()!='\r') previousChars.next(); //no, don't take
+					return m_ParagraphSymbol;
+				}
+				if (prev<256) return singleChars[prev];
+				Integer i=multiChars.get((char)prev);
+				return (i==null) ? UNDEFINED : i;
+			}
+			public int previousIndex() {throw new UnsupportedOperationException("Symbol index");}
+			/** This'll give a false positive iff we have a bad unicode encoding underneath. */
 			public boolean hasNext() {return previousChars.hasNext();}
-			public Integer next() {return GetSingleChar(previousChars.next());}
-			public int nextIndex() {return previousChars.nextIndex();}
+			public Integer next() {
+				char next = previousChars.next();
+				if (Character.isHighSurrogate(next)) {
+					if (previousChars.hasNext()) {
+						char l = previousChars.next();
+						if (Character.isLowSurrogate(l)) {
+							Integer i = multiChars.get(Character.toCodePoint(next, l));
+							return (i==null) ? UNDEFINED : i;
+						}
+						previousChars.previous(); //push back
+					}
+					System.err.println("Ignoring high surrogate "+next+" as not followed by low surrogate");
+					return next();
+				} else if (m_ParagraphSymbol!=UNDEFINED && next=='\r') {
+					if (previousChars.hasNext())
+						if (previousChars.next()=='\n') return m_ParagraphSymbol;
+						else previousChars.previous(); //untake
+					//fall through, i.e. attempt to find a symbol for just '\r'
+				}
+				if (next<256) return singleChars[next];
+				Integer i = multiChars.get(next);
+				return (i==null) ? UNDEFINED : i;
+			}
+			public int nextIndex() {throw new UnsupportedOperationException("Symbol index");}
 			public void add(Integer i) {throw new UnsupportedOperationException("Immutable");}
 			public void remove() {throw new UnsupportedOperationException("Immutable");}
 			public void set(Integer i) {throw new UnsupportedOperationException("Immutable");}
 		};
-	}
-	/**
-	 * Retrieves the next symbol in a stream of characters. Characters are read
-	 * from the stream until a complete representation of a symbol is obtained,
-	 * tho this may require skipping over earlier characters which are not part
-	 * of said symbol.
-	 * 
-	 * <p>TODO: Note that if a symbol has text 'abcdef' and another 'bcd' (not
-	 * a prefix!), and the stream contains 'abcdx'
-	 * 
-	 * 
-	 * @param Key String to look up
-	 * @return SSymbol containing the integer index of the symbol, or Undefined if the supplied String did not correspond to any symbol.
-	 */	
-	public int GetNext(Reader rdr) throws IOException {
-		int c;
-		while (true) {
-			c = rdr.read();
-			if (c==-1) throw new EOFException();
-			if (c < singleChars.length) {
-				int sym = singleChars[c];
-				if (sym>=0) return sym;
-				else if (sym==PREFIX) break;
-			}
-		}
-		//not a symbol itself, but is a prefix of something else.
-		//Slow-case string/character handling, as it's easier and this shouldn't happen often.
-		StringBuilder sb=new StringBuilder();
-		sb.append((char)c);
-		while (true) {
-			if ((c=rdr.read())==-1) throw new EOFException();
-			sb.append((char)c);
-			//now chop 0 or more characters off the beginning until
-			// we have something that's (a prefix of) a symbol
-			int sym;
-			chop: while ((sym=get(sb.toString()))==UNDEFINED && sb.length()>0) {
-				sb.delete(0,1);
-				//look for symbols whose text we've already matched...
-				// (e.g. if there are symbols 'abcdef' and 'bcd' and text was 'abcd',
-				// a prefix of 'abcdef', and then we read an 'x',
-				// 'abcdx' is not a prefix; but chopping off the 'a' leads to 'bcdx',
-				// which is a symbol and should be returned.)
-				for (int i=sb.length(); (i--)>1;)
-					if ((sym=get(sb.substring(0,i)))!=UNDEFINED) {
-						//first 'i' characters of sb are symbol. push back the rest...
-						if (!(rdr instanceof PushbackReader))
-							rdr = new PushbackReader(rdr);
-						((PushbackReader)rdr).unread(sb.toString().toCharArray(), i, sb.length());
-						break chop; //and return the symbol
-					}
-			}
-			if (sym>0) return sym;
-		}
-	}
-	
-	private static final int CHAR_MASK = (1<<Character.SIZE)-1;
-	public int GetSingleChar(char c) {
-		if (!multiChars.isEmpty()) throw new RuntimeException("Not Yet Implemented");
-		return singleChars[(int)c & CHAR_MASK];
 	}
 	
 	
@@ -268,18 +240,54 @@ public class CAlphabetMap {
 			}
 		};
 		CountStream count = new CountStream(FileIn, iOffset);
-		Reader chars = new BufferedReader(new InputStreamReader(count));
+		Reader chars = new BufferedReader(new InputStreamReader(count)); //buffer just for performance
 		C trainContext = model.EmptyContext();
 		
 		try {
-			while (true) {
-				int sym = GetNext(chars);
-				trainContext = model.ContextLearningSymbol(trainContext, sym);
-				if (evt!=null) {
-					int iNPercent = (count.iTotalRead *100)/iTotalBytes;
-					if (iNPercent != evt.m_iPercent) {
-						evt.m_iPercent = iNPercent;
-						model.InsertEvent(evt);
+			outer: while (true) {
+				int c=chars.read();
+				int sym;
+				while (true) {
+					//continues come here, i.e. check for -1
+					if (c==-1) break outer; 
+					if (Character.isHighSurrogate((char)c)) {
+						int n=chars.read();
+						if (Character.isLowSurrogate((char)n)) {
+							sym=Character.toCodePoint((char)c,(char)n);
+							break;
+						} else {
+							System.err.println("Skipping high surrogate char "+c+" as followed by "+n+" which is not low surrogate");
+							c=n;
+							continue;
+						}
+					} else if (c=='\r' && m_ParagraphSymbol!=UNDEFINED) {
+						int n=chars.read();
+						if (n=='\n') {
+							sym=m_ParagraphSymbol;
+							break;
+						} else {
+							System.err.println("Skipping \r as followed by "+n+" which is not \n");
+							c=n;
+							continue;
+						}
+					} else {
+						if (c<256) sym=singleChars[c];
+						else {
+							Integer i=multiChars.get(c);
+							sym=(i==null) ? UNDEFINED : i;
+						}
+						break;
+					}
+				}
+				//breaks come here, with sym defined. As per C++ Dasher, we just ignore symbols not in the alphabet...
+				if (sym!=CAlphabetMap.UNDEFINED) {
+					trainContext = model.ContextLearningSymbol(trainContext, sym);
+					if (evt!=null) {
+						int iNPercent = (count.iTotalRead *100)/iTotalBytes;
+						if (iNPercent != evt.m_iPercent) {
+							evt.m_iPercent = iNPercent;
+							model.InsertEvent(evt);
+						}
 					}
 				}
 			}
@@ -287,6 +295,5 @@ public class CAlphabetMap {
 			//that's fine!
 		}
 		return count.iTotalRead;
-		
 	}
 }
