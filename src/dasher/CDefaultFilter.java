@@ -327,10 +327,13 @@ public class CDefaultFilter extends CInputFilter {
 		if(GetBoolParameter(Ebp_parameters.BP_CIRCLE_START)) {
 			m_StartHandler = new CCircleStartHandler(m_Interface, m_SettingsStore);
 		}
-		else if(GetBoolParameter(Ebp_parameters.BP_MOUSEPOS_MODE)) {
-			/* m_StartHandler = new CTwoBoxStartHandler(m_EventHandler, m_SettingsStore, m_Interface); */
-		}
+		/*else if(GetBoolParameter(Ebp_parameters.BP_MOUSEPOS_MODE))
+			 m_StartHandler = new CTwoBoxStartHandler(m_EventHandler, m_SettingsStore, m_Interface); */
 			// CSFS: Disabled for now, one is enough for testing purposes, if even that is necessary.
+		else {
+			if (m_StartHandler!=null) m_StartHandler.UnregisterComponent();
+			m_StartHandler = null;
+		}
 	}
 	
 	private final int[] mouseX=new int[2],mouseY=new int[2];
