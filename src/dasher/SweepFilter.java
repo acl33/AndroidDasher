@@ -54,4 +54,5 @@ public class SweepFilter extends COneDimensionalFilter {
 	}
 	
 	@Override public boolean supportsPause() {return true;}
+	@Override public void CreateStartHandler() {}
 }
