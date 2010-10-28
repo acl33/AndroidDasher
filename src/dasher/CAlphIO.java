@@ -486,7 +486,7 @@ public class CAlphIO extends XMLFileParser {
 					
 					SGroupInfo currentGroup = new SGroupInfo(label,col,visible);
 					
-				    currentGroup.iStart = currentAlph.m_Characters.size();
+				    currentGroup.iStart = numOrderedCharacters(currentAlph);
 
 				    if(!groupStack.isEmpty()) {
 				    	SGroupInfo parent = groupStack.peek();
@@ -551,7 +551,25 @@ public class CAlphIO extends XMLFileParser {
 				String tagName = (simpleName.equals("") ? qualName : simpleName);
 				
 				if(tagName == "alphabet") {
+					//alphabet finished, i.e. all read in. Groups will have been stored in linked-list
+					// in reverse order to how they were in the file, so put them the right way round...
 					currentAlph.m_BaseGroup = Reverse(currentAlph.m_BaseGroup);
+					//Also to match old behaviour of Dasher, we put the paragraph & space symbols at the end
+					// (many alphabet files put paragraph/space tags at beginning of alphabet when this is not wanted.
+					// TODO, a better solution would be to fix the alphabet files, putting space/para last for the
+					// (presumed majority of) users who want that, so that people who do actually want space
+					// or paragraph anywhere else, could then do so...)
+					if (currentAlph.m_ParagraphSymbol!=CAlphabetMap.UNDEFINED) {
+						//if space symbol is after paragraph, it's about to be moved one earlier
+						if (currentAlph.m_SpaceSymbol > currentAlph.m_ParagraphSymbol) currentAlph.m_SpaceSymbol--;
+						currentAlph.m_ParagraphSymbol=moveCharToEnd(currentAlph,currentAlph.m_ParagraphSymbol);
+					}
+					if (currentAlph.m_SpaceSymbol!=CAlphabetMap.UNDEFINED) {
+						//if paragraph symbol is (now) after space (which it will be if it was defined, because of above),
+						// it'll get moved one earlier...
+						if (currentAlph.m_ParagraphSymbol > currentAlph.m_SpaceSymbol) currentAlph.m_ParagraphSymbol--;
+						currentAlph.m_SpaceSymbol = moveCharToEnd(currentAlph,currentAlph.m_SpaceSymbol);
+					}
 					Alphabets.put(currentAlph.name, currentAlph);
 				}
 				
@@ -566,13 +584,11 @@ public class CAlphIO extends XMLFileParser {
 				// once the tags we're interested in have been closed.
 
 				else if(tagName == "group") {
-					groupStack.pop().iEnd = currentAlph.m_Characters.size();
+					groupStack.pop().iEnd = numOrderedCharacters(currentAlph);
 				}
 				
-
-				
 			}
-
+			
 			public void characters(char[] chars, int start, int length) throws SAXException {
 				
 				if(currentTag == "palette") {
@@ -596,6 +612,30 @@ public class CAlphIO extends XMLFileParser {
 		// Pass in the Alphabet HashMap so it can be modified
 
 		parser.parse(XMLInput, handler);
+	}
+	
+	private static int moveCharToEnd(AlphInfo alph,int pos) {
+		alph.m_Characters.add(alph.m_Characters.get(pos)); alph.m_Characters.remove(pos);
+		alph.m_Colours.add(alph.m_Colours.get(pos)); alph.m_Colours.remove(pos);
+		alph.m_Foreground.add(alph.m_Foreground.get(pos)); alph.m_Foreground.remove(pos);
+		alph.m_Display.add(alph.m_Display.get(pos)); alph.m_Display.remove(pos);
+		return alph.m_Characters.size()-1;
+	}
+	
+	/** Returns the number of characters in the specified alphabet which will stay
+	 * in their current order when the alphabet is complete
+	 * (paragraph and space will not, as they will be moved to the end, past any
+	 * other characters entered since or not-yet-). Thus, this is the size (one more
+	 * than index) of the list of characters read so far, excluding space and para.
+	 * @param alph AlphInfo in process of being built (i.e. still having characters added,
+	 * so space and paragraph not yet moved to end)
+	 * @return number of non-space, non-paragraph, characters so far in alphabet. 
+	 */
+	private static int numOrderedCharacters(AlphInfo alph) {
+		int i = alph.m_Characters.size();
+		if (alph.m_SpaceSymbol!=CAlphabetMap.UNDEFINED) i--;
+		if (alph.m_ParagraphSymbol!=CAlphabetMap.UNDEFINED) i--;
+		return i;
 	}
 	
 	/**
