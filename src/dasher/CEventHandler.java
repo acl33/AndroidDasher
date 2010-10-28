@@ -25,39 +25,36 @@
 
 package dasher;
 
-import java.util.ArrayList;
+import java.util.Set;
+import java.util.HashSet;
 
 /**
- * The EventHandler class is a fairly simple device whose responsibilities are to
- * <p>a) Allow DasherComponents to register themselves as event listeners,
- * <p>b) Accept events from DasherComponents and notify all other Components
- * using their HandleEvent method, and
- * <p>c) Allow Components to unregister themselves when they are being destroyed.
+ * The EventHandler class
+ * <OL>
+ * <LI> Allows DasherComponents to register themselves as event listeners,
+ * <LI> Allows Components to unregister themselves when they are being destroyed.
+ * <LI> Accepts events from DasherComponents and notifies all other Components
+ * using their {@link CDasherComponent#HandleEvent(CEvent)} method. (Note, there is no guarantee of the <em>order</em>
+ * in which HandleEvents are called, not even that this wil be consistent from one event to the next)
  * <p>
- * The mode of action is very simple indeed; we have a list of
- * Listeners to which new listeners are added and old ones removed,
- * and which we iterate through when notified of an event, notifying
- * all other Components by calling their HandleEvent methods in turn.
+ * The mode of action is to have a set of Listeners to which new listeners are added and old ones removed,
+ * and which we iterate through when notified of an event, calling the HandleEvent method of each.
  * <p>
- * There is however one special case: In the event that a listener tries
- * to register itself whilst an event is being handled (for example, a parameter
- * change caused a Component to be created which immediately tried
- * to register itself), the component is added to a queue of listeners
- * who are waiting to be registered.
+ * There is however a special case: In the event that a listener tries
+ * to register or deregister itself whilst an event is being handled (for example,
+ * a parameter change caused a Component to be created, or destroyed, which thus tried
+ * to (de/)register itself), said component is instead added to a set of listeners
+ * who are waiting to be (de/)registered.
  * <p>
  * This is because otherwise there would be some ambiguity as to
  * when a given component would start receiving events, particularly
  * as to whether it would receive that which was being handled
- * when it registered itself.
+ * when it registered itself; and moreover, it removes any possibility
+ * of ConcurrentModificationExceptions!
  * <p>
- * The result is that new listeners will begin receiving events
- * as soon as all those which were in progress when it registered
+ * The result is that new listeners will begin receiving (or stop receiving)
+ * events only when <em>all</em> those which were in progress when it registered
  * have finished.
- * <p>
- * Because events are dispatched immediately and not added to a queue,
- * there cannot be any certainty as to in what order a given component
- * will hear about multiple events inserted without waiting for
- * the first to end.
  * <p>
  * It is also possible to cause the program to enter a tight
  * loop by creating a direct or indirect loop of dispatched events;
@@ -69,15 +66,15 @@ import java.util.ArrayList;
 public class CEventHandler {
 	  
 	/**
-	 * List of currently active listeners
+	 * Set of currently active listeners
 	 */
-	protected final ArrayList <CDasherComponent> m_vListeners = new ArrayList<CDasherComponent>();
+	protected final Set <CDasherComponent> m_vListeners = new HashSet<CDasherComponent>();
 	
 	/**
-	 * List of Components waiting to be added as listeners
-	 * when we finish handling events.
+	 * Set of Components waiting to be either added as listeners (if not already present),
+	 * or else removed (if already present), when we finish handling events.
 	 */
-	protected final ArrayList <CDasherComponent> m_vListenerQueue = new ArrayList<CDasherComponent>();
+	protected final Set<CDasherComponent> m_vListenerQueue = new HashSet<CDasherComponent>();
 
 	/**
 	 * Integer indicating how many times we are 'in' the event
@@ -92,13 +89,8 @@ public class CEventHandler {
 	 * Before beginning, m_iInHandler is incremented to indicate
 	 * that one event is currently in progress; when finished,
 	 * it is decremented and, if zero, listeners which are queued
-	 * up for registration will be added to the list of active
-	 * listeners.
-	 * <p>
-	 * The last components to be notified of a given event will
-	 * always be the parent Interface and then the external
-	 * event handler (by way of the interface's ExternalEventHandler
-	 * method.
+	 * up for (de/)registration will be added/removed to/from the
+	 * list of active listeners.
 	 * 
 	 * @param Event Event to dispatch to all registered listeners.
 	 */
@@ -111,10 +103,6 @@ public class CEventHandler {
 		  // An alternative approach would be a message queue - this might actually be a bit more sensible
 		  ++m_iInHandler;
 		  
-		  /* CSFS: Rewritten to use ArrayLists and for-each
-		   * instead of C++ list iterators.
-		   */
-
 		  // Loop through components and notify them of the event
 		  		  
 		  for(CDasherComponent i : m_vListeners) {
@@ -125,9 +113,11 @@ public class CEventHandler {
 		  
 		  if(m_iInHandler == 0) {
 			  
-			  
 			  for(CDasherComponent i : m_vListenerQueue) {
-				  m_vListeners.add(i); 
+				  if (m_vListeners.contains(i))
+					  m_vListeners.remove(i);
+				  else
+					  m_vListeners.add(i); 
 			  }
 			  m_vListenerQueue.clear();
 		  }
@@ -144,16 +134,9 @@ public class CEventHandler {
 	 */
 	public void RegisterListener(CDasherComponent pListener) {
 
-		if(m_vListeners.contains(pListener) == false && m_vListenerQueue.contains(pListener) == false) {
-		    if(!(m_iInHandler > 0))
-		      m_vListeners.add(pListener);
-		    else
-		      m_vListenerQueue.add(pListener);
-		  }
-		  else {
-		    // Can't add the same listener twice
-		  }
-		}
+		if(m_vListeners.contains(pListener) || m_vListenerQueue.contains(pListener)) return; //already present or waiting
+		((m_iInHandler > 0) ? m_vListenerQueue : m_vListeners).add(pListener);
+	}
 
 	/**
 	 * Removes a given Component from the list of listeners.
@@ -164,9 +147,18 @@ public class CEventHandler {
 	 * @param pListener Component to remove
 	 */
 	public void UnregisterListener(CDasherComponent pListener) {
-		
-		if(m_vListeners.contains(pListener)) m_vListeners.remove(pListener);
-		if(m_vListenerQueue.contains(pListener)) m_vListenerQueue.remove(pListener);
+		if (m_iInHandler==0) {
+			assert (m_vListenerQueue.size()==0);
+			m_vListeners.remove(pListener);
+		}
+		//nope, can't do anything now...
+		if(m_vListeners.contains(pListener)) {
+			if (m_vListenerQueue.contains(pListener)) return; //already enqueued for removal
+			m_vListenerQueue.add(pListener);
+		} else {
+			//not actually a listener atm. So just make sure it isn't added as one later...
+			m_vListenerQueue.remove(pListener);
+		}
 	}
 
 }
