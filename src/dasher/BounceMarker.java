@@ -148,21 +148,8 @@ public class BounceMarker {
 		}
 	}
 	
-	private static class PushRec {
-		int pixelLocn;
-		double natsSince;
-		final double bitrate;
-		PushRec(int pixelLocn, double bitrate) {
-			this.pixelLocn = pixelLocn;
-			this.bitrate = bitrate;
-			//natsSince = 0.0
-		}
-	}
-	
 	private int m_iLocn;
 	private double m_dNumNats;
-	//todo, make this into a linked + free list with object pooling, and no iterators!
-	private final LinkedList<PushRec> prev_pushes = new LinkedList<PushRec>();;
 	private final ParzenEstimator window;
 	
 	private static final int BINS_PER_SEC=100;
@@ -183,36 +170,76 @@ public class BounceMarker {
 		return iOffset;
 	}
 	
+	/** Record of the current location of the sentence at the marker
+	 * when some previous button was pushed
+	 * @author acl33
+	 *
+	 */
+	private static class PushRec {
+		int pixelLocn;
+		double natsSince;
+		double bitrate;
+		/** The next (i.e. came after / more recently in time) push after this one */
+		PushRec next;
+	}
+	
+	/** The longest-ago push we are still tracking, i.e. head of the list */
+	private PushRec longest_push;
+	/** The most recent push, i.e. tail of the list */
+	private PushRec prev_push;
+	/** Object pool of allocated but currently-unused PushRecs */
+	
+	private PushRec freeList;
+	
 	public void NotifyOffset(int iOffset, double dNats) {
 		//1. apply dNats growth and iOffset offset to all previous pushes...
-		for (PushRec p : prev_pushes) {
+		for (PushRec p=longest_push; p!=null; p=p.next) {
 		    p.pixelLocn = (int)(p.pixelLocn * Math.exp(dNats) - iOffset);
 		    p.natsSince += dNats;
 		}
 		
 		//2. for previous pushes that were long enough ago...
-		while (!prev_pushes.isEmpty()) {
-			PushRec longest = prev_pushes.element();
-			if (longest.natsSince <= m_dNumNats) break; //not long enough ago
-			prev_pushes.remove();
+		while (longest_push!=null && longest_push.natsSince <= m_dNumNats) {
+			PushRec p = longest_push;
+			if ((longest_push = longest_push.next)==null) prev_push=null;
 			//ok - p.pixelLocn is the position _now_ of (the sentence at the marker when offset was applied)
 				//target sentence is now at 0
-			double orig_pos = m_iLocn + longest.pixelLocn / Math.exp(longest.natsSince);
+			double orig_pos = m_iLocn + longest_push.pixelLocn / Math.exp(longest_push.natsSince);
 			double mul = orig_pos / m_iLocn;
 		    //TODO - check ok for orig_pos inside&outside positive&negative m_iLocn.
 		    //if not, do the long way:
 		    //window.AddElem((mul<1.0 ? -ln(1.0/mul) : ln(mul)) / longest->bitrate);
-		    window.AddElem((int)(Math.log(mul) * BINS_PER_SEC / longest.bitrate)); //msec, except nats not bits
+		    window.AddElem((int)(Math.log(mul) * BINS_PER_SEC / longest_push.bitrate)); //msec, except nats not bits
 		    android.util.Log.d("DasherIME","Updated mean to "+window.mean());
 		    //TODO, store (some summary of) means&variances as a permanent setting for next time?
+		    p.next=freeList; freeList=p;
 		}
 	}
 	
 	public void addPush(int iOffset, double bitrate) {
-		prev_pushes.add(new PushRec(m_iLocn - iOffset, bitrate));
+		PushRec p;
+		if (freeList!=null) {
+			p=freeList;
+			freeList = freeList.next;
+		} else p=new PushRec();
+		p.next=prev_push;
+		prev_push=p;
+		p.pixelLocn = m_iLocn - iOffset;
+		p.natsSince=0.0;
+		p.bitrate = bitrate;
 	}
 	
-	public void clearPushes() {prev_pushes.clear();}
+	public void clearPushes() {
+		if (prev_push!=null) {
+			prev_push.next=freeList;
+			freeList = longest_push;
+			longest_push=prev_push=null;
+		}
+		//Don't hold onto >4 PushRec's.
+		int i=0;
+		for (PushRec p=freeList; p!=null; p=p.next, i++)
+			if (i>4) p.next=null; //will now exit loop.	
+	}
 	
 	private final long x[] = new long[2], y[]=new long[2];
 	public void Draw(CDasherView pView, double dNats) {
@@ -223,7 +250,7 @@ public class BounceMarker {
 		if (DEBUG_LEARNING) {
 			double e = Math.exp(dNats);
 			//unfortunately this won't take account of the 'smoothing' applied to Offsets...
-			for (PushRec p : prev_pushes) {
+			for (PushRec p=longest_push; p!=null; p=p.next) {
 				x[0]=-100; x[1]=-1000;
 				y[0] = y[1] = (long)(2048-p.pixelLocn * e);
 				pView.DasherPolyline(x, y, 2, 3, 2);
