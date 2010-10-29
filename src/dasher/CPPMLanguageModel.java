@@ -166,23 +166,14 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 
 		long size_of_slice = iToSpend;
 
+		long each = size_of_slice / (iNumSymbols-1);
+		iToSpend -= each*(iNumSymbols-1);
+		
 		for(int i = 1; i < iNumSymbols; i++) {
-			//if(!(exclusions[i] && doExclusion)) {
-			long p = size_of_slice / (iNumSymbols-1);
-			probs[i] += p;
-			iToSpend -= p;
-			//}
-		}
-
-		int iLeft = iNumSymbols-1;
-
-		for(int j = 1; j < iNumSymbols; ++j) {
-			long p = iToSpend / iLeft;
-			probs[j] += p;
-			--iLeft;
+			long p = iToSpend / (iNumSymbols-i);
+			probs[i] += each + p;
 			iToSpend -= p;
 		}
-
 		assert(iToSpend == 0);
 	}
 
