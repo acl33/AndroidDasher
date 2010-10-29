@@ -58,6 +58,8 @@ public class DasherInputMethod extends InputMethodService {
 		} else if (im.equals("AndroidSweep") && keyCode!=KeyEvent.KEYCODE_MENU && keyCode!=KeyEvent.KEYCODE_BACK && (keyCode<19 || keyCode>22)) {
 			//don't intercept menu/back (too useful!) or cursor movement (for editing textbox).
 			key=keyCode;
+		} else if (im.equals("AndroidTwoButtonDynamic") && (keyCode==KeyEvent.KEYCODE_VOLUME_UP || keyCode==KeyEvent.KEYCODE_VOLUME_DOWN)) {
+			key=(keyCode==KeyEvent.KEYCODE_VOLUME_UP) ? 0 : 1;
 		} else
 			return super.onKeyUp(keyCode, event);
 		IMDasherInterface.INSTANCE.enqueue(new Runnable() {
@@ -77,6 +79,8 @@ public class DasherInputMethod extends InputMethodService {
 		} else if (im.equals("AndroidSweep") && keyCode!=KeyEvent.KEYCODE_MENU && keyCode!=KeyEvent.KEYCODE_BACK && (keyCode<19 || keyCode>22)) {
 			//don't intercept menu/back (too useful!) or cursor movement (for editing textbox).
 			key=keyCode;
+		} else if (im.equals("AndroidTwoButtonDynamic") && (keyCode==KeyEvent.KEYCODE_VOLUME_UP || keyCode==KeyEvent.KEYCODE_VOLUME_DOWN)) {
+			key=(keyCode==KeyEvent.KEYCODE_VOLUME_UP) ? 0 : 1;
 		} else
 			return super.onKeyDown(keyCode, event);
 		IMDasherInterface.INSTANCE.enqueue(new Runnable() {

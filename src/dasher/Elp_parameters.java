@@ -78,7 +78,10 @@ public enum Elp_parameters implements EParameters {
 	  LP_SWEEP_TIME("SweepTime", PERS, 3000, "Time in ms to sweep top-to-bottom"),
 	  LP_REVERSE_BOOST("ReverseBoost", PERS, 4, "Amount to speed up reversing (0=don't)"),
 	  LP_MAX_ZOOM("MaxZoom", PERS, 20, "Max factor to zoom by in stylus/click mode"),
-	  LP_TARGET_OFFSET("TargetOffset", PERS, 0, "Offset target from actual mouse/touch/gaze position");
+	  LP_TARGET_OFFSET("TargetOffset", PERS, 0, "Offset target from actual mouse/touch/gaze position"),
+	  /** Can we combine this with LP_TAP_TIME? Think we want this to be much longer...?*/
+	  LP_HOLD_TIME("LongPressTime",PERS,800,"Time/ms for long press (=reverse) in dynamic button mode"),
+	  LP_DOUBLE_CLICK_TIME("DoublePressTime",PERS,150,"Time/ms for double click (=reverse) in dynamic button mode");
 		  
 		  private Elp_parameters(String rName, boolean pers, long def, String hr) {
 				humanReadable = hr;

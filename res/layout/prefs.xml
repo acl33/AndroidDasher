@@ -164,7 +164,29 @@
           android:summary="@string/SweepTime_summary"
           android:max="10000" min="500" text="ms"/>
     </PreferenceScreen>
-  
+
+	<PreferenceScreen
+	  android:key="AndroidTwoButtonDynamic"
+	  android:title="@string/AndroidTwoButtonDynamic_title"
+	  android:summary="@string/AndroidTwoButtonDynamic_summary"
+	  android:widgetLayout="@layout/checkbox_twobuttondynamic">
+	  	<dasher.android.SeekBarPreference
+	  	  android:key="TwoButtonOffset"
+	  	  android:title="@string/TwoButtonOffset_title"
+	  	  android:summary="@string/TwoButtonOffset_summary"
+	  	  android:max="2048" min="0"/>
+	  	<dasher.android.SeekBarPreference
+	  	  android:key="LongPressTime"
+	  	  android:title="@string/LongPressTime_title"
+	  	  android:summary="@string/LongPressTime_summary"
+	  	  android:max="2000" min="100"/>
+	  	<dasher.android.SeekBarPreference
+	  	  android:key="DoublePressTime"
+	  	  android:title="@string/DoublePressTime_title"
+	  	  android:summary="@string/DoublePressTime_summary"
+	  	  android:max="1000" min="100"/>
+	</PreferenceScreen>
+ 
     <PreferenceScreen
       android:title="@string/AndroidGeneralInputSettings_title">
         <CheckBoxPreference

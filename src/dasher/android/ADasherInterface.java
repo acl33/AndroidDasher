@@ -266,6 +266,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		RegisterModule(new CMenuMode(this, getSettingsStore(), 11, "Scanning Menu Mode"));
 		RegisterModule(new CCompassMode(this,getSettingsStore()));
 		RegisterModule(new SweepFilter(this, getSettingsStore()));
+		RegisterModule(new TwoButtonDynamicFilter(this, getSettingsStore()));
 	}
 	
 	public void SetTiltAxes() {

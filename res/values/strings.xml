@@ -69,6 +69,14 @@
 <string name="ReverseBoost_title">Reverse Faster</string>
 <string name="ReverseBoost_summary">Boost speed of reversing (0=don't)</string>
 <string name="ColourID_title">Colour Scheme</string>
+<string name="AndroidTwoButtonDynamic_title">Two-btn. Dynamic Mode</string>
+<string name="AndroidTwoButtonDynamic_summary">Tap top/bottom or use volume control</string>
+<string name="TwoButtonOffset_title">Marker offset</string>
+<string name="TwoButtonOffset_summary">Vertical distance to up/down marker</string>
+<string name="LongPressTime_title">Long-press time</string>
+<string name="LongPressTime_summary">Time for a long-press (=&gt;reverse)</string>
+<string name="DoublePressTime_title">Double-press time</string>
+<string name="DoublePressTime_summary">Time for two consecutive presses to count as double (=&gt; reverse)</string>
 
 <!--Calibration Strings-->
 <string name="invert">Invert</string>
