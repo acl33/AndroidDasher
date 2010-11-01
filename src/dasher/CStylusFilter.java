@@ -15,11 +15,11 @@ public class CStylusFilter extends CDefaultFilter {
     
     public CStylusFilter(CDasherInterfaceBase iface, CSettingsStore store) {
         this(iface,store,15,"Stylus Control");
-        HandleEvent(new CParameterNotificationEvent(Elp_parameters.LP_MAX_ZOOM));
     }
 
     protected CStylusFilter(CDasherInterfaceBase iface, CSettingsStore store, long iID, String sName) {
         super(iface, store, iID, sName);
+        HandleEvent(new CParameterNotificationEvent(Elp_parameters.LP_MAX_ZOOM));
     }
     
     @Override
@@ -62,11 +62,13 @@ public class CStylusFilter extends CDefaultFilter {
      * Called to apply any coordinate transform required for
      * <em>click</em> coords (i.e. for a scheduled zoom, rather
      * than continuous movement towards.)
-     * <p>The default is to do nothing, regardless of {@link #ApplyTransform(CDasherView, long[])};
+     * <p>The default is to multiply the x coordinate to incorporate the {@link Elp_parameters#LP_S}
+     * safety margin, but <em>not</em> to call {@link #ApplyTransform(CDasherView, long[])};
      * subclasses may override to provide different behaviour.
      * @param dasherCoords x&amp;y dasher coordinates which will be target of zoom.
      */
     protected void ApplyClickTransform(CDasherView pView, long[] dasherCoords) {
+    	dasherCoords[0] = (dasherCoords[0]*(1024+GetLongParameter(Elp_parameters.LP_S))/1024);
     }
     
     @Override public void HandleEvent(CEvent evt) {

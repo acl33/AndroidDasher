@@ -58,7 +58,7 @@ public class CClickFilter extends CInputFilter {
 	}
 
 	/**
-	 * Timer simply calls the DasherModel's Tap_on_display method,
+	 * Timer simply calls {@link CDasherModel#nextScheduledStep(long)},
 	 * causing it to move forward a frame if there is currently
 	 * a zoom scheduled. In the event that no further destination
 	 * is scheduled (ie. we are stationary and the user has not
@@ -95,7 +95,7 @@ public class CClickFilter extends CInputFilter {
 	  switch(iId) {
 	  case 100: // Mouse clicks
 	    pInput.GetDasherCoords(pView,inputCoords);
-	    Model.ScheduleZoom(Math.max(minX, inputCoords[0]),inputCoords[1]);
+	    Model.ScheduleZoom(Math.max(minX, (inputCoords[0]*(1024+GetLongParameter(Elp_parameters.LP_S)))/1024),inputCoords[1]);
 	    break;
 	  }
 	}
