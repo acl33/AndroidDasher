@@ -71,10 +71,16 @@ public class CDasherModel extends CFrameRate {
 	protected long m_Rootmax;
 	
 	/**
-	 * Amount to offset display by vs. what's "really" happening
-	 * (used to smooth offsets/bounces over several frames in button modes)
+	 * Amount by which the last rendering of the display was offset from the underlying model
+	 * of what's "really" happening (used to smooth offsets/bounces over several frames in button modes)
 	 */
 	protected long m_iDisplayOffset;
+	
+	/** Amount by which to offset future renderings of display. TODO, use LP_ZOOMSTEPS? */
+	private int[] offsetQueue=new int[24];
+	
+	/** Index into offsetQueue of next value to use (wraps round) */
+	private int nextOffset;
 	
 	/**
 	 * Minimum allowable value of m_Rootmin
@@ -426,10 +432,11 @@ public class CDasherModel extends CFrameRate {
 		
 		int iWidth = ( (int)( (GetLongParameter(Elp_parameters.LP_MAX_Y) / (2.0*dFraction)) ) );
 		
+		MatchTarget();
+		
 		m_Rootmin = GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 - iWidth / 2;
 		m_Rootmax = GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 + iWidth / 2;
-		
-		m_iDisplayOffset = 0;
+	
 	}
 	
 	public int GetOffset() {
@@ -583,7 +590,9 @@ public class CDasherModel extends CFrameRate {
 	protected void NewGoTo(long newRootmin, long newRootmax) {
 		
 		total_nats += Math.log((newRootmax-newRootmin) / (double)(m_Rootmax - m_Rootmin));
-		m_iDisplayOffset = (m_iDisplayOffset*9)/10;
+		m_iDisplayOffset = offsetQueue[nextOffset];
+		offsetQueue[nextOffset]=0;
+		if (++nextOffset==offsetQueue.length) nextOffset=0;
 		
 		//Now actually move to the new location...
 		
@@ -814,8 +823,12 @@ public class CDasherModel extends CFrameRate {
 	public void Offset(int iOffset) {
 		m_Rootmin += iOffset;
 		m_Rootmax += iOffset;
-		if (GetBoolParameter(Ebp_parameters.BP_DELAY_VIEW))
-			m_iDisplayOffset -= iOffset;
+		if (GetBoolParameter(Ebp_parameters.BP_DELAY_VIEW)) {
+			double d = Math.log(Math.abs(iOffset));
+			int s = (iOffset>0) ? -1 : 1;
+			for (int i=0; i<offsetQueue.length; i++)
+				offsetQueue[(nextOffset+i) % offsetQueue.length]+= (int)(s*Math.exp(d*(offsetQueue.length-i)/(double)offsetQueue.length));
+		}
 	} 
 	
 	/**
@@ -826,6 +839,7 @@ public class CDasherModel extends CFrameRate {
 		m_Rootmin += m_iDisplayOffset;
 		m_Rootmax += m_iDisplayOffset;
 		m_iDisplayOffset = 0;
+		for (int i=0; i<offsetQueue.length; i++) offsetQueue[i]=0;
 	}
 	
 	/**

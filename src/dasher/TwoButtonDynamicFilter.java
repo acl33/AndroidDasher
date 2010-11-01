@@ -68,6 +68,7 @@ public class TwoButtonDynamicFilter extends CDynamicFilter {
 			//apply offset
 			double dCurBitrate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) * GetLongParameter(Elp_parameters.LP_BOOSTFACTOR) / 10000.0;
 			int iOffset = pMarker.GetTargetOffset(dCurBitrate);
+			if (pModel.m_iDisplayOffset!=0) System.err.println("Display Offset "+pModel.m_iDisplayOffset+" reducing to "+(iOffset -= pModel.m_iDisplayOffset));
 			double dNewNats = pModel.GetNats() - m_dNatsAtLastApply;
 			up.NotifyOffset(iOffset, dNewNats);
 			down.NotifyOffset(iOffset, dNewNats);
@@ -82,6 +83,16 @@ public class TwoButtonDynamicFilter extends CDynamicFilter {
 		pModel.MatchTarget();
 		up.clearPushes(); down.clearPushes();
 		super.reverse(iTime, pModel);
+	}
+	
+	@Override public void Activate() {
+		super.Activate();
+		m_Interface.SetBoolParameter(Ebp_parameters.BP_DELAY_VIEW, true);
+	}
+	
+	@Override public void Deactivate() {
+		m_Interface.SetBoolParameter(Ebp_parameters.BP_DELAY_VIEW, false);
+		super.Deactivate();
 	}
 	
 }
