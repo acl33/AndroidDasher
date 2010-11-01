@@ -43,7 +43,7 @@ public class CMenuMode extends CScanning {
 
 		double dMin = 0.0;
 
-		for(int i = 0; i < m_pBoxes.length - 1; ++i) { // One button reserved for backoff
+		for(int i = 0; i < iForwardBoxes; ++i) { // One button reserved for backoff
 			double dMax = dMin + dMaxSize * Math.pow(dRatio, i);
   
 //       m_pBoxes[i].iDisplayTop = (i * iDasherY) / (m_iNumBoxes.length - 1);
@@ -52,7 +52,7 @@ public class CMenuMode extends CScanning {
 			dMin = dMax;
 		}
   
-		m_pBoxes[m_pBoxes.length-1]=new SBox((int)(- iDasherY / 2),(int)(iDasherY * 1.5),0,iDasherY);
+		m_pBoxes[m_pBoxes.length-1]=new SBox((iDasherY * (1-iForwardBoxes))/ 2,(iDasherY * (1+iForwardBoxes))/2,0,iDasherY);
 		
 		return m_pBoxes;
 	}

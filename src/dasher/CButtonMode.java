@@ -1,5 +1,7 @@
 package dasher;
 
+import dasher.CDasherButtons.SBox;
+
 /*static SModuleSettings sSettings[] = {
   // TRANSLATORS: The number of time steps over which to perform the zooming motion in button mode.
   {LP_ZOOMSTEPS, T_LONG, 1, 63, 1, 1, _("Zoom steps")},
@@ -35,7 +37,7 @@ public class CButtonMode extends CDasherButtons {
 		final double dRatio = Math.pow(129/127.0, GetLongParameter(Elp_parameters.LP_R));
 		final int lpS = (int)GetLongParameter(Elp_parameters.LP_S);
 	      
-		if(iForwardBoxes == 2+1) { // Special case for two forwards buttons
+		if(iForwardBoxes == 2) { // Special case for two forwards buttons
 			double dNorm = 1+dRatio;
 
 			m_pBoxes[0]=new SBox(0,(int)(iDasherY/dNorm),lpS);
@@ -78,7 +80,7 @@ public class CButtonMode extends CDasherButtons {
 			}
 		}
   
-		m_pBoxes[m_pBoxes.length-1]=new SBox((int)(- iDasherY / 2),(int)(iDasherY * 1.5),0,iDasherY);
+		m_pBoxes[m_pBoxes.length-1]=new SBox((iDasherY * (1-iForwardBoxes))/ 2,(iDasherY * (1+iForwardBoxes))/2,0,iDasherY);
 		
 		return m_pBoxes;
 	}
