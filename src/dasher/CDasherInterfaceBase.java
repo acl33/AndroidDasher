@@ -757,20 +757,33 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	protected void train(String T) {
 		// Train the new language model
-		CLockEvent evt = new CLockEvent("Training Dasher", true, 0); 
-		InsertEvent(evt);		
-		train(T,evt);
+		final CLockEvent evt = new CLockEvent("Training Dasher", true, 0); 
+		InsertEvent(evt);
+		train(T,new ProgressNotifier() {
+			public boolean notifyProgress(int iPercent) {
+				evt.m_iPercent = iPercent;
+				InsertEvent(evt);
+				return false; //do not allow aborts
+			}
+		});
 		evt.m_bLock = false;
 		InsertEvent(evt);
 	}
 	
+	/** Interface by which an object may be notified of training progress (as a %age) */
+	public static interface ProgressNotifier {
+		/** Notify of current progress, and check whether an abort has been requested
+		 * @param percent Current %age progress; should be monotonic; 100% does not imply completion (but nearly!)
+		 * @return true if training should be aborted (note if this returns true once, all subsequent calls should do so too) */
+		boolean notifyProgress(int percent);
+	}
 	/**
 	 * Called to train the model with all available files of the specified name
 	 * (obtained via {@link #GetStreams(String, Collection)}.
 	 * @param T alphabet-provided name of training file, e.g. "training_english_GB.txt"
-	 * @param evt CLockEvent to use to broadcast %progress (only - not finish/unlock)
+	 * @param prog ProgressNotifier which will be notified of %progress
 	 */
-	protected void train(String T,CLockEvent evt) {
+	protected void train(String T,ProgressNotifier prog) {
 		int iTotalBytes=0;
 		List<InputStream> streams=new ArrayList<InputStream>();
 		GetStreams(T,streams);
@@ -786,7 +799,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		int iRead = 0;
 		for (InputStream in : streams) {
 			try {
-				iRead = m_pNCManager.getAlphabetManager().TrainStream(in, iTotalBytes, iRead, evt);
+				iRead = m_pNCManager.getAlphabetManager().TrainStream(in, iTotalBytes, iRead, prog);
 			} catch (IOException e) {
 				InsertEvent(new CMessageEvent("Error "+e+" in training - rest of text skipped", 0, 1)); // 0 = message ID ?!?!
 			}

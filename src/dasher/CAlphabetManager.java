@@ -97,8 +97,8 @@ public class CAlphabetManager<C> {
     }
 
     public int TrainStream(InputStream FileIn, int iTotalBytes, int iOffset,
-			 CLockEvent evt) throws IOException {
-		return m_AlphabetMap.TrainStream(m_LanguageModel, FileIn, iTotalBytes, iOffset, evt);
+			 CDasherInterfaceBase.ProgressNotifier prog) throws IOException {
+		return m_AlphabetMap.TrainStream(m_LanguageModel, FileIn, iTotalBytes, iOffset, prog);
 	}
 	
     /**

@@ -119,20 +119,51 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			taskThread.interrupt();
 	}
 	
+	private class Progress implements Runnable, ProgressNotifier {
+		private final CLockEvent evt;
+		Progress(CLockEvent evt) {
+			InsertEvent(this.evt=evt);
+		}
+		private boolean bAbortRequested;
+		//called from main Dasher thread
+		public void run() {
+			if (p!=this) return; //a new training request has already superceded us...
+			InsertEvent(evt);
+			if (!evt.m_bLock) p=null; //finished.
+		}
+		//called from Training thread
+		public boolean notifyProgress(int iPercent) {
+			evt.m_iPercent=iPercent;
+			enqueue(this);
+			synchronized(this) {return bAbortRequested;}
+		}
+	}
+	private Progress p;
 	@Override protected void train(final String filename) {
-		final CLockEvent evt = new CLockEvent("Training Dasher", true, 0);
-		InsertEvent(evt);
-		//train asynchronously...
+		//1. we're on main thread, so can read p...
+		if (p!=null) {
+			//p's bAbortRequested field is also read by the thread currently doing training
+			synchronized(p) {
+				p.bAbortRequested=true;
+				//wait for training thread to abort...
+				while (p.evt.m_bLock)
+					try {p.wait();}
+					catch (InterruptedException e) {}
+			}
+		}
+		//make new lock...
+		final Progress myProg = p = new Progress(new CLockEvent("Training Dasher",true,0));
+		//now we've got lock, train asynchronously...
 		new Thread() {
 			public void run() {
-				train(filename,evt);
-				//but broadcast the C(Un)LockEvent synchronously...
-				enqueue(new Runnable() {
-					public void run() {
-						evt.m_bLock=false;
-						InsertEvent(evt);
-					}
-				});
+				train(filename,myProg);
+				//completed, or aborted. Signal this...
+				synchronized(myProg) {
+					myProg.evt.m_bLock=false;
+					myProg.notifyAll(); //in case someone was waiting for us to abort
+				}
+				//broadcast the unlock message (unless aborted)
+				enqueue(myProg);
 			}
 		}.start();
 	}

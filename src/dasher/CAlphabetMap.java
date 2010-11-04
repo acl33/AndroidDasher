@@ -215,7 +215,7 @@ public class CAlphabetMap {
 	 * @return Number of bytes read
 	 * @throws IOException 
 	 */	
-	public <C> int TrainStream(CLanguageModel<C> model, InputStream FileIn, int iTotalBytes, int iOffset, CLockEvent evt) throws IOException {
+	public <C> int TrainStream(CLanguageModel<C> model, InputStream FileIn, int iTotalBytes, int iOffset, CDasherInterfaceBase.ProgressNotifier prog) throws IOException {
 		
 		class CountStream extends InputStream {
 			/*package*/ int iTotalRead;
@@ -242,7 +242,7 @@ public class CAlphabetMap {
 		CountStream count = new CountStream(FileIn, iOffset);
 		Reader chars = new BufferedReader(new InputStreamReader(count)); //buffer just for performance
 		C trainContext = model.EmptyContext();
-		
+		int iLastPercent = count.iTotalRead / iTotalBytes;
 		try {
 			outer: while (true) {
 				int c=chars.read();
@@ -282,17 +282,19 @@ public class CAlphabetMap {
 				//breaks come here, with sym defined. As per C++ Dasher, we just ignore symbols not in the alphabet...
 				if (sym!=CAlphabetMap.UNDEFINED) {
 					trainContext = model.ContextLearningSymbol(trainContext, sym);
-					if (evt!=null) {
+					if (prog!=null) {
 						int iNPercent = (count.iTotalRead *100)/iTotalBytes;
-						if (iNPercent != evt.m_iPercent) {
-							evt.m_iPercent = iNPercent;
-							model.InsertEvent(evt);
+						if (iNPercent != iLastPercent) {
+							iLastPercent=iNPercent;
+							if (prog.notifyProgress(iNPercent)) break outer;
 						}
 					}
 				}
 			}
 		} catch (EOFException e) {
 			//that's fine!
+		} finally {
+			chars.close();
 		}
 		return count.iTotalRead;
 	}
