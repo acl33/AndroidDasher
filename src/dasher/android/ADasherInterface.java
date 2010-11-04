@@ -139,7 +139,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		}
 	}
 	private Progress p;
-	@Override protected void train(final String filename) {
+	@Override protected void train(final CAlphabetManager<?> mgr) {
 		//1. we're on main thread, so can read p...
 		if (p!=null) {
 			//p's bAbortRequested field is also read by the thread currently doing training
@@ -156,7 +156,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		//now we've got lock, train asynchronously...
 		new Thread() {
 			public void run() {
-				train(filename,myProg);
+				train(mgr,myProg);
 				//completed, or aborted. Signal this...
 				synchronized(myProg) {
 					myProg.evt.m_bLock=false;
@@ -371,12 +371,12 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		}
 	}
 	
-	@Override public void WriteTrainFile(String s) {
+	@Override public void WriteTrainFile(String filename, String s) {
 		String msg;
 		if (USER_DIR.exists() || USER_DIR.mkdir()) {
 			try {
 				//second parameter is whether to append to any existing file - yes, do!
-				PrintWriter pw = new PrintWriter(new FileWriter(new File(USER_DIR,GetStringParameter(Esp_parameters.SP_TRAIN_FILE)), true));
+				PrintWriter pw = new PrintWriter(new FileWriter(new File(USER_DIR,filename), true));
 				pw.print(s);
 				pw.flush();
 				pw.close();

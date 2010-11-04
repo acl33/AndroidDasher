@@ -472,17 +472,27 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		if(m_AlphIO == null)
 			return;
 		
-		// TODO: Move training into model?
-		// TODO: Do we really need to check for a valid language model?
-		int lmID = (int)GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID);
-		if( lmID == -1 ) return;
+		// TODO: Move training into AlphabetManager?
 		
+		//Not for now - we don't want train the LM too soon, i.e. until
+		// the old LM can first be GC'd, as that'll be using memory for both...
+
+		//So, first we remove refs to NCMgr & LM from the event handler...
 		if (m_pNCManager!=null) m_pNCManager.UnregisterComponent();
 		
+		//Then we construct a new NCMgr and (untrained) LM...
 		m_pNCManager = new CNodeCreationManager(this, m_SettingsStore);
 		
-		// SP_TRAIN_FILE parameter set by CNodeCreationManager constructor... 
-		train(GetStringParameter(Esp_parameters.SP_TRAIN_FILE));
+		//Then, we rebuild the tree, so that any old nodes (referring to the old LM) are gone...
+		forceRebuild();
+		
+		System.gc(); //the old LM should now be collectable, so just a hint...
+		
+		//At last we (hopefully) have enough memory to train the new LM...
+		train(m_pNCManager.getAlphabetManager());
+		
+		//Finally we rebuild the tree _again_ :-(, so as to get probabilities from the trained LM...
+		forceRebuild();
 	}
 	
 	/**
@@ -664,7 +674,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		
 		// Send a lock event
 		
-		WriteTrainFileFull();
+		if (m_pNCManager!=null) WriteTrainFileFull(m_pNCManager.getAlphabetManager().m_Alphabet.GetTrainingFile());
 		
 		// Lock Dasher to prevent changes from happening while we're training.
 		
@@ -755,11 +765,11 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * 
 	 * @param T alphabet-provided name of training file, e.g. "training_english_GB.txt"
 	 */
-	protected void train(String T) {
+	protected void train(CAlphabetManager<?> mgr) {
 		// Train the new language model
 		final CLockEvent evt = new CLockEvent("Training Dasher", true, 0); 
 		InsertEvent(evt);
-		train(T,new ProgressNotifier() {
+		train(mgr,new ProgressNotifier() {
 			public boolean notifyProgress(int iPercent) {
 				evt.m_iPercent = iPercent;
 				InsertEvent(evt);
@@ -783,10 +793,10 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * @param T alphabet-provided name of training file, e.g. "training_english_GB.txt"
 	 * @param prog ProgressNotifier which will be notified of %progress
 	 */
-	protected void train(String T,ProgressNotifier prog) {
+	protected void train(CAlphabetManager<?> mgr,ProgressNotifier prog) {
 		int iTotalBytes=0;
 		List<InputStream> streams=new ArrayList<InputStream>();
-		GetStreams(T,streams);
+		GetStreams(mgr.m_Alphabet.GetTrainingFile(),streams);
 		for (InputStream in : streams)
 			try {
 				iTotalBytes+=in.available();
@@ -799,7 +809,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		int iRead = 0;
 		for (InputStream in : streams) {
 			try {
-				iRead = m_pNCManager.getAlphabetManager().TrainStream(in, iTotalBytes, iRead, prog);
+				iRead = mgr.TrainStream(in, iTotalBytes, iRead, prog);
 			} catch (IOException e) {
 				InsertEvent(new CMessageEvent("Error "+e+" in training - rest of text skipped", 0, 1)); // 0 = message ID ?!?!
 			}
@@ -1145,59 +1155,45 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	
 	
 	/**
-	 * Writes the text entered by the user as a training file.
-	 * <p>
-	 * Won't work at present, as WriteTrainFile() is stubbed.
-	 *
+	 * Writes all the text entered by the user to the training file
+	 * (by calling {@link #WriteTrainFile(String, String)})
+	 * @param filename name of training file, e.g. "training_english_GB.txt"
 	 */
-	protected void WriteTrainFileFull() {
-		WriteTrainFile(strTrainfileBuffer.toString());
+	protected void WriteTrainFileFull(String filename) {
+		WriteTrainFile(filename,strTrainfileBuffer.toString());
 		strTrainfileBuffer.setLength(0);
 	}
 	
 	/**
-	 * Writes the first 100 characters of user-entered text
-	 * as a training file.
-	 * <p>
-	 * Won't work at the moment, as WriteTrainFile() is stubbed.
-	 *
+	 * Passes the longest-ago 100 characters we still have record of,
+	 * to {@link #WriteTrainFile(String, String)}, with the provided filename
+	 * @param filename name of training file, e.g. "training_english_GB.txt" 
 	 */
-	protected void WriteTrainFilePartial() {
-		// TODO: what if we're midway through a unicode character?
+	protected void WriteTrainFilePartial(String filename) {
 		
 		if(strTrainfileBuffer.length() > 100) {
-			//LinkedList<Byte> surplus = new LinkedList<Byte>();
-			//while(strTrainfileBuffer.length() > 100) {
-			//	surplus.addFirst(strTrainfileBuffer.getLast());
-			//	strTrainfileBuffer.removeLast();
-			//}
-			WriteTrainFile(strTrainfileBuffer.substring(0, 99));
-			strTrainfileBuffer.delete(0, 99);
-			// strTrainfileBuffer.addAll(surplus);
-			
-			/* CSFS: Write the first 100 bytes to disk and keep the rest */
+			int len; 
+			if (Character.isHighSurrogate(strTrainfileBuffer.charAt(99))) {
+				assert Character.isLowSurrogate(strTrainfileBuffer.charAt(100));
+				len=99;
+			} else len=100;
+			WriteTrainFile(filename, strTrainfileBuffer.substring(0, len));
+			strTrainfileBuffer.delete(0, len);
 		}
-		else {
-			WriteTrainFile(strTrainfileBuffer.toString());
-			strTrainfileBuffer.setLength(0);
-		}
-		
+		else 
+			WriteTrainFileFull(filename);
 	}
 	
 	/**
-	 * Stub. This ought to write out a training file, but
-	 * is not implemented at present due since the applet
-	 * implementation cannot write a training file to the
-	 * local disk.
-	 * <p>
-	 * This method should be implemented if a local application
-	 * version of JDasher is to be implemented, and should write
-	 * a file containing the user's typed text encoded as UTF-8
-	 * suitable for reading by the TrainStream routine.
+	 * Append user-written text to a training file - which should be found
+	 * if the same filename is passed to {@link #GetStreams(String, Collection)}
+	 * Default implementation does nothing; subclasses which are able
+	 * to perform file I/O, should override to do so. (e.g. applet cannot!).
 	 * 
-	 * @param strNewText
+	 * @param trainFileName name of training file, e.g. "training_english_GB.txt"
+	 * @param strNewText user-written text to append to file
 	 */
-	public void WriteTrainFile(String strNewText) {
+	public void WriteTrainFile(String trainFileName, String strNewText) {
 		/* Empty method: at the platform-independent level
 		 * we can't know how to write the file.
 		 */

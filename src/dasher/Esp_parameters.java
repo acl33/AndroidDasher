@@ -39,7 +39,6 @@ public enum Esp_parameters implements EParameters {
 			  SP_DEFAULT_COLOUR_ID("DefaultColourID", !PERS, "", "Default Colour ID (Used for auto-colour mode)"),
 			  SP_DASHER_FONT("DasherFont", PERS, "", "DasherFont"),
 			  SP_GAME_TEXT_FILE("GameTextFile", !PERS, "gamemode_english_GB.txt", "File with strings to practice writing"),
-			  SP_TRAIN_FILE("TrainingFile", !PERS, "", "Training text for alphabet"),
 			  SP_SOCKET_INPUT_X_LABEL("SocketInputXLabel", PERS, "x", "Label preceding X values for network input"),
 			  SP_SOCKET_INPUT_Y_LABEL("SocketInputYLabel", PERS, "y", "Label preceding Y values for network input"),
 			  SP_INPUT_FILTER("InputFilter", PERS, "Stylus Control", "Input filter used to provide the current control mode"),

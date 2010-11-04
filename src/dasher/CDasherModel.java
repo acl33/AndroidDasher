@@ -123,26 +123,8 @@ public class CDasherModel extends CFrameRate {
 	private CDasherNode m_pLastOutput;
 	
 	/**
-	 * Initialise a new DasherModel. This consists of:
-	 * <p><ul>
-	 * <li>Retrieving an AlphInfo object describing the user's chosen alphabet
-	 * (ie. which corresponds to SP_ALPHABET_ID)
-	 * <li>Setting global parameters which reflect information about this alphabet
-	 * (eg. SP_TRAIN_FILE)
-	 * <li>Creating a new CAlphabet which describes this alphabet, by calling
-	 * its constructor which takes an AlphInfo
-	 * <li>Creating a CSymbolAlphabet which wraps this Alphabet
-	 * <li>Creating the LanguageModel described by LP_LANGUAGE_MODEL_ID
-	 * <li>Initialising this LanguageModel with a blank context.
-	 * </ul><p>
-	 * This does not train the newly created language model;
-	 * this must be requested from outside, typically by the
-	 * Interface.
-	 * 
-	 * @param EventHandler Event handler with which to register ourselves
-	 * @param SettingsStore Settings repository
-	 * @param DashIface Interface which we serve
-	 * @param AlphIO AlphIO object from which to retrieve the AlphInfo object describing the user's chosen alphabet
+	 * Initialise a new DasherModel. Note that you'll still have to call
+	 * {@link #SetOffset(int, CAlphabetManager, boolean)} before you can use it...
 	 */
 	public CDasherModel(CDasherInterfaceBase iface, CSettingsStore SettingsStore) {
 		super(iface, SettingsStore); 

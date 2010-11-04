@@ -46,7 +46,21 @@ public class CNodeCreationManager extends CDasherComponent {
 	// values are calculated when the model is created and are recalculated
 	// in response to any dependent parameter changes.
 
-	
+	/**
+	 * Create a new NCManager. This is where the user's chosen alphabet is identified.
+	 * Includes:
+	 * <ul>
+	 * <li>Setting global parameters which reflect information about this alphabet
+	 * (eg. SP_DEFAULT_COLOUR_ID)
+	 * <li> Creating the LanguageModel described by LP_LANGUAGE_MODEL_ID
+	 * <li> Constructing an {@link AlphabetManager} using the previous
+	 * </ul>
+	 * 
+	 * <p> Note this does not train the newly created language model;
+-    * this must be performed from outside, typically by the Interface.
+	 * @param EventHandler Interface for e.g. Event handling
+	 * @param SettingsStore Settings repository
+	 */
 	public CNodeCreationManager(CDasherInterfaceBase intf, CSettingsStore SettingsStore) {
 		super(intf, SettingsStore);
 		this.m_DasherInterface=intf;
@@ -62,7 +76,6 @@ public class CNodeCreationManager extends CDasherComponent {
 		
 		m_cAlphabet = intf.GetInfo(GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
 		
-		SetStringParameter(Esp_parameters.SP_TRAIN_FILE, m_cAlphabet.GetTrainingFile());
 		SetStringParameter(Esp_parameters.SP_DEFAULT_COLOUR_ID, m_cAlphabet.GetPalette());
 		
 		if(GetLongParameter(Elp_parameters.LP_ORIENTATION) == Opts.AlphabetDefault)
