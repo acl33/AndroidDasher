@@ -41,6 +41,11 @@
 		  android:title="@string/MarginWidth_title"
 		  android:summary="@string/MarginWidth_summary"
 		  min="100" android:max="1000"/>
+		  
+		<ListPreference
+      	  android:key="ColourID"
+      	  android:title="@string/ColourID_title"/>
+	
 	</PreferenceScreen>
 
 	<CheckBoxPreference
@@ -215,9 +220,5 @@
 	      android:summary="@string/ReverseBoost_summary"
 	      android:max="10" min="0"/>
 	</PreferenceScreen>
-	
-	<ListPreference
-      android:key="ColourID"
-      android:title="@string/ColourID_title"/>
 	
 </PreferenceScreen>

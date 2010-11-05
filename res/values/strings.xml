@@ -20,7 +20,7 @@
 <string name="ControlMode_title">Commands</string>
 <string name="ControlMode_summary">Generate nodes for e.g. IME actions</string>
 <string name="AlphabetID_title">Alphabet Name</string>
-<string name="AndroidInputMethod_title">Input Method</string>
+<string name="AndroidInputMethod_title">Input Mode</string>
 <string name="AndroidInputMethod_summary">Choose how to control Dasher</string>
 <string name="AndroidTilt_title">Tilt Control</string>
 <string name="OneDimensionalMode_title">Use only 1 dimension</string>
