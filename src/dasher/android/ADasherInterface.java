@@ -117,6 +117,20 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 				&& ((CParameterNotificationEvent)evt).m_iParameter == Ebp_parameters.BP_DASHER_PAUSED
 				&& !GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
 			taskThread.interrupt();
+		else if (evt instanceof CMessageEvent) {
+			CMessageEvent msg = (CMessageEvent)evt;
+			switch (msg.m_iType) {
+			case 0:
+				Log.i("DasherIME",msg.m_strMessage);
+				break;
+			case 1:
+				Log.w("DasherIME",msg.m_strMessage);
+				break;
+			case 2:
+				Log.e("DasherIME",msg.m_strMessage);
+				break;
+			}
+		}
 	}
 	
 	private class Progress implements Runnable, ProgressNotifier {
