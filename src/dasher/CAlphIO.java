@@ -584,7 +584,9 @@ public class CAlphIO extends XMLFileParser {
 				// once the tags we're interested in have been closed.
 
 				else if(tagName == "group") {
-					groupStack.pop().iEnd = numOrderedCharacters(currentAlph);
+					SGroupInfo finish = groupStack.pop();
+					finish.iEnd = numOrderedCharacters(currentAlph);
+					finish.Child = Reverse(finish.Child);
 				}
 				
 			}
