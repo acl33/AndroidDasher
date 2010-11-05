@@ -75,6 +75,7 @@ public class CStylusFilter extends CDefaultFilter {
 		if (evt instanceof CParameterNotificationEvent
 				&& ((CParameterNotificationEvent)evt).m_iParameter==Elp_parameters.LP_MAX_ZOOM)
 			minX = Math.max(2, GetLongParameter(Elp_parameters.LP_OX)/GetLongParameter(Elp_parameters.LP_MAX_ZOOM));
+		super.HandleEvent(evt);
 	}
     
     /** Make sure no start handler is created - even tho we ignore changes 
