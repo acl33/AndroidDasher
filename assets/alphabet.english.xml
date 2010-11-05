@@ -286,48 +286,4 @@
 <s d="&#183;" t="." b="104"/>
 </group>
 </alphabet>
-<alphabet name="English, lower case">
-<orientation type="LR"/>
-<encoding type="Western"/>
-<palette>European/Asian</palette>
-<train>training_englishLC_GB.txt</train>
-<space d="&#x25a1;" t=" " b="9" note="box" />
-<control d="Control" t="" b="8"/>
-<group name="Lower case Latin letters" b="0">
-<s d="a" t="a" b="10"/>
-<s d="b" t="b" b="11"/>
-<s d="c" t="c" b="12"/>
-<s d="d" t="d" b="13"/>
-<s d="e" t="e" b="14"/>
-<s d="f" t="f" b="15"/>
-<s d="g" t="g" b="16"/>
-<s d="h" t="h" b="17"/>
-<s d="i" t="i" b="18"/>
-<s d="j" t="j" b="19"/>
-<s d="k" t="k" b="20"/>
-<s d="l" t="l" b="21"/>
-<s d="m" t="m" b="22"/>
-<s d="n" t="n" b="23"/>
-<s d="o" t="o" b="24"/>
-<s d="p" t="p" b="25"/>
-<s d="q" t="q" b="26"/>
-<s d="r" t="r" b="27"/>
-<s d="s" t="s" b="28"/>
-<s d="t" t="t" b="29"/>
-<s d="u" t="u" b="30"/>
-<s d="v" t="v" b="31"/>
-<s d="w" t="w" b="32"/>
-<s d="x" t="x" b="33"/>
-<s d="y" t="y" b="34"/>
-<s d="z" t="z" b="35"/>
-</group>
-<group name="Punctuation" b="112">
-<s b="105" d="&apos;"  t="&apos;" />
-<!--<s b="105" d="&#x25cc;&#x0313;"  t="&apos;" />-->
-<s b="103" d="?" t="?" />
-<s b="104" d="!" t="!" />
-<s b="100" d="," t="," />
-<s b="104" d="&#183;" t="." />
-</group>
-</alphabet>
 </alphabets>
