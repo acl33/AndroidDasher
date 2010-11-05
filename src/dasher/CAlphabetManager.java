@@ -165,8 +165,12 @@ public class CAlphabetManager<C> {
         @Override
 		public void DeleteNode() {
         	bCommitted=false;
-        	probInfo=null;
         	super.DeleteNode();
+        }
+        @Override
+        public void Delete_children() {
+        	super.Delete_children();
+        	probInfo=null;
         }
 
         protected long[] GetProbInfo() {
