@@ -64,7 +64,7 @@ public class TwoButtonDynamicFilter extends CDynamicFilter {
 	@Override public void Event(long iTime, int iId, int pressType, CDasherModel pModel) {
 		marker: if (pressType==SINGLE_PRESS && getState()==RUNNING) {
 			BounceMarker pMarker;
-			if (iId==0) pMarker=up; else if (iId==1) pMarker=down; else break marker;
+			if (iId==0 || iId==4) pMarker=up; else if (iId==1 || iId==2) pMarker=down; else break marker;
 			//apply offset
 			double dCurBitrate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) * GetLongParameter(Elp_parameters.LP_BOOSTFACTOR) / 10000.0;
 			int iOffset = pMarker.GetTargetOffset(dCurBitrate);
