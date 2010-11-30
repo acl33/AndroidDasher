@@ -92,10 +92,11 @@ public interface CDasherScreen {
 	 * @param iCX X co-ordinate of the centre
 	 * @param iCY Y co-ordinate of the centre
 	 * @param iR Radius in pixels
-	 * @param iColour Colour number
-	 * @param bFill Fill or outline?
+	 * @param iFillColour Colour number to fill (-1 = don't fill)
+         * @param iLineColour Colour number to outline (-1 = use default)
+         * @param iLineWidth line width of outline (<=0 = don't outline)
 	 */	
-	public abstract void DrawCircle(int iCX, int iCY, int iR, int iColour, boolean bFill);
+	public abstract void DrawCircle(int iCX, int iCY, int iR, int iFillColour, int iLineColour, int iLineWidth);
 	
 	/**
 	 * Draws a sequence of lines.

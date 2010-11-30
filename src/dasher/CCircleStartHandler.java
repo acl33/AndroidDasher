@@ -89,8 +89,18 @@ public class CCircleStartHandler extends CStartHandler{
 				
 		CDasherView.Point C = getScreenCenter(View);
 		int rad = getScreenRadius(View);
-		boolean bStarting = GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) && inCircle && m_iEnterTime!=Integer.MAX_VALUE;
-		View.Screen().DrawCircle(C.x, C.y, rad, bStarting ? 1 : 0, GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED));
+		boolean bAboutToChange = inCircle && m_iEnterTime!=Integer.MAX_VALUE;
+		int fillColor, lineColor, lineWidth;
+		if (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
+			lineColor = 2;
+			lineWidth = 1;
+			fillColor = bAboutToChange ? 241 : 242;
+		} else {
+			lineColor = 240;
+			fillColor = -1; //don't fill
+			lineWidth = bAboutToChange ? 3 : 1;
+		}
+		View.Screen().DrawCircle(C.x, C.y, rad, fillColor, lineColor, lineWidth);
 		
 		return true;
 	}

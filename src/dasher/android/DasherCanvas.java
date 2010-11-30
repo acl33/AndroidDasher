@@ -171,11 +171,20 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 	public void Blank() {
 		canvas.drawARGB(255, 255, 255, 255);
 	}
-	public void DrawCircle(int iCX, int iCY, int iR, int iColour,
-			boolean bFill) {
-		p.setARGB(255, colours.GetRed(iColour), colours.GetGreen(iColour), colours.GetBlue(iColour));
-		p.setStyle(bFill ? Style.FILL_AND_STROKE : Style.STROKE);
-		canvas.drawCircle(iCX, iCY, iR, p);
+	public void DrawCircle(int iCX, int iCY, int iR, int iFillColour, int iLineColour, int iLineWidth) {
+		if (iFillColour!=-1) {
+			p.setARGB(255, colours.GetRed(iFillColour), colours.GetGreen(iFillColour), colours.GetBlue(iFillColour));
+			p.setStyle(Style.FILL);
+			canvas.drawCircle(iCX, iCY, iR, p);
+		}
+		//and outline
+		if (iLineWidth>0) {
+			if (iLineColour==-1) iLineColour=3; //TODO hardcoded default
+			p.setARGB(255, colours.GetRed(iLineColour), colours.GetGreen(iLineColour), colours.GetBlue(iLineColour));
+			p.setStyle(Style.STROKE);
+			p.setStrokeWidth(iLineWidth);
+			canvas.drawCircle(iCX, iCY, iR, p);
+		}
 	}
 	public void DrawRectangle(int x1, int y1, int x2, int y2,
 			int iFillColour, int iOutlineColour,
