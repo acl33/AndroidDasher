@@ -219,20 +219,23 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param vNodeList Collection which will be filled with drawn Nodes
 	 * @param vDeleteList Collection which will be filled with undrawable Nodes
 	 */
-	public void Render(CDasherNode Root, long iRootMin, long iRootMax, ExpansionPolicy pol) {
-		
+	public CDasherNode Render(CDasherNode Root, long iRootMin, long iRootMax, ExpansionPolicy pol, CDasherModel model) {
+		m_model=model;
 		Screen().Blank();
 		
 		CDasherView.DRect visreg = VisibleRegion();
-		
+		output = Root.Parent();
 		RecursiveRender(Root, iRootMin, iRootMax, (int)visreg.maxX, pol);
 		
 		// DelayDraw the text nodes
 		m_DelayDraw.Draw(Screen());
 		
 		Crosshair();  // add crosshair
+		return output;
 	}
 	
+	private CDasherNode output;
+	private CDasherModel m_model;
 	
 	/* CSFS: Heavily modified to get the new mostleft value out. I'm fairly sure this
 	 * obeys the same semantics as the C++ version but this needs to be tested.
@@ -286,17 +289,32 @@ public class CDasherViewSquare extends CDasherView {
 		int right=(int)temp[0], top=(int)temp[1];
 		
 		Screen().DrawRectangle(left, top, right, bottom, Render.m_iColour, -1, 0);
-		
 		if( Render.m_strDisplayText.length() > 0 )
 			mostleft = (int)DasherDrawText(iDasherSize, y1, iDasherSize, y2, Render.m_strDisplayText, mostleft, Render.shove());
-					
-		/* If this node hasn't any children (yet), we're done */
-		if(Render.ChildCount() == 0) {
-			pol.pushNode(Render, (int)y1, (int)y2, true);
-		} else renderChildren: {
-			//it has children, so can be collapsed...
-			pol.pushNode(Render, (int)y1, (int)y2, false);
+		
+		renderChildren: {
+			collapse: {
+				if (output == Render.Parent()) {
 			
+					//we may be seen as well
+					long lpOY = GetLongParameter(Elp_parameters.LP_OY);
+					if (y1<lpOY && y2>lpOY && (y2-y1)>GetLongParameter(Elp_parameters.LP_OX)) {
+						//we are also seen!
+						m_model.Output(output=Render);
+						break collapse;
+					}
+				}
+				//else - node not now under crosshair
+				/* If this node hasn't any children (yet), we're done */
+				if(Render.ChildCount() == 0) {
+					pol.pushNode(Render, (int)y1, (int)y2, true);
+					break renderChildren;
+				}
+				//has children, & not under xhair, so can be collapsed
+				pol.pushNode(Render, (int)y1, (int)y2, false);
+			}
+			//break here if now under crosshair => output => has children;
+			//fallthrough to here if has children but not under crosshair (so enqueued).
 			if (Render.m_OnlyChildRendered != null) {
 				CDasherNode child=Render.m_OnlyChildRendered;
 				long newy1 = y1 + (iDasherSize * child.Lbnd()) / lpNormalisation;
@@ -318,7 +336,7 @@ public class CDasherViewSquare extends CDasherView {
 				newy2 = y1 + (iDasherSize * ch.Hbnd()) / lpNormalisation;
 				if (newy2 < visreg.minY) {
 					//not reached screen yet.
-					ch.Delete_children();
+					m_model.Collapse(ch);
 					//and loop round
 				} else if (newy2 - newy1 > minNodeSizeText) {
 					//definitely big enough to render
@@ -332,24 +350,24 @@ public class CDasherViewSquare extends CDasherView {
 					//and loop round
 				} else {
 					if (ch.Range() > bestSz) {
-						if (bestCh!=null) bestCh.Delete_children();
+						if (bestCh!=null) m_model.Collapse(bestCh);;
 						bestCh = ch;
 						bestSz = (int)ch.Range();
 					} else {
 						//did not RecursiveRender, or store into bestCh.
-						ch.Delete_children();
+						m_model.Collapse(ch);
 					}
 					if (newy2 > visreg.maxY) break; //rest of children are offscreen
 				}
 			}
 			//any remaining children are offscreen, and do not need rendering
-			while (++i<j) Render.ChildAtIndex(i).Delete_children();
+			while (++i<j) m_model.Collapse(Render.ChildAtIndex(i));
 			if (bestSz>lpNormalisation/3) {
 				if (bestSz!=Integer.MAX_VALUE) {
 					RecursiveRender(bestCh,y1 + (bestCh.Lbnd() * iDasherSize)/lpNormalisation,
 									y1 + (bestCh.Hbnd() * iDasherSize)/lpNormalisation, mostleft,pol);
 					Render.m_OnlyChildRendered = bestCh;
-				} else if (bestCh!=null) bestCh.Delete_children();
+				} else if (bestCh!=null) m_model.Collapse(bestCh);
 			}
 		}
 		//children rendered (if any!)

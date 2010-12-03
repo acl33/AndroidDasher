@@ -464,18 +464,24 @@ public abstract class CDasherView extends CDasherComponent {
 	}
 	
 	/**
-	 * Renders the entire model, starting at a given Node and given
-	 * specific bounds in Dasher space. Push all on-screen nodes onto the
-	 * ExpansionPolicy along with their computed dasher min/max-y co-ords
-	 * (note, these are passed _after_ conversion for nonlinearity...?).
-	 * Off-screen nodes, or those too small to render, are collapsed immediately.
+	 * Renders the entire model starting at a given Node and given
+	 * specific bounds in Dasher space. Output() and Erase() are called
+	 * on the model for nodes under the crosshair (or not) where this differs
+	 * from their previous {@link CDasherNode#isSeen()} status.
+	 * Nodes under the cross-hair may be expanded immediately; off-screen
+	 * nodes, or those too small to render, may be collapsed immediately.
+	 * All other nodes are pushed onto the ExpansionPolicy along with
+	 * their computed dasher min/max-y co-ords (note, these are passed
+	 * _after_ conversion for nonlinearity...?);
 	 * 
 	 * @param Root Node at which to start drawing
 	 * @param iRootMin Lower y co-ordinate of this node
 	 * @param iRootMax Upper y co-ordinate of this node
 	 * @param pol ExpansionPalicy to push all nodes onto (expandable or collapsible)
+	 * @param model CDasherModel to use to output/erase nodes under/not under the crosshair
+	 * @return the smallest/innermost node under the crosshair
 	 */
-	public abstract void Render(CDasherNode Root, long iRootMin, long iRootMax, ExpansionPolicy pol);
+	public abstract CDasherNode Render(CDasherNode Root, long iRootMin, long iRootMax, ExpansionPolicy pol, CDasherModel model);
 			
 	/**
 	 * Convert a given screen co-ordinate to dasher co-ordinates. 

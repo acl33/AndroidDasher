@@ -203,7 +203,6 @@ public class CDasherModel extends CFrameRate {
 	{
 		m_Root.commit();
 		
-		m_Root.DeleteNephews(whichchild); //typically, this does nothing, as all siblings of new root are offscreen already...
 		m_Root.m_dCost = Double.MAX_VALUE; //make sure never collapsed, and new root's cost is never limited to <= its parent
 		oldroots.addLast(m_Root);
 		
@@ -250,28 +249,15 @@ public class CDasherModel extends CFrameRate {
 	}
 	
 	/**
-	 * Forget about the queue of old root nodes.
-	 * <p>
-	 * This should be called when the previous context is no
-	 * longer valid. 
-	 *
+	 * Delete the root and all nodes in the queue of old root nodes.
+	 * This should be called when the previous context is no longer valid.
 	 */
-	protected void ClearRootQueue() {
-		while(oldroots.size() > 0) {
-			if(oldroots.size() > 1) {
-				oldroots.get(0).OrphanChild(oldroots.get(1));
-			}
-			else {
-				oldroots.get(0).OrphanChild(m_Root);
-			}
-			
-			/* CSFS: Again, this originally would delete oldroots[0] before
-			 * pop_front'ing the deque.
-			 * ACL However, OrphanChild() here includes calling DeleteNode().
-			 */
-			
-			oldroots.removeFirst();
-		}
+	protected void DeleteRoot() {
+		if (m_Root==null) return; //could assert oldroots empty & m_pLastOutput==null...
+		if (m_pLastOutput!=null) m_pLastOutput.Leave();
+		(oldroots.isEmpty() ? m_Root : oldroots.get(0)).DeleteNode();
+		oldroots.clear();
+		m_Root=null;
 	}
 
 	/**
@@ -349,23 +335,6 @@ public class CDasherModel extends CFrameRate {
 		}
 		return true; //success!
 	}
-
-	protected CDasherNode Get_node_under_crosshair() {
-		return m_Root.Get_node_under(GetLongParameter(Elp_parameters.LP_NORMALIZATION), m_Rootmin + m_iDisplayOffset, m_Rootmax + m_iDisplayOffset, GetLongParameter(Elp_parameters.LP_OX), GetLongParameter(Elp_parameters.LP_OY));
-	}
-	
-
-	/**
-	 * Gets the node under the current mouse position.
-	 * 
-	 * @param Mousex Current mouse x co-ordinate
-	 * @param Mousey Current mouse y co-ordinate
-	 * @return Reference to Node under mouse
-	 */
-	protected CDasherNode Get_node_under_mouse(long Mousex, long Mousey) {
-		return m_Root.Get_node_under(GetLongParameter(Elp_parameters.LP_NORMALIZATION), m_Rootmin + m_iDisplayOffset, m_Rootmax + m_iDisplayOffset, Mousex, Mousey);
-	}
-	
 	
 	/**
 	 * Forces the current context to a given value, and resets
@@ -396,21 +365,16 @@ public class CDasherModel extends CFrameRate {
 		 */
 		m_deGotoQueue.clear();
 		
-		ClearRootQueue();
-		
-		/* CSFS: BUGFIX: Didn't used to check the root really exists before deleting it */
-		if(m_Root != null) {
-			m_Root.DeleteNode();
-		}
+		DeleteRoot();
 		
 		m_Root = alphMgr.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), iOffset, true);
 		//we've already entered the node, as it was reconstructed from previously-written context
 		m_Root.Enter();
 		m_Root.Seen(true);
 		m_pLastOutput=m_Root;
-		Push_Node(m_Root);
+		Expand(m_Root);
 		
-		double dFraction = ( 1 - (1 - m_Root.MostProbableChild() / (double)(GetLongParameter(Elp_parameters.LP_NORMALIZATION))) / 2.0 );
+		double dFraction = 1 - (1 - m_Root.MostProbableChild() / (double)(GetLongParameter(Elp_parameters.LP_NORMALIZATION)))/2.0;
 		
 		int iWidth = ( (int)( (GetLongParameter(Elp_parameters.LP_MAX_Y) / (2.0*dFraction)) ) );
 		
@@ -594,8 +558,8 @@ public class CDasherModel extends CFrameRate {
 					}*/
 					//make pChild the root node...
 					//first we're gonna have to force it to be output, as a non-output root won't work...
-					if (!ch.isSeen()) OutputTo(ch);
-					
+					if (!ch.isSeen()) Output(ch); //(parent=old root has already been seen)
+					m_Root.DeleteNephews(ch);
 					//we need to update the target coords (newRootmin,newRootmax)
 					// to reflect the new coordinate system based upon pChild as root.
 					//Make_root automatically updates any such pairs stored in m_deGotoQueue, so:
@@ -628,12 +592,7 @@ public class CDasherModel extends CFrameRate {
 		    m_Rootmax = newRootmax;
 		    m_Rootmin = newRootmin;
 		    
-		    // This may have moved us around a bit...so
-		// push node under crosshair
-		CDasherNode new_under_cross = Get_node_under_crosshair();
-		Push_Node(new_under_cross);
-			                
-			OutputTo(new_under_cross);
+		    // This may have moved us around a bit...output will happen when the frame is rendered
 		} //else, we just stop - this prevents the user from zooming too far back
 		//outside the root node (when we can't generate an older root).
 	}
@@ -652,29 +611,36 @@ public class CDasherModel extends CFrameRate {
 	 * @param NewNode Node now under the crosshair
 	 * @param OldNode Node previously under the crosshair (maybe the same as NewNode)
 	 */
-	protected void OutputTo(CDasherNode NewNode) {
-		if (NewNode!=null && !NewNode.isSeen()) {
-			OutputTo(NewNode.Parent());
-			if (NewNode.Parent()!=null) NewNode.Parent().Leave();
-			NewNode.Enter();
-			NewNode.Seen(true);
-			m_pLastOutput=NewNode;
-			NewNode.Output();
-		} else {
-			//NewNode either null or has been seen; delete back to it
-			while (m_pLastOutput != NewNode) {
-				//if NewNode has been seen, m_pLastOutput!=null...
-				m_pLastOutput.Undo();
-				m_pLastOutput.Seen(false);
-				m_pLastOutput.Leave();
-				m_pLastOutput = m_pLastOutput.Parent();
-				//if NewNode is null, i.e. exitting back out of root, m_pLastOutput==null now...
-				if (m_pLastOutput==null) {
-					assert NewNode==null;
-					break;
-				} else m_pLastOutput.Enter();
-			}
+	protected void Output(CDasherNode NewNode) {
+		if (NewNode.isSeen()) return;
+		if (NewNode.Parent()!=null
+				&& !NewNode.Parent().isSeen())
+			throw new IllegalArgumentException("Parent must be output first");
+		if (m_pLastOutput!=NewNode.Parent()) EraseBackTo(NewNode.Parent());
+
+		if (m_pLastOutput!=null) m_pLastOutput.Leave();
+		NewNode.Enter();
+		NewNode.Seen(true);
+		m_pLastOutput=NewNode;
+		NewNode.Output();
+		Expand(NewNode);
+		NewNode.m_dCost = Double.MAX_VALUE;
+	}
+	
+	protected void Collapse(CDasherNode node) {
+		if (node.isSeen()) EraseBackTo(node.Parent());
+		if (node.ChildCount()>0) node.Delete_children();
+	}
+	
+	private void EraseBackTo(CDasherNode lastToKeep) {
+		m_pLastOutput.Leave();
+		while (true) {
+			m_pLastOutput.Undo();
+			m_pLastOutput.Seen(false);
+			m_pLastOutput = m_pLastOutput.Parent();
+			if (m_pLastOutput == lastToKeep) break;
 		}
+		if (m_pLastOutput!=null) m_pLastOutput.Enter();
 	}
 	
 	/**
@@ -684,7 +650,7 @@ public class CDasherModel extends CFrameRate {
 	 * in that case, there is no point in deleting/recreating.)
 	 * @param Node Node to push. Must not be null.
 	 */
-	protected void Push_Node(CDasherNode Node) {
+	protected void Expand(CDasherNode Node) {
 		
 		if(Node.ChildCount() == 0)
 			Node.PopulateChildren();
@@ -704,7 +670,8 @@ public class CDasherModel extends CFrameRate {
 			if (!Reparent_root()) break;
 		}
 		
-		View.Render(m_Root, m_Rootmin + m_iDisplayOffset, m_Rootmax + m_iDisplayOffset, pol);
+		CDasherNode out=View.Render(m_Root, m_Rootmin + m_iDisplayOffset, m_Rootmax + m_iDisplayOffset, pol, this);
+		if (out!=m_pLastOutput) EraseBackTo(out);
 		
 		while (m_Root.m_OnlyChildRendered!=null) {
 			// We must have zoomed sufficiently that only one child of the root node 
@@ -849,8 +816,7 @@ public class CDasherModel extends CFrameRate {
 	}
 	
 	public void shutdown() {
-		ClearRootQueue();
-		if (m_Root!=null) m_Root.DeleteNode();
+		DeleteRoot();
 	}
 	
 }

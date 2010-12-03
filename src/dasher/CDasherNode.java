@@ -353,37 +353,6 @@ public abstract class CDasherNode {
     	return iMax;
     }
 
-   
-    /**
-     * Finds the node under a given mouse location, given our boundaries
-     * in Dasher space. Essentially this iterates through our children
-     * checking whether the point falls within each child, and if so recalls
-     * this method in the child. If no children match, we replace a reference
-     * to ourselves.
-     * <p>
-     * The "mouse position" may of course be replaced by any other
-     * point we want to find the node under. 
-     * 
-     * @param iNormalization Normalization value, usually LP_NORMALIZATION
-     * @param miY1 Our upper bound in Dasher co-ordinate space
-     * @param miY2 Our lower bound in Dasher co-ordiante space
-     * @param miMousex Current mouse position X
-     * @param miMousey Current mouse position Y
-     * @return Node under this mouse position.
-     */
-    public CDasherNode Get_node_under(long iNormalization, long miY1, long miY2, long miMousex, long miMousey) {
-		
-		long miRange = miY2 - miY1;
-        
-        for(CDasherNode i : this.Children()) {
-        	long miNewy1 = miY1 + (miRange * i.m_iLbnd) / iNormalization;
-        	long miNewy2 = miY1 + (miRange * i.m_iHbnd) / iNormalization;
-        	if(miMousey < miNewy2 && miMousey > miNewy1 && miMousex < miNewy2 - miNewy1)
-        		return i.Get_node_under(iNormalization, miNewy1, miNewy2, miMousex, miMousey);
-        }
-        return this;
-	}
-	
 //		 kill ourselves and all other children except for the specified
 //		 child
 //		 FIXME this probably shouldn't be called after history stuff is working
