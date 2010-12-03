@@ -62,6 +62,7 @@ class IMDasherInterface extends ADasherInterface
 			private boolean haveChar(int dPos) {
 				if (myCursorPos != lastCursorPos) throw new ConcurrentModificationException();
 				if (dPos < myCursorPos) {
+					if (dPos<0) return false;
 					//desired character to left of cursor
 					if (dPos < myCursorPos - cacheTextLeft.length()) {
 						//need to extend backwards

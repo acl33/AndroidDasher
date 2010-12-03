@@ -110,7 +110,13 @@ public class CAlphabetManager<C> {
     public CAlphNode GetRoot(CDasherNode Parent, long iLower, long iUpper, int iOffset, boolean bEnteredLast) {
     	if (iOffset < -1) throw new IllegalArgumentException("offset "+iOffset+" must be at least -1");
     	ListIterator<Character> previousChars = m_Model.m_DasherInterface.getContext(iOffset);
-    	assert iOffset>=0 || !previousChars.hasPrevious();
+    	if (iOffset<0 && previousChars.hasPrevious()) {
+    		StringBuilder sb=new StringBuilder();
+    		do {
+    			sb.append(previousChars.previous());
+    		} while (previousChars.hasPrevious());
+    		throw new IllegalStateException("Got context \""+sb.reverse()+"\" for offset "+iOffset);
+    	}
     	CAlphNode NewNode;
     	ListIterator<Integer> previousSyms = m_AlphabetMap.GetSymbols(previousChars);
     	if (bEnteredLast && previousSyms.hasPrevious()) {
