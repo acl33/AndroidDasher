@@ -358,13 +358,15 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		} catch (IOException e) {
 			android.util.Log.e("DasherIME", "Could not list assets: ",e);
 		}
-		if (USER_DIR.exists()) {
-			for (String aFile : USER_DIR.list()) {
-				if (aFile.contains(prefix) && aFile.endsWith(".xml"))
-					try {parser.ParseFile(new FileInputStream(new File(USER_DIR,aFile)), true);}
-					catch (Exception e) {
-						android.util.Log.e("DasherIME","Could not parse/read user file "+aFile,e);
-					}
+		for (File f : new File[] {GetPackageDir(),USER_DIR}) {
+			if (f.exists()) {
+				for (String aFile : f.list()) {
+					if (aFile.contains(prefix) && aFile.endsWith(".xml"))
+						try {parser.ParseFile(new FileInputStream(new File(f,aFile)), true);}
+						catch (Exception e) {
+							android.util.Log.e("DasherIME","Could not parse/read user file "+aFile,e);
+						}
+				}
 			}
 		}
 	}
@@ -380,24 +382,25 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		} catch (IOException e) {
 			//no system training file present. Which is fine; silently skip.
 		}
-		//2. user file
-		File f = new File(USER_DIR,fname);
-		if (f.exists()) {
-			try {
-				into.add(new FileInputStream(f));
-			} catch (FileNotFoundException fnf) {
-				//we checked f.exists()...
-				throw new AssertionError();
-			}
+		//2. user file(s)
+		try {
+			File f = new File(GetPackageDir(),fname); //user-specific file written by dasher
+			if (f.exists()) into.add(new FileInputStream(f));
+			f = new File(USER_DIR, fname); //anything explicitly/manually provided by user
+			if (f.exists()) into.add(new FileInputStream(f));
+		} catch (FileNotFoundException fnf) {
+			//we checked f.exists()...
+			throw new AssertionError();
 		}
 	}
 	
 	@Override public void WriteTrainFile(String filename, String s) {
 		String msg;
-		if (USER_DIR.exists() || USER_DIR.mkdir()) {
+		File pkgDir = GetPackageDir();
+		if (pkgDir.exists() || pkgDir.mkdirs()) {
 			try {
 				//second parameter is whether to append to any existing file - yes, do!
-				PrintWriter pw = new PrintWriter(new FileWriter(new File(USER_DIR,filename), true));
+				PrintWriter pw = new PrintWriter(new FileWriter(new File(pkgDir,filename), true));
 				pw.print(s);
 				pw.flush();
 				pw.close();
@@ -405,10 +408,38 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			} catch (IOException e) {
 				msg = e.toString();
 			}
-		} else msg = USER_DIR+" does not exist and could not create.";
-		android.util.Log.e("Dasher", "Error writing training file: "+msg);
+		} else msg = pkgDir+" does not exist and could not create.";
+		android.util.Log.e("DasherIME", "Error writing training file: "+msg);
 	}
-
-	/*package*/ static final File USER_DIR = new File(Environment.getExternalStorageDirectory(),"dasher");
+	
+	/** Cache of {@link #GetPackageDir()} */
+	private File PACKAGE_DIR;
+	/** OS-provided directory for storing files for this app, i.e. that will be removed on app uninstallation
+	 * (On API 8+, anyway!). Following Google's specification, this is something like /sdcard/Android/data/dasher.android/files/.
+	 * We store text the user writes whilst using Dasher into this directory.
+	 * Note, application package name is determined from the (runtime sub)class of the receiver.
+	 * @return Directory for storing this application package's files.
+	 */
+	protected File GetPackageDir() {
+		if (PACKAGE_DIR==null) getDir: {
+			try {
+				java.lang.reflect.Method m = Context.class.getMethod("getExternalFilesDir", new Class[] {String.class});
+				PACKAGE_DIR = (File)m.invoke(androidCtx, new Object[] {null});
+				//method can return null at device boot time (hypothesis:
+				// Dasher service starting up before filesystem ready?).
+				// if so, fallback to old API (below) 
+				if (PACKAGE_DIR!=null) break getDir;
+			} catch (Exception e) {/*fall through*/}
+			//New API not available or not yet working. Use old API, and stick on the prescribed directory name...
+			PACKAGE_DIR = Environment.getExternalStorageDirectory();
+			PACKAGE_DIR = new File(new File(new File(new File(PACKAGE_DIR, "Android"),"data"),
+					getClass().getPackage().getName()), "files");
+		}
+		return PACKAGE_DIR;
+	}
+	/** Additional directory from which we read any alphabet/training files placed there by the user
+	 * (not removed upon app installation, but much easier for the user to find: /sdcard/dasher).
+	 */
+	private static final File USER_DIR = new File(Environment.getExternalStorageDirectory(),"dasher");
 
 }
