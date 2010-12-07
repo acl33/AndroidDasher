@@ -316,8 +316,11 @@ public class CDasherViewSquare extends CDasherView {
 				CDasherNode ch = Render.ChildAtIndex(i);
 					
 				newy2 = y1 + (iDasherSize * ch.Hbnd()) / lpNormalisation;
-				if (newy2 < visreg.minY) continue; //not reached screen yet.
-				if (newy2 - newy1 > minNodeSizeText) {
+				if (newy2 < visreg.minY) {
+					//not reached screen yet.
+					ch.Delete_children();
+					//and loop round
+				} else if (newy2 - newy1 > minNodeSizeText) {
 					//definitely big enough to render
 					RecursiveRender(ch, newy1, newy2, mostleft, pol);
 					if (newy2 >= visreg.maxY) {
@@ -326,16 +329,18 @@ public class CDasherViewSquare extends CDasherView {
 						break; 
 					}
 					bestSz = Integer.MAX_VALUE;
-					continue; //skips a repeat test of newy2 > visreg.maxY...
-				} else if (ch.Range() > bestSz) {
-					if (bestCh!=null) bestCh.Delete_children();
-					bestCh = ch;
-					bestSz = (int)ch.Range();
+					//and loop round
 				} else {
-					//did not RecursiveRender, or store into bestCh.
-					ch.Delete_children();
+					if (ch.Range() > bestSz) {
+						if (bestCh!=null) bestCh.Delete_children();
+						bestCh = ch;
+						bestSz = (int)ch.Range();
+					} else {
+						//did not RecursiveRender, or store into bestCh.
+						ch.Delete_children();
+					}
+					if (newy2 > visreg.maxY) break; //rest of children are offscreen
 				}
-				if (newy2 > visreg.maxY) break; //rest of children are offscreen
 			}
 			//any remaining children are offscreen, and do not need rendering
 			while (++i<j) Render.ChildAtIndex(i).Delete_children();
@@ -346,8 +351,8 @@ public class CDasherViewSquare extends CDasherView {
 					Render.m_OnlyChildRendered = bestCh;
 				} else if (bestCh!=null) bestCh.Delete_children();
 			}
-				
 		}
+		//children rendered (if any!)
 		if (bOutline && Render.outline()) {
 			Screen().DrawRectangle(left, top, right, bottom, -1, -1, 1);
 		}
