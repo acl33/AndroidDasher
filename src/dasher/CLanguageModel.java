@@ -141,6 +141,18 @@ public abstract class CLanguageModel<C> extends CDasherComponent {
 	 * @param Symbol Symbol to enter
 	 */
 	public abstract C ContextLearningSymbol(C ctxIn, int Symbol);
+	
+	/**
+	 * Attempt to "unlearn" an occurrence of a symbol in a context.
+	 * The default implementation fails to unlearn, so just returns false
+	 * @param parentCtx Context in which symbol occurred
+	 * @param Symbol symbol to unlearn (in parentCtx)
+	 * @param childCtx context returned from {@link #ContextLearningSymbol} when the symbol was learned
+	 * @return true if the symbol was unlearned; false if couldn't.
+	 */
+	public boolean UnlearnChild(C parentCtx, int Symbol, C childCtx) {
+		return false;
+	}
 
 	/////////////////////////////////////////////////////////////////////////////
 	// Prediction

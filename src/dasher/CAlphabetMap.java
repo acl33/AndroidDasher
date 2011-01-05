@@ -34,18 +34,31 @@ import java.io.InputStreamReader;
 import java.io.PushbackReader;
 import java.io.Reader;
 import java.io.StringReader;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.ListIterator;
+import java.util.*;
 
 /**
  * Map from the textual representation of alphabet symbols
  * (which can be multiple characters!) to symbol numbers.
  */
 public class CAlphabetMap {
+	/** Symbol number used to indicate some non-symbol character was present */
 	public static final int UNDEFINED = -1;
 
+	/** The alphabet which this map represents */
+	public final CAlphIO.AlphInfo m_AlphInfo;
+	
+	private List<Integer> defaultContextSyms;
+	public <C> C defaultContext(CLanguageModel<C> model) {
+		if (defaultContextSyms==null) {
+			defaultContextSyms = new ArrayList<Integer>();
+			GetSymbols(defaultContextSyms, m_AlphInfo.m_strDefaultContext);
+		}
+		C ctx = model.EmptyContext();
+		for (int i=0; i<defaultContextSyms.size(); i++)
+			ctx = model.ContextWithSymbol(ctx, defaultContextSyms.get(i));
+		return ctx;
+	}
+	
 	/** Symbol value of the paragraph symbol, to which both "\r\n" and "\n" are mapped.
 	 * (if {@link #UNDEFINED}, no special mapping for "\r\n" is applied.)
 	 */
@@ -64,7 +77,8 @@ public class CAlphabetMap {
 	 */
 	private int[] singleChars = new int[256];
 	
-	public CAlphabetMap() {
+	public CAlphabetMap(CAlphIO.AlphInfo alphInfo) {
+		this.m_AlphInfo = alphInfo;
 		Arrays.fill(singleChars, UNDEFINED);
 	}
 	
@@ -203,7 +217,14 @@ public class CAlphabetMap {
 	
 	/**
 	 * Trains the language model from a given InputStream, which
-	 * must be UTF-8 encoded.
+	 * must be UTF-8 encoded. The stream may contain commands to
+	 * switch context; these are encoded as {@link #CONTEXT_COMMAND_CHAR},
+	 * followed by an arbitrary delimiter character that is not
+	 * {@link #CONTEXT_COMMAND_CHAR}, then any number of characters which
+	 * are used to define the new context, terminated by another
+	 * occurrence of the same delimiter. (Two {@link #CONTEXT_COMMAND_CHAR}s in
+	 * a row are read as meaning that character is wanted as actual text to be
+	 * learnt.)
 	 * <p>
 	 * LockEvents will be inserted every 1KB of data read, informing
 	 * components and the interface of the progress made in reading
@@ -243,14 +264,29 @@ public class CAlphabetMap {
 		Reader chars = new BufferedReader(new InputStreamReader(count)); //buffer just for performance
 		C trainContext = model.EmptyContext();
 		int iLastPercent = count.iTotalRead / iTotalBytes;
+		int delim=-1; //if not -1, we are in a context-switching command; chars read should be Enter'd not Learn'd.
 		try {
 			outer: while (true) {
 				int c=chars.read();
 				int sym;
 				while (true) {
-					//continues come here, i.e. check for -1
+					//continues come here => check for -1 and then read next char
 					if (c==-1) break outer; 
-					if (Character.isHighSurrogate((char)c)) {
+					if (c==m_AlphInfo.ctxChar) {
+						int n = chars.read();
+						if (n==c) {
+							//actual occurrence of character wanted.
+							sym = c;
+							break;
+						}
+						trainContext = defaultContext(model);
+						delim=n; //=> only Enter symbols until we see this
+					} else if (c==delim) {
+						//end of context-switch context
+						delim=-1; // => following characters will be learnt.
+						c=chars.read();
+						continue;
+					} else if (Character.isHighSurrogate((char)c)) {
 						int n=chars.read();
 						if (Character.isLowSurrogate((char)n)) {
 							sym=Character.toCodePoint((char)c,(char)n);
@@ -281,7 +317,10 @@ public class CAlphabetMap {
 				}
 				//breaks come here, with sym defined. As per C++ Dasher, we just ignore symbols not in the alphabet...
 				if (sym!=CAlphabetMap.UNDEFINED) {
-					trainContext = model.ContextLearningSymbol(trainContext, sym);
+					if (delim==-1)
+						trainContext = model.ContextLearningSymbol(trainContext, sym);
+					else
+						trainContext = model.ContextWithSymbol(trainContext, sym);
 					if (prog!=null) {
 						int iNPercent = (count.iTotalRead *100)/iTotalBytes;
 						if (iNPercent != iLastPercent) {

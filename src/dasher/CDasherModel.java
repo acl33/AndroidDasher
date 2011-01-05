@@ -201,7 +201,7 @@ public class CDasherModel extends CFrameRate {
 	protected void Make_root(CDasherNode whichchild)
 	//	find a new root node 
 	{
-		m_Root.commit();
+		m_Root.commit(true);
 		
 		m_Root.m_dCost = Double.MAX_VALUE; //make sure never collapsed, and new root's cost is never limited to <= its parent
 		oldroots.addLast(m_Root);
@@ -319,11 +319,9 @@ public class CDasherModel extends CFrameRate {
 			oldroots.addLast(NewRoot);
 			return false;
 		}
-		
+		m_Root.commit(false);
 		m_Root = NewRoot;
 		
-		//TODO, should we uncommit? C++ Dasher does...
-	
 		m_Rootmax +=  ((lNorm - upper)) * iRootWidth / iWidth;
 	
 		m_Rootmin -= lower * iRootWidth / iWidth;

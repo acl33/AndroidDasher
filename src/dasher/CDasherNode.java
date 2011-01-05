@@ -325,7 +325,7 @@ public abstract class CDasherNode {
 	/** Called when we've gone far enough into the node that it is no
 	 *  longer a root (i.e. one of its children is!)
 	 */
-	public void commit() {}
+	public void commit(boolean commit) {}
 
 	/**
 	 * Gets this Node's colour index

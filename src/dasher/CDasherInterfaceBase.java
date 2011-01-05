@@ -117,11 +117,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	protected CColourIO m_ColourIO;
 	
 	/**
-	 * Entered text which has not yet been written out to disk
-	 */
-	protected StringBuffer strTrainfileBuffer;
-		
-	/**
 	 * Our settings repository
 	 */
 	private CSettingsStore m_SettingsStore;
@@ -211,7 +206,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * the event handler and module manager.
 	 */
 	public CDasherInterfaceBase() {
-		strTrainfileBuffer = new StringBuffer();
 		m_oModuleManager = new CModuleManager();
 				
 		// Global logging object we can use from anywhere
@@ -478,7 +472,11 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		// the old LM can first be GC'd, as that'll be using memory for both...
 
 		//So, first we remove refs to NCMgr & LM from the event handler...
-		if (m_pNCManager!=null) m_pNCManager.UnregisterComponent();
+		if (m_pNCManager!=null) {
+			//and since the AlphabetManager is about to be deleted too, better do that as well...
+			m_pNCManager.getAlphabetManager().WriteTrainFileFull(this);
+			m_pNCManager.UnregisterComponent();
+		}
 		
 		//Then we construct a new NCMgr and (untrained) LM...
 		m_pNCManager = new CNodeCreationManager(this, m_SettingsStore);
@@ -674,7 +672,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		
 		// Send a lock event
 		
-		if (m_pNCManager!=null) WriteTrainFileFull(m_pNCManager.getAlphabetManager().m_Alphabet.GetTrainingFile());
+		if (m_pNCManager!=null) m_pNCManager.getAlphabetManager().WriteTrainFileFull(this);
 		
 		// Lock Dasher to prevent changes from happening while we're training.
 		
@@ -886,15 +884,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		//ACL couldn't find said notes! But changing context system anyway.
 		PauseAt(0,0);
 		
-		// The previous code seemed to extract the most recent 10 characters
-		// to write to the training file, so I'm preserving that behaviour!
-		StringBuilder strLast = new StringBuilder(10);
-		for (ListIterator<Character> it = getContext(iOffset); it.hasPrevious() && strLast.length()<10;)
-			strLast.append(it.previous());
-		//we build the string in reverse order, so reverse it now...
-		String strNewContext = strLast.reverse().toString();
-		strTrainfileBuffer.append(strNewContext);
-						
 		m_DasherModel.SetOffset(iOffset,m_pNCManager.getAlphabetManager(), bForce);
 		
 		Redraw(true);
@@ -1151,37 +1140,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	public void StartShutdown() {
 		m_bShutdownLock = true;
 		if (m_DasherModel!=null) m_DasherModel.shutdown();
-	}
-	
-	
-	/**
-	 * Writes all the text entered by the user to the training file
-	 * (by calling {@link #WriteTrainFile(String, String)})
-	 * @param filename name of training file, e.g. "training_english_GB.txt"
-	 */
-	protected void WriteTrainFileFull(String filename) {
-		WriteTrainFile(filename,strTrainfileBuffer.toString());
-		strTrainfileBuffer.setLength(0);
-	}
-	
-	/**
-	 * Passes the longest-ago 100 characters we still have record of,
-	 * to {@link #WriteTrainFile(String, String)}, with the provided filename
-	 * @param filename name of training file, e.g. "training_english_GB.txt" 
-	 */
-	protected void WriteTrainFilePartial(String filename) {
-		
-		if(strTrainfileBuffer.length() > 100) {
-			int len; 
-			if (Character.isHighSurrogate(strTrainfileBuffer.charAt(99))) {
-				assert Character.isLowSurrogate(strTrainfileBuffer.charAt(100));
-				len=99;
-			} else len=100;
-			WriteTrainFile(filename, strTrainfileBuffer.substring(0, len));
-			strTrainfileBuffer.delete(0, len);
-		}
-		else 
-			WriteTrainFileFull(filename);
 	}
 	
 	/**

@@ -134,9 +134,19 @@ public class CAlphIO extends XMLFileParser {
 		 * Alphabet name as per xml
 		 */
 		public final String name;
+
+		/**
+		 * Context to use when starting a new sentence or document. Defaults to ". "
+		 */
+		protected String m_strDefaultContext=". ";
+
+		/** Escape character to use in training files to delimit context-switching commands,
+		 * or null to not use context-switching commands. 
+		 */
+		protected Character ctxChar;
 		
 		public CAlphabetMap makeMap() {
-			CAlphabetMap m = new CAlphabetMap();
+			CAlphabetMap m = new CAlphabetMap(this);
 			if (m_ParagraphSymbol!=CAlphabetMap.UNDEFINED) m.AddParagraphSymbol(m_ParagraphSymbol);
 			for (int i=0; i<m_Characters.size(); i++) {
 				if (i!=m_ParagraphSymbol) m.Add(m_Characters.get(i), i);
@@ -332,18 +342,27 @@ public class CAlphIO extends XMLFileParser {
 				
 				if(tagName == "alphabet") {
 					/* A new alphabet is beginning. Find its name... */
-					String name=null;
+					String name=null; String ctxEscape="Â";
 				    for(int i = 0; i < tagAttributes.getLength(); i++) {
 				    	String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
 				    	if(attributeName == "name") {
 				    		name=tagAttributes.getValue(i);
+				    	} else if (attributeName.equals("escape")) {
+				    		ctxEscape = tagAttributes.getValue(i);
 				    	}
 				    }
-					if (name==null) {
+					
+				    currentAlph = new AlphInfo(name);
+				    if (name==null) {
 						m_Interface.InsertEvent(new CMessageEvent("Alphabet does not have a name, ignoring", 0, 1));
-						currentAlph=null;
+						//subtags etc. will be recorded in the AlphInfo object with null name anyway;
+						// but this will not be added to the list of available alphabets.
+					} else if (ctxEscape.length()!=1) {
+						m_Interface.InsertEvent(new CMessageEvent("Alphabet "+name+" has invalid escape character, will not use context commands.", 0, 1));
+						currentAlph.ctxChar = null;
+					} else {
+						currentAlph.ctxChar = ctxEscape.charAt(0);
 					}
-					currentAlph = new AlphInfo(name);
 					
 				    bFirstGroup = true;
 				    
@@ -391,6 +410,11 @@ public class CAlphIO extends XMLFileParser {
 					currentTag = "train"; // Likewise
 				}
 				
+				else if (tagName.equals("context")) {
+					for (int i=0; i<tagAttributes.getLength(); i++)
+						if (tagAttributes.getLocalName(i).equals("default"))
+							currentAlph.m_strDefaultContext = tagAttributes.getValue(i);
+				}
 				else if(tagName == "paragraph") {
 					//note index of paragraph symbol in order to handle \n / \r\n special-casing...
 					currentAlph.m_ParagraphSymbol = currentAlph.m_Characters.size();
@@ -551,6 +575,7 @@ public class CAlphIO extends XMLFileParser {
 				String tagName = (simpleName.equals("") ? qualName : simpleName);
 				
 				if(tagName == "alphabet") {
+					if (currentAlph.name == null) return; //we warned at start, now drop it.
 					//alphabet finished, i.e. all read in. Groups will have been stored in linked-list
 					// in reverse order to how they were in the file, so put them the right way round...
 					currentAlph.m_BaseGroup = Reverse(currentAlph.m_BaseGroup);

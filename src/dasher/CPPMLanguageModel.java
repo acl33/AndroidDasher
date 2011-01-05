@@ -131,6 +131,7 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 	 * @return array with one element per character in the alphabet
 	 * PLUS an initial zero.
 	 */
+	@Override
 	public void GetProbs(CPPMnode ppmcontext, long[] probs, long norm) {
 
 		/* CSFS: In the original C++ the norm value was an
@@ -177,6 +178,7 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 		assert(iToSpend == 0);
 	}
 
+	@Override
 	public CPPMnode ContextLearningSymbol(CPPMnode ctx, int sym)
 	// add symbol to the context
 	// creates new nodes, updates counts
@@ -217,6 +219,17 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
         return order<=m_iMaxOrder;
 	}
 
+	@Override
+	public boolean UnlearnChild(CPPMnode parent, int sym, CPPMnode ch) {
+		assert (ch.count>0);
+		//do not reduce count to 0...unless we want to hang onto node via a weakref(?!)
+		// and then let it be GC'd (or count reincremented first)?
+		if (ch.count<=1) return false;
+		ch.count--;
+		return true;
+	}
+	
+	@Override
 	public CPPMnode ContextWithSymbol(CPPMnode ctx, int Symbol) {
 		assert(Symbol >= 0 && Symbol < m_Alphabet.GetNumberSymbols());
 
