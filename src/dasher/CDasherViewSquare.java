@@ -225,7 +225,8 @@ public class CDasherViewSquare extends CDasherView {
 		
 		CDasherView.DRect visreg = VisibleRegion();
 		output = Root.Parent();
-		RecursiveRender(Root, iRootMin, iRootMax, (int)visreg.maxX, pol);
+		this.pol = pol;
+		RecursiveRender(Root, iRootMin, iRootMax, (int)visreg.maxX, 0);
 		
 		// DelayDraw the text nodes
 		m_DelayDraw.Draw(Screen());
@@ -236,6 +237,7 @@ public class CDasherViewSquare extends CDasherView {
 	
 	private CDasherNode output;
 	private CDasherModel m_model;
+	private ExpansionPolicy pol;
 	
 	/* CSFS: Heavily modified to get the new mostleft value out. I'm fairly sure this
 	 * obeys the same semantics as the C++ version but this needs to be tested.
@@ -264,35 +266,40 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param y1 Top y co-ordinate of this Node
 	 * @param y2 Bottom y co-ordinate of this Node
 	 * @param mostleft Shoving parameter; see above
-	 * @param vNodeList Collection to fill with drawn, childless Nodes
-	 * @param vDeleteList Collection to fill with undrawable Nodes
+	 * @param parentColour colour index in which parent rect was drawn
 	 */
-	public void RecursiveRender(CDasherNode Render, long y1, long y2, int mostleft, ExpansionPolicy pol) {
-		
+	public void RecursiveRender(CDasherNode Render, long y1, long y2, int mostleft, int parentColour) {
 		// This method takes mostleft by VALUE.
 		
-		/* Step 1: Render *this* node */
-		assert y2 >= y1;
-		
-		// TODO - Get sensible limits here (to allow for non-linearities)
 		CDasherView.DRect visreg = VisibleRegion();
 		
-		//ok, render the node...
-		long iDasherSize = (y2 - y1);
-		temp[0]=Math.min(iDasherSize,visreg.maxX);
-		temp[1]=Math.min(y2,visreg.maxY);
-		Dasher2Screen(temp);
-		int left=(int)temp[0], bottom=(int)temp[1];
-		temp[0] = 0;
-		temp[1] = Math.max(y1, visreg.minY);
-		Dasher2Screen(temp);
-		int right=(int)temp[0], top=(int)temp[1];
+		//when only a single recursive call is required (and nothing more after that recursion completes),
+		// iterating round this loop allows a "tail call"-like mechanism without using any more stack space.
+		// (Stack space is limited on Android and the render-largest-child-even-if-too-small mechanism
+		// can otherwise lead to very deep recursion in some cases.)
+		tailcall: while (true) {
 		
-		Screen().DrawRectangle(left, top, right, bottom, Render.m_iColour, -1, 0);
-		if( Render.m_strDisplayText.length() > 0 )
-			mostleft = (int)DasherDrawText(iDasherSize, y1, iDasherSize, y2, Render.m_strDisplayText, mostleft, Render.shove());
-		
-		renderChildren: {
+			/* Step 1: Render *this* node */
+			assert y2 >= y1;
+			
+			//ok, render the node...
+			long iDasherSize = (y2 - y1);
+			temp[0]=Math.min(iDasherSize,visreg.maxX);
+			temp[1]=Math.min(y2,visreg.maxY);
+			Dasher2Screen(temp);
+			int left=(int)temp[0], bottom=(int)temp[1];
+			temp[0] = 0;
+			temp[1] = Math.max(y1, visreg.minY);
+			Dasher2Screen(temp);
+			int right=(int)temp[0], top=(int)temp[1];
+			
+			if (Render.m_iColour !=parentColour) {
+				Screen().DrawRectangle(left, top, right, bottom, Render.m_iColour, -1, bOutline && Render.outline() ? 1 : 0);
+			}
+	
+			if( Render.m_strDisplayText.length() > 0 )
+				mostleft = (int)DasherDrawText(iDasherSize, y1, iDasherSize, y2, Render.m_strDisplayText, mostleft, Render.shove());
+			
 			collapse: {
 				if (output == Render.Parent()) {
 			
@@ -308,20 +315,25 @@ public class CDasherViewSquare extends CDasherView {
 				/* If this node hasn't any children (yet), we're done */
 				if(Render.ChildCount() == 0) {
 					pol.pushNode(Render, (int)y1, (int)y2, true);
-					break renderChildren;
+					return;
 				}
 				//has children, & not under xhair, so can be collapsed
 				pol.pushNode(Render, (int)y1, (int)y2, false);
 			}
+			
 			//break here if now under crosshair => output => has children;
-			//fallthrough to here if has children but not under crosshair (so enqueued).
+			//fallthrough to here if not under crosshair (so enqueued to collapse) but has children from before.
 			if (Render.m_OnlyChildRendered != null) {
 				CDasherNode child=Render.m_OnlyChildRendered;
 				long newy1 = y1 + (iDasherSize * child.Lbnd()) / lpNormalisation;
 				long newy2 = y1 + (iDasherSize * child.Hbnd()) / lpNormalisation;
-				if (y2-y1 < minNodeSizeText || (newy1 <= visreg.minY && newy2 >= visreg.maxY)) {
-					RecursiveRender(child, newy1, newy2, mostleft, pol);
-					break renderChildren; //all other children were collapsed when m_OnlyChildRendered was set
+				if ((y2-y1 < minNodeSizeText && newy2>visreg.minY && newy1<visreg.maxY) //too-small - but other children smaller still
+						|| (newy1 <= visreg.minY && newy2 >= visreg.maxY)) { //covers entire y axis
+					//only need to render this one child. Do it by looping round...
+					parentColour=Render.m_iColour;
+					y1=newy1; y2=newy2;
+					Render=child;
+					continue tailcall;
 				}
 				else Render.m_OnlyChildRendered = null;
 			}
@@ -340,7 +352,7 @@ public class CDasherViewSquare extends CDasherView {
 					//and loop round
 				} else if (newy2 - newy1 > minNodeSizeText) {
 					//definitely big enough to render
-					RecursiveRender(ch, newy1, newy2, mostleft, pol);
+					RecursiveRender(ch, newy1, newy2, mostleft, Render.m_iColour);
 					if (newy2 >= visreg.maxY) {
 						//remaining children offscreen
 						if (newy1 <= visreg.minY) Render.m_OnlyChildRendered = ch; //and previous ones were too!
@@ -364,15 +376,18 @@ public class CDasherViewSquare extends CDasherView {
 			while (++i<j) m_model.Collapse(Render.ChildAtIndex(i));
 			if (bestSz>lpNormalisation/3) {
 				if (bestSz!=Integer.MAX_VALUE) {
-					RecursiveRender(bestCh,y1 + (bestCh.Lbnd() * iDasherSize)/lpNormalisation,
-									y1 + (bestCh.Hbnd() * iDasherSize)/lpNormalisation, mostleft,pol);
 					Render.m_OnlyChildRendered = bestCh;
+					//tail call...
+					parentColour = Render.m_iColour;
+					y2 = y1 + (bestCh.Hbnd() * iDasherSize)/lpNormalisation;
+					y1 += (bestCh.Lbnd() * iDasherSize)/lpNormalisation;
+					Render = bestCh;
+					continue tailcall;
 				} else if (bestCh!=null) m_model.Collapse(bestCh);
 			}
-		}
-		//children rendered (if any!)
-		if (bOutline && Render.outline()) {
-			Screen().DrawRectangle(left, top, right, bottom, -1, -1, 1);
+			//node rendered, no tail call required, exit
+			break;
+			// (otherwise, would loop round the tail-call loop)
 		}
 	}
 	private final long[] temp=new long[2];
