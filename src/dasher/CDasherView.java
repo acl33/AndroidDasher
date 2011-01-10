@@ -315,152 +315,75 @@ public abstract class CDasherView extends CDasherComponent {
 	}
 	private final long[] temp1=new long[2], temp2 = new long[2];
 	/**
-	 * Draws a given string inside a specified box, the dimensions and co-ordinates
-	 * of which are given in Dasher co-ordinates.
+	 * Draws a given string inside a box specified in screen coordinates.
 	 * <p>
-	 * The actual specified bounding box is more or less taken as a guideline
-	 * however, and many changes are made from that which is specified to the
-	 * drawing command which is actually issued.
+	 * The text is drawn just inside the box at the midpoint of the high-dasher-x edge
+	 * (i.e. just inside the left edge in normal orientations), except that it is
+	 * "shoved" towards the Y axis until it is at least <code>textedge</code> pixels
+	 * from the furthest (back, high-dasher-x) edge of the screen.
 	 * <p>
-	 * The most important change is that, using the mostleft parameter to
-	 * indicate the right-hand edge of some ancestor's text, an effort is made
-	 * to 'shove' this text to the right far enough that it does not overlap
-	 * with our ancestor.
-	 * <p>
-	 * This feature is enabled only when bShove is true.
-	 * <p>
-	 * The font size to be used to draw text is currently hard coded
-	 * so that text within 15 pixels of the y axis is drawn at size 11,
-	 * between 15 and 30 pixels is drawn at size 14, and over 30 pixels
-	 * is drawn at size 20.
-	 * <p>
-	 * The bounding box is recalculated by calling the Screen's TextSize
-	 * method, which attempts to determine the dimensions of this string
-	 * at a given size. This is then used to work out how far our children's
-	 * text must be 'shoved' to avoid overlapping our own.
+	 * The font bounding box is calculated by calling the Screen's TextSize
+	 * method; the relevant dimension of this is added to the <code>textedge</code>
+	 * parameter to make the return value.
 	 * <p>
 	 * As such, this method is far from general, and should only
 	 * be used to draw node labels. A new method will be required
 	 * if the need arises to draw arbitrary strings in a specified
 	 * location without adjustment.
 	 * <p>
-	 * This method will return a new 'mostleft' value for use when
-	 * drawing our children; if the Screen's TextSize method is
-	 * accurate, this ought to prevent our text from overlapping that
-	 * of our children.
-	 * <p>
-	 * For the actual drawing of text, m_DelayDraw is used instead
-	 * of passing the command directly to our Screen. This queue
-	 * of text to draw will be emptied towards the end of the
-	 * drawing cycle.
+	 * Actually rendering the text onto the canvas is done by m_DelayDraw
+	 * <em>after</em> all node boxes have been rendered, to prevent
+	 * text being blanked out by child node rectangles.
 	 * 
-	 * @param iAnchorX1 Left edge x co-ordinate
-	 * @param iAnchorY1 Top edge y co-ordinate
-	 * @param iAnchorX2 Right edge x co-ordinate
-	 * @param iAnchorY2 Bottom edge y co-ordinate
+	 * @param left Screen coordinate of high-dasherX edge of node
+	 * (note, all these coordinates truncated to screen edges)
+	 * @param top Screen coordinate of high-dasherY edge of node
+	 * @param right Screen coordinate of low-dasherX edge of node (i.e. dasherY axis)
+	 * @param bottom Screen coordinate of low-dasherY edge of node
+	 * @param textedge Minimum distance in pixels from high-dasherX edge of screen
+	 * to draw any text (i.e., max distance of any parent text causing shoving)
+	 * @param size font size to use. 
 	 * @param sDisplayText String to draw
-	 * @param mostleft Co-ordinate of the right-most text drawn by our ancestor.
-	 * @param bShove Should we try to avoid overlapping ancestor's text?
-	 * @return New 'mostleft' value for drawing children
+	 * @return Max distance in pixels from high-dasherX edge of screen occupied by the
+	 * string rendered by this call (i.e., pass into textedge parameter of calls
+	 * rendering children, to prevent text overlapping)
 	 */
-	public long DasherDrawText(long iAnchorX1, long iAnchorY1, long iAnchorX2, long iAnchorY2, String sDisplayText, long mostleft, boolean bShove) {
+	protected int DrawText(int left, int top, int right, int bottom, int textedge, int size, String sDisplayText) {
 		
-		// Don't draw text which will overlap with text in an ancestor.
-		
-		temp1[0] = Math.min(iAnchorX1, mostleft);
-		temp2[0] = Math.min(iAnchorX2, mostleft);
-		
-		CDasherView.DRect VisRegion = VisibleRegion();
-		
-		temp1[1] = Math.min( VisRegion.maxY, Math.max( VisRegion.minY, iAnchorY1 ) );
-		temp2[1] = Math.min( VisRegion.maxY, Math.max( VisRegion.minY, iAnchorY2 ) );
-		
-		// FIXME - Truncate here before converting - otherwise we risk integer overflow in screen coordinates
-		
-		Dasher2Screen(temp1);
-		Dasher2Screen(temp2);
-		
-		// Truncate the ends of the anchor line to be on the screen - this
-		// prevents us from loosing characters off the top and bottom of the
-		// screen
-		
-		// TruncateToScreen(iScreenAnchorX1, iScreenAnchorY1);
-		// TruncateToScreen(iScreenAnchorX2, iScreenAnchorY2);
-		
-		// Actual anchor point is the midpoint of the anchor line
-		
-		int iScreenAnchorX = (int)(temp1[0] + temp2[0])>>>1;
-		int iScreenAnchorY = (int)(temp1[1] + temp2[1])>>>1;
-		
-		// Compute font size based on position
-		int Size = lpFontSize;
-		
-		/* CSFS: BUGFIX: longs needed here, not ints. Fixed. */
-		
-		// FIXME - this could be much more elegant, and probably needs a
-		// rethink anyway - behvaiour here is too dependent on screen size
-		
-		long iLeftTimesFontSize = (lpMaxY) - ((iAnchorX1 + iAnchorX2)/ 2) *Size;
-		
-		if (iLeftTimesFontSize < (lpMaxY*19)/20)
-			Size*=20;
-		else if (iLeftTimesFontSize < (lpMaxY*159)/160)
-			Size*=14;
-		else
-			Size*=11;
+		CDasherView.Point textDimensions = ScreenTextSize(sDisplayText, size);
 
-		int TextWidth, TextHeight;
+		// Position of text box relative to anchor depends on orientation
 		
-		CDasherView.Point textDimensions = ScreenTextSize(sDisplayText, Size);
-		TextHeight = textDimensions.y;
-		TextWidth = textDimensions.x;
-		// Poistion of text box relative to anchor depends on orientation
+		int textleft,texttop; //in screen coordinates & screen orientation
 		
-		int newleft2,newtop2;
-		
-		switch ((int)(realOrientation)) {
+		switch ((int)realOrientation) {
 		case (Opts.ScreenOrientations.LeftToRight):
-			newleft2 = iScreenAnchorX;
-		newtop2 = iScreenAnchorY - TextHeight / 2;
-		break;
+			textedge = (textleft = Math.max(left,textedge)) + textDimensions.x;
+			texttop = (top+bottom - textDimensions.y) / 2;
+			break;
 		case (Opts.ScreenOrientations.RightToLeft):
-			newleft2 = iScreenAnchorX - TextWidth;
-		newtop2 = iScreenAnchorY - TextHeight / 2;
-		break;
+			textedge = textleft = Math.min(left, Screen().GetWidth()-textedge) - textDimensions.x;
+			texttop = (top+bottom - textDimensions.y) / 2;
+			break;
 		case (Opts.ScreenOrientations.TopToBottom):
-			newleft2 = iScreenAnchorX - TextWidth / 2;
-		newtop2 = iScreenAnchorY;
-		break;
+			textleft = (top+bottom - textDimensions.x) / 2;
+			textedge = (texttop = Math.max(left, textedge)) + textDimensions.y;
+			break;
 		case (Opts.ScreenOrientations.BottomToTop):
-			newleft2 = iScreenAnchorX - TextWidth / 2;
-		newtop2 = iScreenAnchorY - TextHeight;
+			textleft = (top+bottom - textDimensions.x) / 2;
+			textedge = texttop = Math.min(left, Screen().GetHeight()-textedge) - textDimensions.y;
 		break;
 		default:
 			throw new AssertionError();
 		}
 		
-		// Update the value of mostleft to take into account the new text
-		
-		if(bShove) {
-			temp1[0]=newleft2; temp1[1] = newtop2;
-			temp2[0]=newleft2+TextWidth; temp2[1] = newtop2+TextHeight;
-			
-			Screen2Dasher(temp1);
-			Screen2Dasher(temp2);
-			
-			mostleft = Math.min(temp1[0], temp2[0]);
-		}
-		
 		// Actually draw the text. We use DelayDrawText as the text should
 		// be overlayed once all of the boxes have been drawn.
 		
-		m_DelayDraw.DelayDrawText(sDisplayText, newleft2, newtop2, Size);
+		m_DelayDraw.DelayDrawText(sDisplayText, textleft, texttop, size);
 		
-		return mostleft;
+		return textedge;
 		
-		/* CSFS: This method was using a pointer to set mostleft; this seemed to be
-		 * all it returned, so I've altered it to directly return mostleft.
-		 */
 	}
 	
 	/**

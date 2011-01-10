@@ -146,6 +146,7 @@ public class BounceMarker {
 				DecayAndAdd(time,ExpWidth());
 			}
 		}
+
 	}
 	
 	private int m_iLocn;
@@ -254,7 +255,12 @@ public class BounceMarker {
 				x[0]=-100; x[1]=-1000;
 				y[0] = y[1] = (long)(2048-p.pixelLocn * e);
 				pView.DasherPolyline(x, y, 2, 3, 2);
-				pView.DasherDrawText(-100, y[0], -1000, y[1], Double.toString(p.natsSince+dNats), -100, false);
+				//abuse x/y for Dasher2Screen conversion. I.e., contrary to naming,
+				// each will be a pair of (x,y) coordinates
+				long temp=x[1]; x[1] = y[0]; y[0] = temp;
+				pView.Dasher2Screen(x); pView.Dasher2Screen(y);
+				//and this'll only be (even roughly) right for standard left-to-right orientation...
+				pView.Screen().DrawString(Double.toString(p.natsSince+dNats), (int)x[0], (int)y[1]-5, 10);
 			}
 		}
 	}

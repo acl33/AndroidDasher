@@ -226,7 +226,7 @@ public class CDasherViewSquare extends CDasherView {
 		CDasherView.DRect visreg = VisibleRegion();
 		output = Root.Parent();
 		this.pol = pol;
-		RecursiveRender(Root, iRootMin, iRootMax, (int)visreg.maxX, 0);
+		RecursiveRender(Root, iRootMin, iRootMax, 0, 0);
 		
 		// DelayDraw the text nodes
 		m_DelayDraw.Draw(Screen());
@@ -257,16 +257,18 @@ public class CDasherViewSquare extends CDasherView {
 	 * and undrawable nodes, by catching NodeCannotBeDrawnExceptions in the latter
 	 * case.
 	 * <p>
-	 * 'Shoving,' the process which keeps a child node's text from overlapping
-	 * that of its parent, is also co-ordinated here; the new mostleft
-	 * value returned by RenderNode is passed into the recursive
-	 * calls which draw our children.
 	 * 
 	 * @param Render Node at which to begin rendering
 	 * @param y1 Top y co-ordinate of this Node
 	 * @param y2 Bottom y co-ordinate of this Node
+<<<<<<< HEAD
 	 * @param mostleft Shoving parameter; see above
 	 * @param parentColour colour index in which parent rect was drawn
+=======
+	 * @param mostleft Minimum distance from high-dasher-X edge of screen, in <em>pixels</em>,
+	 * to draw text. (When a recursive call is made, the value passed in here will be the low-dasher-X
+	 * edge of the text that the caller just rendered.)
+>>>>>>> ce1f44a... Do text positioning in screen coordinates
 	 */
 	public void RecursiveRender(CDasherNode Render, long y1, long y2, int mostleft, int parentColour) {
 		// This method takes mostleft by VALUE.
@@ -297,9 +299,11 @@ public class CDasherViewSquare extends CDasherView {
 				Screen().DrawRectangle(left, top, right, bottom, Render.m_iColour, -1, bOutline && Render.outline() ? 1 : 0);
 			}
 	
-			if( Render.m_strDisplayText.length() > 0 )
-				mostleft = (int)DasherDrawText(iDasherSize, y1, iDasherSize, y2, Render.m_strDisplayText, mostleft, Render.shove());
-			
+			if( Render.m_strDisplayText.length() > 0 ) {
+				int textedge = DrawText(left, top, right, bottom, mostleft, fontSize(iDasherSize), Render.m_strDisplayText);
+				if (Render.shove()) mostleft=textedge;
+			}
+		
 			collapse: {
 				if (output == Render.Parent()) {
 			
@@ -390,6 +394,29 @@ public class CDasherViewSquare extends CDasherView {
 			// (otherwise, would loop round the tail-call loop)
 		}
 	}
+	
+	/**
+	 * Compute the font size to use for rendering a node label.
+	 * @param iDasherX Preferred text position, i.e. the extent of node (y2-y1, or max x) in dasher-coordinates.
+	 * @return 11, 14 or 20 times the LP_FONT_SIZE parameter, depending on
+	 * text position as a fraction of the way across the screen from the Y-axis. 
+	 */
+	protected int fontSize(long iDasherX) {
+		// Compute font size based on position
+		
+		// FIXME - this could be much more elegant, and probably needs a
+		// rethink anyway - behvaiour here is too dependent on screen size
+		
+		long iLeftTimesFontSize = iDasherX *lpFontSize;
+		
+		if (iLeftTimesFontSize > lpMaxY/20)
+			return lpFontSize*20;
+		else if (iLeftTimesFontSize > lpMaxY/160)
+			return lpFontSize*14;
+		else
+			return lpFontSize*11;
+	}
+	
 	private final long[] temp=new long[2];
 	/**
 	 * Determines whether a node falls within our current visible
