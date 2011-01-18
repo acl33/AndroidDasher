@@ -170,7 +170,11 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		//now we've got lock, train asynchronously...
 		new Thread() {
 			public void run() {
-				train(mgr,myProg);
+				try {
+					train(mgr,myProg);
+				} catch (Throwable th) {
+					Log.e("DasherIME", "Error in training", th);
+				}
 				//completed, or aborted. Signal this...
 				synchronized(myProg) {
 					myProg.evt.m_bLock=false;
