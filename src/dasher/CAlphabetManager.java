@@ -131,7 +131,7 @@ public class CAlphabetManager<C> {
     		//don't use previous symbol (if any)
     		NewNode = allocGroup(Parent, iOffset, null, iLower, iUpper, m_AlphabetMap.defaultContext(m_LanguageModel));
     	}
-    	
+    	NewNode.m_bCommitted = bEnteredLast;
     	return NewNode;
     }
     
@@ -140,34 +140,50 @@ public class CAlphabetManager<C> {
     /** Context representing the last characters in strTrainfileBuffer */
     private C bufCtx;
     
-    protected void Learn(CAlphNode parent, CSymbolNode child) {
-        String sym = m_Alphabet.GetText(child.m_Symbol);
-		if (bufCtx==null || !parent.context.equals(bufCtx)) {
-			//changing context. First write the old to the training file...
+    /** The last alphnode to be output (seen). So we can flush _all_ output characters
+     * to file + train LM when changing context / exitting.
+     */
+    private CAlphNode lastOutput;
+    
+    protected void Learn(CSymbolNode child) {
+    	CAlphNode parent = checkCast(child.Parent());
+    	C parCtx = (parent==null) ? m_AlphabetMap.defaultContext(m_LanguageModel) : parent.context;
+        if (bufCtx==null || !bufCtx.equals(parCtx)) {
+	    	//changing context. First write the old to the training file...
 			if (strTrainfileBuffer.length()>0) WriteTrainFileFull(m_Model.m_DasherInterface);
 			
 			//Now encode a context-switch command (if possible)
 			if (m_Alphabet.ctxChar!=null) {
-				// First get the new context. Really we should ask the language model
-				// to extract the amount of context it actually cares about, or to
-				// turn its context into a string. However, for now the previous 10
-				// chars seems sufficient...
-				StringBuilder strLast = new StringBuilder(10);
-				for (ListIterator<Character> it = m_Model.m_DasherInterface.getContext(parent.getOffset()); it.hasPrevious() && strLast.length()<10;)
-					strLast.append(it.previous());
-				//we build the string in reverse order, so put it in the right order...
-				String ctx = strLast.reverse().toString();
-				
+				// Unfortunately getting the new context may not be possible:
+				// If we're committing a string because the user has finished editing and
+				// switched out of the textbox, we won't be able to get a meaningful context string.
+				// So, we rely on the LM being able to turn a context back into a string...
+				String ctx;
+				if (parent!=null) {
+					List<Integer> syms = new ArrayList<Integer>();
+					m_LanguageModel.ContextToSymbols(parent.context, syms);
+					
+					StringBuilder sb=new StringBuilder();
+					for (int i=0; i<syms.size(); i++)
+						sb.append(m_Alphabet.GetText(syms.get(i)));
+					ctx=sb.toString();
+					//Whatever we write out, when we read in the context-switch command, we automatically 
+					// enter the alphabet default context first. So avoid entering it twice!
+					if (ctx.startsWith(m_Alphabet.getDefaultContext()))
+						ctx = ctx.substring(m_Alphabet.getDefaultContext().length());
+				} else ctx="";
 				//now put the record of it into the buffer. The command format
 				//requires an arbitrary delimiter, so look for the first character
-				//(starting from a) that's _not_ in the context we need to delimit...
+				//(strictly after 32=space) that's _not_ in the context we need to delimit...
 				char delimiter;
-				for (delimiter='a'; ctx.indexOf(delimiter)!=-1 || delimiter==m_Alphabet.ctxChar; delimiter++);
+				for (delimiter=33; ctx.indexOf(delimiter)!=-1 || delimiter==m_Alphabet.ctxChar; delimiter++);
 				//(guaranteed to terminate, the context has only ten characters!)
 				
 				strTrainfileBuffer.append(m_Alphabet.ctxChar).append(delimiter).append(ctx).append(delimiter);
 			}
-		} else if (sym.equals(m_Alphabet.ctxChar)) {
+        }
+        String sym = m_Alphabet.GetText(child.m_Symbol);
+		if (sym.equals(m_Alphabet.ctxChar)) {
 			//the context-command character is actually being written as a genuine character. Escape it by writing it twice...
 			strTrainfileBuffer.append(m_Alphabet.ctxChar); // (it gets written once more below)
 		}
@@ -176,26 +192,20 @@ public class CAlphabetManager<C> {
 		//and train the LM. Hmmm - this may keep trainfile (eventually) in sync with model,
 		// but still only writes/trains on committed text, i.e. will miss the last few characters
 		// (written but not committed, at the end) of each session (e.g. prior to each textbox/context switch)
-		m_LanguageModel.ContextLearningSymbol(parent.context,child.m_Symbol);
+		m_LanguageModel.ContextLearningSymbol(parCtx,child.m_Symbol);
         //Also note we don't update the child context with the result of ContextLearningSymbol:
         // this might be different if this is the first time that child symbol has been seen,
         // but the same context may/will also be stored in child sub (group) nodes,
         // and unless we also update all of those, <bufCtx> will get out-of-sync,
         // resulting in lots of spurious context switches being written out to file :-(
 	}
+    
+    protected void flush(CAlphNode output) {
+    	if (output==null || output.m_bCommitted) return;
+    	flush(checkCast(output.Parent()));
+   		output.commit(true);
+    }
 	
-	protected boolean Unlearn(CAlphNode parent, CSymbolNode child) {
-		C childCtx = ((CAlphNode)child).context;
-		if (bufCtx==null || !childCtx.equals(bufCtx)) return false;
-		String s = m_Alphabet.GetText(child.m_Symbol);
-		if (strTrainfileBuffer.length()<s.length() || !strTrainfileBuffer.substring(strTrainfileBuffer.length()-s.length()).equals(s)) return false;
-		//note we only append text to strTrainfileBuffer if we've actually written it, in which case
-		// unlearning seems reasonable.
-		if (!m_LanguageModel.UnlearnChild(parent.context, child.m_Symbol, childCtx)) return false;
-		strTrainfileBuffer.delete(strTrainfileBuffer.length()-s.length(), strTrainfileBuffer.length());
-		bufCtx = parent.context;
-		return true;
-	}
     /**
 	 * Writes all the text entered by the user to the training file
 	 * (by calling {@link #WriteTrainFile(String, String)})
@@ -206,31 +216,22 @@ public class CAlphabetManager<C> {
 		strTrainfileBuffer.setLength(0);
 	}
 	
-	/**
-	 * Passes the longest-ago 100 characters we still have record of,
-	 * to {@link #WriteTrainFile(String, String)}, with the provided filename
-	 * @param filename name of training file, e.g. "training_english_GB.txt" 
-	 */
-	protected void WriteTrainFilePartial(CDasherInterfaceBase intf) {
-		
-		if(strTrainfileBuffer.length() > 100) {
-			int len; 
-			if (Character.isHighSurrogate(strTrainfileBuffer.charAt(99))) {
-				assert Character.isLowSurrogate(strTrainfileBuffer.charAt(100));
-				len=99;
-			} else len=100;
-			intf.WriteTrainFile(m_Alphabet.GetTrainingFile(), strTrainfileBuffer.substring(0, len));
-			strTrainfileBuffer.delete(0, len);
+	CAlphNode checkCast(CDasherNode n) {
+		//type erasure means can't check parent has _same_ context type.
+		if (n instanceof CAlphabetManager<?>.CAlphNode) {
+			CAlphabetManager<?>.CAlphNode nn = (CAlphabetManager<?>.CAlphNode)n;
+			//however, we _can_ check that it's from the same AlphMgr, in which case we know we're safe...
+				if (nn.mgr()==this)
+					return (CAlphNode)nn; //warning unchecked cast, we know safe because of above
 		}
-		else 
-			WriteTrainFileFull(intf);
+		return null;
 	}
 	
     abstract class CAlphNode extends CDasherNode {
     	
     	protected final CAlphabetManager<C> mgr() {return CAlphabetManager.this;}
     	private long[] probInfo;
-    	
+    	private boolean m_bCommitted;
     	/**
     	 * Language model context corresponding to this node's
     	 * position in the tree.
@@ -253,11 +254,31 @@ public class CAlphabetManager<C> {
         	return m_Alphabet.numChildNodes();
         }
         @Override
-        public void Delete_children() {
-        	super.Delete_children();
+        public void DeleteNode() {
         	probInfo=null;
+        	super.DeleteNode();
+        	m_bCommitted=false;
         }
 
+        @Override public void Output() {
+        	if (lastOutput!=Parent()) {
+        		flush(lastOutput);
+        	}
+        	lastOutput=this;
+        }
+        
+        @Override public void Undo() {
+        	if (lastOutput==this) {
+        		lastOutput = checkCast(Parent());
+        	}
+        	m_bCommitted = false;
+        }
+        
+        @Override public void commit(boolean bNv) {
+        	//we don't allow uncommitting.
+        	m_bCommitted |= bNv;
+        }
+        
         protected long[] GetProbInfo() {
         	if (probInfo == null) {
 	        	probInfo = m_Model.GetProbs(m_LanguageModel,context);
@@ -287,8 +308,13 @@ public class CAlphabetManager<C> {
 				 */
 				
 			CAlphNode newNode = GetRoot(null, 0, 0, iNewOffset, true);
-			newNode.Seen(true);
 			IterateChildGroups(newNode, null, this);
+			CAlphNode node = this;
+			do {
+				node = (CAlphNode)node.Parent();
+				node.Seen(true);
+				node.m_bCommitted=true;
+			} while (node != newNode);
 		}
     
 		protected abstract CGroupNode rebuildGroup(CAlphNode parent, SGroupInfo group, long iLbnd, long iHbnd);
@@ -313,11 +339,13 @@ public class CAlphabetManager<C> {
 
 		@Override
 		public void Output() {
+			super.Output();
 			//probability 0 will break user trials, but user trials shouldn't involve unknown symbols anyway...?
 			m_Model.InsertEvent(new CEditEvent(1, m_strDisplayText, 0.0));
 		}
 		
 		@Override public void Undo() {
+			super.Undo();
 			m_Model.InsertEvent(new CEditEvent(2, m_strDisplayText, 0.0));
 		}
 
@@ -331,7 +359,7 @@ public class CAlphabetManager<C> {
 			if (Parent()==null) {
 				//make a node for the previous symbol - i.e. as we'd expect our parent to be...
 				CAlphNode n = GetRoot(null, 0, 0, getOffset()-1, true);
-				n.Seen(true);
+				n.Seen(true); n.m_bCommitted=true;
 
 				//however, n won't generate us as a child. That's ok: we'll put in
 				// its children for it, now, giving this special character a probability of 1/4
@@ -362,7 +390,6 @@ public class CAlphabetManager<C> {
 	}
 
     protected class CSymbolNode extends CAlphNode {
-    	private boolean m_bCommitted;
     	private CSymbolNode() {}
     	
     	@Override
@@ -409,8 +436,8 @@ public class CAlphabetManager<C> {
          */
     	@Override
         public void Output() {
-        	CEditEvent oEvent = new CEditEvent(1, m_Alphabet.GetText(m_Symbol), GetProb());
-        	m_Model.InsertEvent(oEvent);
+    		m_Model.InsertEvent(new CEditEvent(1, m_Alphabet.GetText(m_Symbol), GetProb()));
+    		super.Output();
         }
 
     	private double GetProb() {
@@ -430,35 +457,21 @@ public class CAlphabetManager<C> {
          * @param Node Node whose symbol we wish to remove.
          */    
         public void Undo() {
-        	CEditEvent oEvent = new CEditEvent(2, m_Alphabet.GetText(m_Symbol), GetProb());
-       		m_Model.InsertEvent(oEvent);
-       		m_bCommitted = false;
+        	super.Undo();
+        	m_Model.InsertEvent(new CEditEvent(2, m_Alphabet.GetText(m_Symbol), GetProb()));
         }
         
         @Override
         public void commit(boolean bNv) {
-        	if (bNv==m_bCommitted) return;
+        	if (((CAlphNode)this).m_bCommitted || !bNv) return;
 			//ACL this was used as an 'if' condition:
 			assert (m_Symbol < m_Alphabet.GetNumberSymbols());
 			//...before performing the following. But I can't see why it should ever fail?!
 			
+			super.commit(bNv);
 			if (m_Model.GetBoolParameter(Ebp_parameters.BP_LM_ADAPTIVE)) {
-				if (Parent() instanceof CAlphabetManager<?>.CAlphNode) {
-					//type erasure means can't check parent has _same_ context type.
-					CAlphabetManager<?>.CAlphNode parent = (CAlphabetManager<?>.CAlphNode)Parent();
-					//however, we _can_ check that it's from the same AlphMgr, in which case we know we're safe...
-					if (parent.mgr() == mgr()) {
-						CAlphNode par = (CAlphNode)parent; //warning unchecked cast, we know safe because of above
-						if (bNv)
-							Learn(par, this);
-						else
-							if (!Unlearn(par, this))
-								return;
-						m_bCommitted = bNv;
-					}
-				}
-				//else - parent not an alphnode - do we do anything? should mean root nodes ok...
-			} else m_bCommitted = bNv; //adaptive disabled....?
+				Learn(this);
+			}
 		}
         
         @Override
@@ -470,7 +483,6 @@ public class CAlphabetManager<C> {
 		public CGroupNode rebuildGroup(CAlphNode parent, SGroupInfo group, long iLbnd, long iHbnd) {
 			CGroupNode ret = CAlphabetManager.this.mkGroup(parent, group, iLbnd, iHbnd);
 			if (group.iStart <= m_Symbol && group.iEnd > m_Symbol) {
-				ret.Seen(true);
 				//created group node should contain this symbol
 				IterateChildGroups(ret, group, this);
 			}
@@ -488,8 +500,11 @@ public class CAlphabetManager<C> {
 		
 		@Override
 		public void DeleteNode() {
-			m_bCommitted = false;
-			super.DeleteNode();
+			if (lastOutput==this) {
+				flush(this);
+				lastOutput=null;
+			}
+			super.DeleteNode(); //clears Parent(), hence have to do the above first...
 			freeSymbolList.add(this);
 		}
 
@@ -546,11 +561,6 @@ public class CAlphabetManager<C> {
 
     	protected SGroupInfo m_Group;
 
-		@Override
-		public void Output() {
-			// Do nothing.
-		}
-
 		public CGroupNode rebuildGroup(CAlphNode parent, SGroupInfo group, long iLbnd, long iHbnd) {
 			if (group==this.m_Group) {
 				SetRange(iLbnd, iHbnd);
@@ -560,9 +570,8 @@ public class CAlphabetManager<C> {
 			CGroupNode ret=CAlphabetManager.this.mkGroup(parent, group, iLbnd, iHbnd);
 			if (group.iStart <= m_Group.iStart && group.iEnd >= m_Group.iEnd) {
 			    //created group node should contain this one
-				ret.Seen(true);
-			    IterateChildGroups(ret,group,this);
-			  }
+				IterateChildGroups(ret,group,this);
+			}
 			return ret;
 		}
 

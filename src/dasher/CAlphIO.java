@@ -138,7 +138,9 @@ public class CAlphIO extends XMLFileParser {
 		/**
 		 * Context to use when starting a new sentence or document. Defaults to ". "
 		 */
-		protected String m_strDefaultContext=". ";
+		private String m_strDefaultContext=". ";
+		
+		public String getDefaultContext() {return m_strDefaultContext;}
 
 		/** Escape character to use in training files to delimit context-switching commands,
 		 * or null to not use context-switching commands. 

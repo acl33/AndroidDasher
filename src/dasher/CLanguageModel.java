@@ -25,13 +25,7 @@
 
 package dasher;
 
-import java.io.BufferedReader;
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.ListIterator;
 
 /* CSFS: WARNING: This is a DasherComponent derived class and so MUST
@@ -113,7 +107,14 @@ public abstract class CLanguageModel<C> extends CDasherComponent {
 	 * @return Context object representing the empty context (no preceding characters)
 	 */
 	public abstract C EmptyContext();
-	
+
+	/**
+	 * Turns a context back into a list of symbols.
+	 * @param ctx Context to serialize
+	 * @param into will be filled with the symbols which, if passed to {@link #BuildContext}
+	 * (or entered in turn using {@link #ContextWithSymbol}), would result in that context. 
+	 */
+	public abstract void ContextToSymbols(C ctx, List<Integer> into);
 	/////////////////////////////////////////////////////////////////////////////
 	// Context modifiers
 	////////////////////////////////////////////////////////////////////////////

@@ -51,7 +51,7 @@ public class CAlphabetMap {
 	public <C> C defaultContext(CLanguageModel<C> model) {
 		if (defaultContextSyms==null) {
 			defaultContextSyms = new ArrayList<Integer>();
-			GetSymbols(defaultContextSyms, m_AlphInfo.m_strDefaultContext);
+			GetSymbols(defaultContextSyms, m_AlphInfo.getDefaultContext());
 		}
 		C ctx = model.EmptyContext();
 		for (int i=0; i<defaultContextSyms.size(); i++)
@@ -281,6 +281,7 @@ public class CAlphabetMap {
 						}
 						trainContext = defaultContext(model);
 						delim=n; //=> only Enter symbols until we see this
+						c=chars.read();
 					} else if (c==delim) {
 						//end of context-switch context
 						delim=-1; // => following characters will be learnt.

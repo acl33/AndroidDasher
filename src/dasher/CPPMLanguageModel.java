@@ -26,6 +26,7 @@
 
 package dasher;
 
+import java.util.List;
 import java.util.ListIterator;
 
 /**
@@ -236,7 +237,9 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 		while(ctx != null) {
 			CPPMnode find = ctx.find_symbol(Symbol);
 			// Only try to extend the context if it's not going to make it too long
-			if(find!=null && orderOk(find)) {   
+			if(find!=null) {
+				while (!orderOk(find))
+					find=find.vine;   
 				return find;
 			}
 
@@ -288,6 +291,27 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 
 	public CPPMnode EmptyContext() {
 		return m_Root;
+	}
+	
+	@Override
+	public void ContextToSymbols(CPPMnode node, List<Integer> into) {
+		if (node==m_Root) return;
+		if (node.vine==m_Root) {
+			into.add(node.symbol);
+			return;
+		}
+		ContextToSymbols(node.vine,into);
+		search: for (CPPMnode rootCh = m_Root.child; rootCh!=null; rootCh=rootCh.next) {
+			CPPMnode traverse = rootCh;
+			for (int i=0; i<into.size(); i++)
+				if ((traverse = traverse.find_symbol(into.get(i)))==null)
+					continue search; //not found -> started in wrong place
+			if (traverse==node) {
+				into.add(0, rootCh.symbol);
+				return;
+			}
+		}
+		throw new RuntimeException("No child of Root, on inserting "+into+", produced "+node+" (symbol "+node.symbol+")");
 	}
 	
 	@Override
