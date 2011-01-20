@@ -242,25 +242,21 @@ public class BounceMarker {
 			if (i>4) p.next=null; //will now exit loop.	
 	}
 	
-	private final long x[] = new long[2], y[]=new long[2];
+	private final long[] temp = new long[2];
 	public void Draw(CDasherView pView, double dNats) {
-		x[0]=-100; x[1]=-1000;
-		y[0]=y[1] = 2048-m_iLocn;
-		pView.DasherPolyline(x, y, 2, 3, 1);
-	
+		pView.Dasherline(-100, 2048-m_iLocn, -1000, 2048-m_iLocn, 3, 1);
+		
 		if (DEBUG_LEARNING) {
 			double e = Math.exp(dNats);
 			//unfortunately this won't take account of the 'smoothing' applied to Offsets...
 			for (PushRec p=longest_push; p!=null; p=p.next) {
-				x[0]=-100; x[1]=-1000;
-				y[0] = y[1] = (long)(2048-p.pixelLocn * e);
-				pView.DasherPolyline(x, y, 2, 3, 2);
-				//abuse x/y for Dasher2Screen conversion. I.e., contrary to naming,
-				// each will be a pair of (x,y) coordinates
-				long temp=x[1]; x[1] = y[0]; y[0] = temp;
-				pView.Dasher2Screen(x); pView.Dasher2Screen(y);
-				//and this'll only be (even roughly) right for standard left-to-right orientation...
-				pView.Screen().DrawString(Double.toString(p.natsSince+dNats), (int)x[0], (int)y[1]-5, 10);
+				long y = (long)(2048-p.pixelLocn * e);
+				pView.Dasherline(-100, y, -1000, y, 1, 2);
+				
+				temp[0] = -100; temp[1] = y;
+				pView.Dasher2Screen(temp);
+				//and the adjustments'll only be (even roughly) right for standard left-to-right orientation...
+				pView.Screen().DrawString(Double.toString(p.natsSince+dNats), (int)temp[0], (int)temp[1]-5, 10);
 			}
 		}
 	}

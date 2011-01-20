@@ -31,18 +31,12 @@ public class CCompassMode extends CDasherButtons {
 	}
 
 	@Override public boolean DecorateView(CDasherView pView, CDasherInput pInput) {
-		final long[] x=new long[2], y=new long[2];
 		boolean bFirst=true;
-		x[0]=-100; x[1]=-1000;
 		for (int iPos = 2048 - iTargetWidth / 2; iPos >= 0; iPos -= iTargetWidth) {
 			
-			y[0] = y[1] = iPos;
-
-			pView.DasherPolyline(x, y, 2, 1, bFirst ? 1 : 2);
+			pView.Dasherline(-100, iPos, -1000, iPos, 1, bFirst ? 1 : 2);
 			
-			y[0] = y[1] = 4096 - iPos;
-
-			pView.DasherPolyline(x, y, 2, 1, bFirst ? 1 : 2);
+			pView.Dasherline(-100, 4096 - iPos, -1000, 4096-iPos, 1, bFirst ? 1 : 2);
 			
 			bFirst = false;
 		}

@@ -225,31 +225,29 @@ public abstract class CDasherView extends CDasherComponent {
 	public abstract boolean NodeFillsScreen(long y1, long y2);
 	
 	/**
-	 * Draws a polyline given a series of points in Dasher space.
+	 * Draws a single line segment given endpoints in Dasher space.
 	 * <p>
 	 * Internally, we convert these to screen co-ordinates and pass
 	 * the request on to our screen.
 	 * <p>
 	 * Specifying a line colour of -1 causes the default to be drawn.
 	 * 
-	 * @param x Array of points' x co-ordinates
-	 * @param y Array of points' y co-ordinates
-	 * @param n Number of points in the line
+	 * @param x0,y0 DasherX&amp;Y of one endpoint
+	 * @param x1,y1 DasherX&amp;Y of other endpoint
 	 * @param iWidth Line width
 	 * @param iColour Colour index (-1 means default colour)
 	 */
-	public void DasherPolyline(long[] x, long[] y, int n, int iWidth, int iColour) {
+	public void Dasherline(long x0, long y0, long x1, long y1, int iWidth, int iColour) {
+		temp1[0]=x0; temp1[1]=y0;
+		Dasher2Screen(temp1);
+		x[0]=(int)temp1[0]; y[0]=(int)temp1[1];
 		
-		int[] xs=new int[x.length], ys=new int[y.length];
-		for(int i = (0); i < n; ++i) {
-			temp1[0]=x[i]; temp1[1]=y[i];
-			Dasher2Screen(temp1);
-			xs[i]=(int)temp1[0]; ys[i]=(int)temp1[1];
-		}
-		Screen().Polyline(xs, ys, iWidth, iColour);
+		temp1[0]=x1; temp1[1]=y1;
+		Dasher2Screen(temp1);
+		x[1]=(int)temp1[0]; y[1]=(int)temp1[1];
+		Screen().Polyline(x, y, iWidth, iColour);
 	}
-	
-//	Draw a filled polygon specified in Dasher co-ordinates
+	private final int[] x=new int[2], y=new int[2];
 	
 	/**
 	 * Draws a filled polygon given a series of points in Dasher space.
