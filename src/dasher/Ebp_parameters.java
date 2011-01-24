@@ -55,7 +55,8 @@ public enum Ebp_parameters implements EParameters {
 			  BP_DELAY_VIEW("DelayView", !PERS, false, "Delayed dynamics (for two button mode)"),
 			  BP_LM_REMOTE("RemoteLM", PERS, false, "Language model is remote and responds asynchronously."),
 			  BP_CONNECT_LOCK("Connecting", !PERS, false, "Currently waiting for a connection to a remote LM; lock Dasher."),
-			  BP_ONE_DIMENSIONAL_MODE("OneDimensionalMode", PERS, false, "Remap x/y to radius / curve all around origin");
+			  BP_ONE_DIMENSIONAL_MODE("OneDimensionalMode", PERS, false, "Remap x/y to radius / curve all around origin"),
+			  BP_ONE_BUTTON_RELEASE_TIME("OneButtonReleaseTime", PERS, false, "Use length of single push, not gap, for 1B-dynamic mode");
 
 			  private Ebp_parameters(String rName, boolean pers, boolean def, String hr) {
 				humanReadable = hr;

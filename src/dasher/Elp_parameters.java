@@ -81,7 +81,10 @@ public enum Elp_parameters implements EParameters {
 	  LP_TARGET_OFFSET("TargetOffset", PERS, 0, "Offset target from actual mouse/touch/gaze position"),
 	  /** Can we combine this with LP_TAP_TIME? Think we want this to be much longer...?*/
 	  LP_HOLD_TIME("LongPressTime",PERS,800,"Time/ms for long press (=reverse) in dynamic button mode"),
-	  LP_DOUBLE_CLICK_TIME("DoublePressTime",PERS,150,"Time/ms for double click (=reverse) in dynamic button mode");
+	  LP_DOUBLE_CLICK_TIME("DoublePressTime",PERS,150,"Time/ms for double click (=reverse) in 2B-dynamic mode"),
+	  LP_ONE_BUTTON_SHORT_GAP("OneButtonShortGap", PERS, 40, "Distance between up markers as % of long gap in 1B-dynamic mode"),
+	  LP_ONE_BUTTON_LONG_GAP("OneButtonLongGap", PERS, 512, "Distance between down markers (long gap) in 1B-dynamic mode"),
+	  LP_ONE_BUTTON_OUTER("OneButtonOuter", PERS, 1920, "Distance to up&down outer markers in 1B-dynamic mode");
 		  
 		  private Elp_parameters(String rName, boolean pers, long def, String hr) {
 				humanReadable = hr;

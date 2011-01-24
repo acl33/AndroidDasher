@@ -1,11 +1,9 @@
 package dasher;
 
-import java.util.LinkedList;
-
 public class BounceMarker {
 	static final boolean DEBUG_LEARNING=true;
 	
-	private static class ParzenEstimator {
+	protected static class ParzenEstimator {
 		private final double m_Lambda;
 		private final int m_nL;
 			
@@ -61,6 +59,54 @@ public class BounceMarker {
 			    tot -= getWeight(i);
 			    if (tot <= 0.0) return i;
 			}
+		}
+		
+		/** Get the mean of the result of multiplying this distribution
+		 * with (another distribution shifted by an offset)
+		 * @param other the other distribution
+		 * @param offset Amount to shift the other distribution _back_ by
+		 * (i.e. positive offset = pull it backwards in time,
+		 * so high-positive elements there line up with lower-index elements here)
+		 * @return Mean of the product distribution; if the product distribution is
+		 * zero, return the midpoint of the two means (one shifted back by the offset) instead.  
+		 */
+		public int meanMulOff(ParzenEstimator other, int offset) {
+			double tot = 0.0;
+			//Element i of (other shifted back by offset) is element (i+offset) of (other).
+			//No need to examine elements where one dist is definitely zero. 
+			for (int i=-weightsNeg.length; i<weightsPos.length; i++) tot+=getWeight(i)*other.getWeight(i+offset);
+			if (tot==0.0) {
+				android.util.Log.d("DynamicLearn", "Offset "+offset+" no ovelap mean "+mean()+" w "+other.mean()+" => "+(mean() + other.mean()-offset)/2);
+				//interpolate the midpoints, evenly weighted. (Better would be to weight
+				// according to variance, i.e. estimator X more concentrated => result
+				// closer to mean of X)
+				return (mean() + other.mean()-offset)/2;
+			}
+			tot/=2.0;
+			for (int i = -weightsNeg.length; ; i++) {
+			    tot -= getWeight(i)*other.getWeight(i+offset);
+			    if (tot <= 0.0) {
+			    	return i;
+			    }
+			}
+		}
+		
+		/**
+		 * Gets the indices between which some portion of the distribution lies
+		 * @param frac 0<frac<0.5 Proportion of distribution to exclude at each end (e.g. top & bottom 5%)
+		 * @param into 2-element array into which indices will be written
+		 */
+		public void getPercentile(double frac, int[] into) {
+			double tot = 0.0;
+		    for (int i=0; i<weightsNeg.length; i++) tot+=weightsNeg[i];
+		    for (int i=0; i<weightsPos.length; i++) tot+=weightsPos[i];
+		    double acc = 0.0; boolean fst=true;
+		    for (int i= -weightsNeg.length; ; i++) {
+		    	if ((acc+=getWeight(i)) >= tot*(fst ? frac : (1.0-frac))) {
+		    		into[fst ? 0 : 1]=i;
+		    		if (fst) fst=false; else return;
+		    	}
+		    }
 		}
 		
 		private static final int NUM_ROWS=6;
@@ -149,36 +195,73 @@ public class BounceMarker {
 
 	}
 	
-	private int m_iLocn;
-	private double m_dNumNats;
-	private final ParzenEstimator window;
+	protected final int m_iLocn;
+	protected final ParzenEstimator window;
 	
-	private static final int BINS_PER_SEC=100;
+	protected static final int BINS_PER_SEC=100;
 	
 	public BounceMarker(int iLocn) {
 		this.m_iLocn = iLocn;
-		this.m_dNumNats = Math.log(2.0*Math.abs(iLocn));
 		
 		//lambda, init mean, init variance...in (msec but with nats not bits)
 		this.window = new ParzenEstimator(3, (int)(0.1*BINS_PER_SEC*2.0/Math.E), Math.pow(0.02*BINS_PER_SEC*2.0/Math.E,2.0));
 	}
-	
+
+	public int GetTargetOffset(double dCurBitrate, BounceMarker other, long interval) {
+		double expectedInterval = Math.log(other.m_iLocn / (double)m_iLocn) / dCurBitrate;
+		//shift second (outer) dist. back in time relative to first:
+		int iShift = (int) ((interval/1000.0 - expectedInterval)*BINS_PER_SEC);
+		// (positive offset = long gap = pull the second-press dist back in time,
+		// so late (high-index) presses there line up with early (low-index) presses here)
+		int iMean = window.meanMulOff(other.window, iShift);
+		//iMean is the mean of the product distribution, but expressed in the indices of the first distr.
+		// We need the target coordinate relative to the _second_ (outer) marker, because
+		// that's where the sentence is now...
+		int iOffset = (int)(Math.exp((iMean+iShift)*dCurBitrate/BINS_PER_SEC)* other.m_iLocn);
+		android.util.Log.d("DynamicLearn","Shift "+iShift+" => mean " + iMean + " & offset " + iOffset+" from "+other.m_iLocn);
+		return iOffset;
+	}
+
 	public int GetTargetOffset(double dCurBitrate) {
-		//TODO, adapt this to take into account the current display offset of the model?
 		double dMean = window.mean();
 		int iOffset = (int)(Math.exp(window.mean()*dCurBitrate/BINS_PER_SEC)* m_iLocn);
-		android.util.Log.d("DasherIME","Computed mean " + dMean + " so offset " + iOffset);
+		android.util.Log.d("DynamicLearn","Computed mean " + dMean + " so offset " + iOffset);
 		return iOffset;
 	}
 	
-	/** Record of the current location of the sentence at the marker
-	 * when some previous button was pushed
-	 * @author acl33
-	 *
+	/**
+	 * Learn user's push distribution from the record of a previous push
+	 * @param curPos The offset that would have to be applied _now_, to
+	 * bring to the center of the Y axis, the sentence that was at the marker
+	 * when the _original_ offset was applied.
+	 * @param natsSince Total nats since the original offset
+	 * @param bitrateThen Bitrate at the time the original offset was applied
 	 */
+	protected void learn(int curPos, double natsSince, double bitrateThen) {
+		//When the user pushed the button (and the sentence at curPos was beside the marker),
+		// (assume) they were aiming at the sentence that is _now_ at the center of the Y axis (offset 0).
+		//To compute the location _then_ of this target sentence, we have to apply curPos offset _in_reverse_,
+		// scaled down according to the nats entered since...
+		double targetPos = m_iLocn - curPos / Math.exp(natsSince);
+		//turn that into an offset in _time_, at which they must have clicked
+		// (negative = sentence not yet reached marker)
+		double time = Math.log(targetPos / m_iLocn);
+		int iOldMean=window.mean();
+		window.AddElem((int)(time * BINS_PER_SEC / bitrateThen)); //msec, except nats not bits);
+		android.util.Log.d("DynamicLearn","Added push at offset "+curPos+" => target "+targetPos+"=time "+time+" => mean changed from "+iOldMean+" to "+window.mean());
+	}
+	
+	/** Records info about some previous push of a button */
 	private static class PushRec {
-		int pixelLocn;
+		/** The current location of the sentence that was besides
+		 * the marker when the button was pushed, stored as the offset
+		 * that would have to be applied to bring it to the center of the
+		 * Y axis (i.e., 2048 less the dasherY that would appear there onscreen)
+		 */
+		int curPosn;
+		/** Total nats entered since that push of the button (or since the corresponding Offset() was applied) */
 		double natsSince;
+		/** Bitrate at the time of that push */
 		double bitrate;
 		/** The next (i.e. came after / more recently in time) push after this one */
 		PushRec next;
@@ -191,33 +274,29 @@ public class BounceMarker {
 	/** Object pool of allocated but currently-unused PushRecs */
 	
 	private PushRec freeList;
+	private static double NATS_TO_LEARN=Math.log(4096/30.0);//30 =~= line thickness in dasher coords (3 pixels)...
 	
+	/** Tell the marker that a call to {@link CDasherModel#Offset(int)} has been made.
+	 * The marker needs to know this, to adjust its own records of previous
+	 * pushes, and so to learn the user's push distribution. 
+	 * @return Whether any change to the user distribution was made */
 	public void NotifyOffset(int iOffset, double dNats) {
 		//1. apply dNats growth and iOffset offset to all previous pushes...
 		for (PushRec p=longest_push; p!=null; p=p.next) {
-		    p.pixelLocn = (int)(p.pixelLocn * Math.exp(dNats) - iOffset);
+		    p.curPosn = (int)(p.curPosn * Math.exp(dNats) - iOffset);
 		    p.natsSince += dNats;
 		}
 		
 		//2. for previous pushes that were long enough ago...
-		while (longest_push!=null && longest_push.natsSince <= m_dNumNats) {
+		while (longest_push!=null && longest_push.natsSince >= NATS_TO_LEARN) {
 			PushRec p = longest_push;
 			if ((longest_push = longest_push.next)==null) prev_push=null;
-			//ok - p.pixelLocn is the position _now_ of (the sentence at the marker when offset was applied)
-				//target sentence is now at 0
-			double orig_pos = m_iLocn + longest_push.pixelLocn / Math.exp(longest_push.natsSince);
-			double mul = orig_pos / m_iLocn;
-		    //TODO - check ok for orig_pos inside&outside positive&negative m_iLocn.
-		    //if not, do the long way:
-		    //window.AddElem((mul<1.0 ? -ln(1.0/mul) : ln(mul)) / longest->bitrate);
-		    window.AddElem((int)(Math.log(mul) * BINS_PER_SEC / longest_push.bitrate)); //msec, except nats not bits
-		    android.util.Log.d("DasherIME","Updated mean to "+window.mean());
-		    //TODO, store (some summary of) means&variances as a permanent setting for next time?
-		    p.next=freeList; freeList=p;
+			learn(p.curPosn, p.natsSince, p.bitrate);
+			p.next=freeList; freeList=p;
 		}
 	}
 	
-	public void addPush(int iOffset, double bitrate) {
+	public void RecordPush(int iOffset, double dNatsAgo, double bitrate) {
 		PushRec p;
 		if (freeList!=null) {
 			p=freeList;
@@ -225,7 +304,8 @@ public class BounceMarker {
 		} else p=new PushRec();
 		p.next=prev_push;
 		prev_push=p;
-		p.pixelLocn = m_iLocn - iOffset;
+		if (longest_push==null) longest_push=p;
+		p.curPosn = (int)(Math.exp(-dNatsAgo)*m_iLocn) - iOffset;
 		p.natsSince=0.0;
 		p.bitrate = bitrate;
 	}
@@ -250,9 +330,10 @@ public class BounceMarker {
 			double e = Math.exp(dNats);
 			//unfortunately this won't take account of the 'smoothing' applied to Offsets...
 			for (PushRec p=longest_push; p!=null; p=p.next) {
-				long y = (long)(2048-p.pixelLocn * e);
+				long y = (long)(2048-p.curPosn * e);
 				pView.Dasherline(-100, y, -1000, y, 1, 2);
-				
+				int dThick = (int)(Math.exp(p.natsSince+dNats)*30);
+				pView.DasherDrawRectangle(-300, y-dThick, -1000, y+dThick, 7, 0, 0);
 				temp[0] = -100; temp[1] = y;
 				pView.Dasher2Screen(temp);
 				//and the adjustments'll only be (even roughly) right for standard left-to-right orientation...

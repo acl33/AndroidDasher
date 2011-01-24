@@ -162,15 +162,31 @@
 	    </PreferenceScreen>
 	 
 	    <PreferenceScreen
-	      android:key="AndroidSweep"
-	      android:title="@string/AndroidSweep_title"
-	      android:summary="@string/AndroidSweep_summary"
-	      android:widgetLayout="@layout/checkbox_sweep">
+	      android:key="AndroidOneButtonDynamic"
+	      android:title="@string/AndroidOneButtonDynamic_title"
+	      android:summary="@string/AndroidOneButtonDynamic_summary"
+	      android:widgetLayout="@layout/checkbox_onebuttondynamic">
 	        <dasher.android.SeekBarPreference
-	          android:key="SweepTime"
-	          android:title="@string/SweepTime_title"
-	          android:summary="@string/SweepTime_summary"
-	          android:max="10000" min="500" text="ms"/>
+	          android:key="OneButtonOuter"
+	          android:title="@string/OneButtonOuter_title"
+	          android:summary="@string/OneButtonOuter_summary"
+	          android:max="2048" min="1024" text="/2048"/>
+	        <dasher.android.SeekBarPreference
+	          android:key="OneButtonLongGap"
+	          android:title="@string/OneButtonLongGap_title"
+	          android:summary="@string/OneButtonLongGap_summary"
+	          android:max="1024" min="128" text="/2048"/>
+	        <dasher.android.SeekBarPreference
+	          android:key="OneButtonShortGap"
+	          android:title="@string/OneButtonShortGap_title"
+	          android:summary="@string/OneButtonShortGap_summary"
+	          android:max="90" min="10" text="%"/>
+	        
+	        <CheckBoxPreference
+	          android:key="OneButtonReleaseTime"
+	          android:title="@string/OneButtonReleaseTime_title"
+	          android:summaryOn="@string/OneButtonReleaseTime_summaryOn"
+	          android:summaryOff="@string/OneButtonReleaseTime_summaryOff"/>
 	    </PreferenceScreen>
 	
 		<PreferenceScreen

@@ -1,6 +1,6 @@
 package dasher;
 
-public class TwoButtonDynamicFilter extends CDynamicFilter {
+public class TwoButtonDynamicFilter extends CDynamicPresses {
 
 	private BounceMarker up,down;
 	private boolean m_bDecorationChanged;
@@ -27,9 +27,10 @@ public class TwoButtonDynamicFilter extends CDynamicFilter {
 	}
 	
 	@Override
-	public boolean TimerImpl(long Time, CDasherView pView,CDasherModel pModel) {
+	public boolean TimerImpl(long iTime, CDasherView pView,CDasherModel pModel) {
+		super.TimerImpl(iTime, pView, pModel);
 		m_dNatsSinceLastApply = pModel.GetNats() - m_dNatsAtLastApply;
-		pModel.oneStepTowards(0, GetLongParameter(Elp_parameters.LP_OY), Time, 1.0f);
+		pModel.oneStepTowards(0, GetLongParameter(Elp_parameters.LP_OY), iTime, 1.0f);
 		return true;
 	}
 
@@ -72,7 +73,7 @@ public class TwoButtonDynamicFilter extends CDynamicFilter {
 			double dNewNats = pModel.GetNats() - m_dNatsAtLastApply;
 			up.NotifyOffset(iOffset, dNewNats);
 			down.NotifyOffset(iOffset, dNewNats);
-			pMarker.addPush(iOffset, dCurBitrate);
+			pMarker.RecordPush(iOffset, 0.0, dCurBitrate);
 			pModel.Offset(iOffset);
 			m_dNatsAtLastApply = pModel.GetNats();
 		}
