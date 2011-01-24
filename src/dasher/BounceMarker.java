@@ -1,7 +1,6 @@
 package dasher;
 
 public class BounceMarker {
-	static final boolean DEBUG_LEARNING=true;
 	
 	protected static class ParzenEstimator {
 		private final double m_Lambda;
@@ -217,9 +216,7 @@ public class BounceMarker {
 		//iMean is the mean of the product distribution, but expressed in the indices of the first distr.
 		// We need the target coordinate relative to the _second_ (outer) marker, because
 		// that's where the sentence is now...
-		int iOffset = (int)(Math.exp((iMean+iShift)*dCurBitrate*LN2/BINS_PER_SEC)* other.m_iLocn);
-		android.util.Log.d("DynamicLearn","Mean "+window.mean()+" *("+other.window.mean()+"<<"+iShift+") => " + iMean + " & offset " + iOffset+" from "+other.m_iLocn);
-		return iOffset;
+		return (int)(Math.exp((iMean+iShift)*dCurBitrate*LN2/BINS_PER_SEC)* other.m_iLocn);
 	}
 	/*public int GetTargetOffset(BounceMarker other, double dNats, double dCurBitrate) {
 		double expectedNats = Math.log(other.m_iLocn / (double)m_iLocn);
@@ -231,10 +228,7 @@ public class BounceMarker {
 	}*/
 
 	public int GetTargetOffset(double dCurBitrate) {
-		double dMean = window.mean();
-		int iOffset = (int)(Math.exp(window.mean()*dCurBitrate*LN2/BINS_PER_SEC)* m_iLocn);
-		android.util.Log.d("DynamicLearn","Computed mean " + dMean + " so offset " + iOffset);
-		return iOffset;
+		return (int)(Math.exp(window.mean()*dCurBitrate*LN2/BINS_PER_SEC)* m_iLocn);
 	}
 	
 	/**
@@ -254,9 +248,7 @@ public class BounceMarker {
 		//turn that into an offset in _time_, at which they must have clicked
 		// (negative = sentence not yet reached marker)
 		double bits = Math.log(targetPos / m_iLocn) / LN2;
-		int iOldMean=window.mean();
-		window.AddElem((int)(bits * BINS_PER_SEC / bitrateThen)); //units easy, already in logs to base E.
-		android.util.Log.d("DynamicLearn","Added push at offset "+curPos+" => target "+targetPos+"=bits "+bits+" => mean changed from "+iOldMean+" to "+window.mean());
+		window.AddElem((int)(bits * BINS_PER_SEC / bitrateThen)); //units easy, already in logs to base E.		
 	}
 	
 	/** Records info about some previous push of a button */
@@ -330,24 +322,8 @@ public class BounceMarker {
 			if (i>4) p.next=null; //will now exit loop.	
 	}
 	
-	private final long[] temp = new long[2];
-	public void Draw(CDasherView pView, double dNats) {
+	public void Draw(CDasherView pView) {
 		pView.Dasherline(-100, 2048-m_iLocn, -1000, 2048-m_iLocn, 3, 1);
-		
-		if (DEBUG_LEARNING) {
-			double e = Math.exp(dNats);
-			//unfortunately this won't take account of the 'smoothing' applied to Offsets...
-			for (PushRec p=longest_push; p!=null; p=p.next) {
-				long y = (long)(2048-p.curPosn * e);
-				pView.Dasherline(-100, y, -1000, y, 1, 2);
-				int dThick = (int)(Math.exp(p.natsSince+dNats)*30);
-				pView.DasherDrawRectangle(-300, y-dThick, -1000, y+dThick, 7, 0, 0);
-				temp[0] = -100; temp[1] = y;
-				pView.Dasher2Screen(temp);
-				//and the adjustments'll only be (even roughly) right for standard left-to-right orientation...
-				pView.Screen().DrawString(Double.toString(p.natsSince+dNats), (int)temp[0], (int)temp[1]-5, 10);
-			}
-		}
 	}
 
 }

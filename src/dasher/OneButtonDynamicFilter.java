@@ -18,9 +18,6 @@ public class OneButtonDynamicFilter extends CDynamicFilter {
 	private double m_dMulBoundary;
 	private boolean m_bUseUpGuide;
 	
-	//for debugging....
-	private double m_dNatsSinceLastApply;
-	
 	public OneButtonDynamicFilter(CDasherInterfaceBase iface,
 			CSettingsStore SettingsStore) {
 		super(iface, SettingsStore, 17, "One-button Dynamic Mode");
@@ -41,12 +38,12 @@ public class OneButtonDynamicFilter extends CDynamicFilter {
 			pView.Dasherline(-100, 2048-guideDown, -1000, 2048-guideDown, 3, downCol);
 		}
 		//Fixed markers - draw last so they go on top...
-		upInner.Draw(pView, m_dNatsSinceLastApply);
-		upOuter.Draw(pView, m_dNatsSinceLastApply);
-		downInner.Draw(pView, m_dNatsSinceLastApply);
-		downOuter.Draw(pView, m_dNatsSinceLastApply);
+		upInner.Draw(pView);
+		upOuter.Draw(pView);
+		downInner.Draw(pView);
+		downOuter.Draw(pView);
 		
-		if (m_bDecorationChanged || BounceMarker.DEBUG_LEARNING) {
+		if (m_bDecorationChanged) {
 			m_bDecorationChanged=false;
 			return true;
 		}
@@ -67,7 +64,6 @@ public class OneButtonDynamicFilter extends CDynamicFilter {
 				return false;
 			}
 		}
-		m_dNatsSinceLastApply = pModel.GetNats() - m_dNatsAtLastApply;
 		pModel.oneStepTowards(0, GetLongParameter(Elp_parameters.LP_OY), iTime, 1.0f);
         return true;
 	}

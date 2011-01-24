@@ -6,9 +6,6 @@ public class TwoButtonDynamicFilter extends CDynamicPresses {
 	private boolean m_bDecorationChanged;
 	private double m_dNatsAtLastApply;
 	
-	//for debugging....
-	private double m_dNatsSinceLastApply;
-	
 	public TwoButtonDynamicFilter(CDasherInterfaceBase iface,
 			CSettingsStore SettingsStore) {
 		super(iface, SettingsStore, 19, "Two-button Dynamic Mode");
@@ -17,9 +14,9 @@ public class TwoButtonDynamicFilter extends CDynamicPresses {
 
 	@Override
 	public boolean DecorateView(CDasherView pView, CDasherInput pInput) {
-		up.Draw(pView, m_dNatsSinceLastApply);
-		down.Draw(pView, m_dNatsSinceLastApply);
-		if (m_bDecorationChanged || BounceMarker.DEBUG_LEARNING) {
+		up.Draw(pView);
+		down.Draw(pView);
+		if (m_bDecorationChanged) {
 			m_bDecorationChanged=false;
 			return true;
 		}
@@ -29,7 +26,6 @@ public class TwoButtonDynamicFilter extends CDynamicPresses {
 	@Override
 	public boolean TimerImpl(long iTime, CDasherView pView,CDasherModel pModel) {
 		super.TimerImpl(iTime, pView, pModel);
-		m_dNatsSinceLastApply = pModel.GetNats() - m_dNatsAtLastApply;
 		pModel.oneStepTowards(0, GetLongParameter(Elp_parameters.LP_OY), iTime, 1.0f);
 		return true;
 	}
