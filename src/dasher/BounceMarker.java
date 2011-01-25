@@ -203,12 +203,12 @@ public class BounceMarker {
 	public BounceMarker(int iLocn) {
 		this.m_iLocn = iLocn;
 		
-		//lambda, init mean, init variance...in (msec but with nats not bits)
-		this.window = new ParzenEstimator(3, (int)(0.1*BINS_PER_SEC*2.0/Math.E), Math.pow(0.02*BINS_PER_SEC*2.0/Math.E,2.0));
+		//lambda, init mean=0.1s, init variance=0.02s 
+		this.window = new ParzenEstimator(3, (int)(0.1*BINS_PER_SEC), Math.pow(0.02*BINS_PER_SEC,2.0));
 	}
-
+	private static final double LN2 = Math.log(2.0);
 	public int GetTargetOffset(double dCurBitrate, BounceMarker other, long interval) {
-		double expectedInterval = Math.log(other.m_iLocn / (double)m_iLocn) / dCurBitrate;
+		double expectedInterval = Math.log(other.m_iLocn / (double)m_iLocn) / LN2 / dCurBitrate; //in actual seconds
 		//shift second (outer) dist. back in time relative to first:
 		int iShift = (int) ((interval/1000.0 - expectedInterval)*BINS_PER_SEC);
 		// (positive offset = long gap = pull the second-press dist back in time,
@@ -217,14 +217,22 @@ public class BounceMarker {
 		//iMean is the mean of the product distribution, but expressed in the indices of the first distr.
 		// We need the target coordinate relative to the _second_ (outer) marker, because
 		// that's where the sentence is now...
-		int iOffset = (int)(Math.exp((iMean+iShift)*dCurBitrate/BINS_PER_SEC)* other.m_iLocn);
-		android.util.Log.d("DynamicLearn","Shift "+iShift+" => mean " + iMean + " & offset " + iOffset+" from "+other.m_iLocn);
+		int iOffset = (int)(Math.exp((iMean+iShift)*dCurBitrate*LN2/BINS_PER_SEC)* other.m_iLocn);
+		android.util.Log.d("DynamicLearn","Mean "+window.mean()+" *("+other.window.mean()+"<<"+iShift+") => " + iMean + " & offset " + iOffset+" from "+other.m_iLocn);
 		return iOffset;
 	}
+	/*public int GetTargetOffset(BounceMarker other, double dNats, double dCurBitrate) {
+		double expectedNats = Math.log(other.m_iLocn / (double)m_iLocn);
+		int iShift = (int)((dNats - expectedNats) *BINS_PER_SEC / LN2 / dCurBitrate);
+		int iMean = window.meanMulOff(other.window, iShift);
+		int iOffset = (int)(Math.exp(iMean*dCurBitrate*LN2/BINS_PER_SEC + (dNats-expectedNats)) * other.m_iLocn);
+		android.util.Log.d("DynamicLearn","Mean "+window.mean()+" & "+other.window.mean()+"<<"+iShift+" => " + iMean + " = offset " + iOffset+" from "+other.m_iLocn);
+		return iOffset;
+	}*/
 
 	public int GetTargetOffset(double dCurBitrate) {
 		double dMean = window.mean();
-		int iOffset = (int)(Math.exp(window.mean()*dCurBitrate/BINS_PER_SEC)* m_iLocn);
+		int iOffset = (int)(Math.exp(window.mean()*dCurBitrate*LN2/BINS_PER_SEC)* m_iLocn);
 		android.util.Log.d("DynamicLearn","Computed mean " + dMean + " so offset " + iOffset);
 		return iOffset;
 	}
@@ -245,10 +253,10 @@ public class BounceMarker {
 		double targetPos = m_iLocn - curPos / Math.exp(natsSince);
 		//turn that into an offset in _time_, at which they must have clicked
 		// (negative = sentence not yet reached marker)
-		double time = Math.log(targetPos / m_iLocn);
+		double bits = Math.log(targetPos / m_iLocn) / LN2;
 		int iOldMean=window.mean();
-		window.AddElem((int)(time * BINS_PER_SEC / bitrateThen)); //msec, except nats not bits);
-		android.util.Log.d("DynamicLearn","Added push at offset "+curPos+" => target "+targetPos+"=time "+time+" => mean changed from "+iOldMean+" to "+window.mean());
+		window.AddElem((int)(bits * BINS_PER_SEC / bitrateThen)); //units easy, already in logs to base E.
+		android.util.Log.d("DynamicLearn","Added push at offset "+curPos+" => target "+targetPos+"=bits "+bits+" => mean changed from "+iOldMean+" to "+window.mean());
 	}
 	
 	/** Records info about some previous push of a button */
