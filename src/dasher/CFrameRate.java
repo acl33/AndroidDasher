@@ -115,12 +115,13 @@ private double logFrames;*/
 	public CFrameRate(CDasherInterfaceBase iface, CSettingsStore sets) {
 		super(iface,sets);
 		HandleEvent(new CParameterNotificationEvent(Elp_parameters.LP_MAX_BITRATE));
-		m_dRXmax = 2;                 // only a transient effect
 		m_iFrames = -1;
 		m_iSamples = 1;
 		
 		// we dont know the framerate yet - play it safe by setting it high
 		m_dFr = 1 << 5;
+		//and set the max-zoom correspondingly...(otherwise first frame goes waaay too far)
+		m_dRXmax = Math.exp(m_dMaxbitrate*LN2/m_dFr);
 		
 		// start off very slow until we have sampled framerate adequately
 		m_iSteps = 2000;
