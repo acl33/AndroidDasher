@@ -572,6 +572,8 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		}
 	}
 	
+	private final List<Runnable> endOfFrameTasks = new ArrayList<Runnable>();
+	
 	/**
 	 * Encapsulates the entire process of drawing a
 	 * new frame of the Dasher world.
@@ -638,6 +640,9 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			if (m_InputFilter!=null) bChanged |= m_InputFilter.DecorateView(m_DasherView,m_Input);
 		}
 		if (bChanged) Redraw(bRedrawNodes);
+		for (int i=0; i<endOfFrameTasks.size(); i++)
+			endOfFrameTasks.get(i).run();
+		endOfFrameTasks.clear();
 	}
 	
 	/**
@@ -1199,9 +1204,13 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		public String desc() {return "Pause";} //TODO internationalize
 		public void happen(CDasherNode node) {
 			SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
-			forceRebuild();
+			endOfFrameTasks.add(REBUILD_TASK);
 		}
 		public List<ControlAction> successors() {return Collections.emptyList();}
+	};
+	
+	private final Runnable REBUILD_TASK = new Runnable() {
+		public void run() {forceRebuild();}
 	};
 
 }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-      package="dasher.android" android:versionCode="5" android:versionName="2.2">
+      package="dasher.android" android:versionName="2.2.1" android:versionCode="6">
     <application android:icon="@drawable/icon" android:label="@string/app_name" android:debuggable="true">
     
     <!-- Declares the input method service -->

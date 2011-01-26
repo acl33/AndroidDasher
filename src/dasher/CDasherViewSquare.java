@@ -261,14 +261,10 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param Render Node at which to begin rendering
 	 * @param y1 Top y co-ordinate of this Node
 	 * @param y2 Bottom y co-ordinate of this Node
-<<<<<<< HEAD
-	 * @param mostleft Shoving parameter; see above
-	 * @param parentColour colour index in which parent rect was drawn
-=======
 	 * @param mostleft Minimum distance from high-dasher-X edge of screen, in <em>pixels</em>,
 	 * to draw text. (When a recursive call is made, the value passed in here will be the low-dasher-X
 	 * edge of the text that the caller just rendered.)
->>>>>>> ce1f44a... Do text positioning in screen coordinates
+	 * @param parentColour colour index in which parent rect was drawn
 	 */
 	public void RecursiveRender(CDasherNode Render, long y1, long y2, int mostleft, int parentColour) {
 		// This method takes mostleft by VALUE.
@@ -345,7 +341,7 @@ public class CDasherViewSquare extends CDasherView {
 			long newy1 = y1, newy2;
 			int bestSz=lpNormalisation/3; CDasherNode bestCh=null;
 			assert newy1 <= visreg.maxY;
-			int i=0, j=Render.ChildCount();
+			int i=0; final int j=Render.ChildCount();
 			for(; i<j; i++, newy1=newy2) {
 				CDasherNode ch = Render.ChildAtIndex(i);
 					
