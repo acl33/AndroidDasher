@@ -1,0 +1,9 @@
+Port of Dasher as input method for Google Android OS.
+
+Distributed under terms of GPL License v3.
+
+Based on Chris Smowton's Java port, which is included in the main (C++) Dasher
+repository git.gnome.org/dasher
+
+Dasher website: www.inference.phy.cam.ac.uk/dasher
+Mobile Dasher (includes instructions to enable as Android IME): www.inference.phy.cam.ac.uk/dasher/MobileDasher.html
