@@ -16,12 +16,7 @@ import android.util.Log;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import dasher.CControlManager.ControlAction;
-import dasher.CEditEvent;
-import dasher.CEvent;
 import dasher.CSettingsStore;
-import dasher.Ebp_parameters;
-import dasher.Elp_parameters;
-import dasher.Esp_parameters;
 import dasher.CDasherNode;
 
 class IMDasherInterface extends ADasherInterface
@@ -111,33 +106,33 @@ class IMDasherInterface extends ADasherInterface
 		};
 	}
 	
-	@Override
-	public void InsertEvent(CEvent e) {
-		super.InsertEvent(e);
-		if (e instanceof CEditEvent) {
-			if (ic==null) {
-				Log.d("DasherIME","EditEvent on null IC!");
-				return;
-			}
-			CEditEvent evt = (CEditEvent)e;
-			if (evt.m_iEditType==1) {
-				if (numSelectedChars>0) {
-					Log.d("DasherIME",androidCtx+" deleting selection of "+numSelectedChars);
-					ic.deleteSurroundingText(0, numSelectedChars);
-					numSelectedChars=0;
-				}
-				ic.commitText(evt.m_sText, 1); //position cursor just after
-				lastCursorPos+=evt.m_sText.length();
-				synchronized(this) {expectedOffsets.push(lastCursorPos);}
-				Log.d("DasherIME",androidCtx+" entering "+evt.m_sText+" to give "+ic.getTextBeforeCursor(5, 0));
-			} else if (evt.m_iEditType==2) {
-				ic.deleteSurroundingText(evt.m_sText.length(), 0);
-				lastCursorPos-=evt.m_sText.length();
-				synchronized(this) {expectedOffsets.push(lastCursorPos);}
-				Log.d("DasherIME", androidCtx+" deleting "+evt.m_sText+" to give "+ic.getTextBeforeCursor(5, 0));
-			}
+	@Override public void outputText(String ch, double prob) {
+		if (ic==null) {
+			Log.d("DasherIME","outputText when no InputConnection?!");
+			return;
 		}
+		if (numSelectedChars>0) {
+			Log.d("DasherIME",androidCtx+" deleting selection of "+numSelectedChars);
+			ic.deleteSurroundingText(0, numSelectedChars);
+			numSelectedChars=0;
+		}
+		ic.commitText(ch, 1); //position cursor just after
+		lastCursorPos+=ch.length();
+		synchronized(this) {expectedOffsets.push(lastCursorPos);}
+		Log.d("DasherIME",androidCtx+" entering "+ch+" to give "+ic.getTextBeforeCursor(5, 0));
 	}
+	
+	@Override public void deleteText(String ch, double prob) {
+		if (ic==null) {
+			Log.d("DasherIME","deleteText when no InputConnection?!");
+			return;
+		}
+		ic.deleteSurroundingText(ch.length(), 0);
+		lastCursorPos-=ch.length();
+		synchronized(this) {expectedOffsets.push(lastCursorPos);}
+		Log.d("DasherIME", androidCtx+" deleting "+ch+" to give "+ic.getTextBeforeCursor(5, 0));		
+	}
+	
 	
 	@Override public void NewFrame(long time) {
 		synchronized(this) {

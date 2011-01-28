@@ -614,7 +614,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		}
 					
 		/*Logging code. TODO: capture int iNumDeleted / Vector<CSymbolProb>
-		 * from information broadcast in CEditEvents; then:
+		 * from information passed to outputText/deleteText, then:
 		 *    if (iNumDeleted > 0)
 		 *        m_UserLog.DeleteSymbols(iNumDeleted);
 		 *    if (vAdded.size() > 0)
@@ -895,12 +895,19 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		
 	}
 	
+	/** Call to output/write text at the current cursor position
+	 * (when a symbol node is entered).
+	 * @param ch String representation of _a_single_symbol_. (TODO: make a unicode charpoint?)
+	 * @param prob Probability of symbol, conditioned on parent
+	 */
+	public abstract void outputText(String ch, double prob);
 	
-	/* public void SetContext(String strNewContext) {
-		m_DasherModel.m_strContextBuffer = strNewContext;
-	} */
-	
-	// REMOVED: See bug notes at the top.
+	/** Call to delete text at (i.e. just before) the current cursor position.
+	 * In other words, this performs a single backspace operation - when the user leaves a symbol node.
+	 * @param ch String representation of _a_single_symbol_. (TODO: make a unicode charpoint?)
+	 * @param prob Probability of symbol, conditioned on parent
+	 */
+	public abstract void deleteText(String ch, double prob);
 	
 	/**
 	 * Deferred to CSettingsStore

@@ -341,12 +341,12 @@ public class CAlphabetManager<C> {
 		public void Output() {
 			super.Output();
 			//probability 0 will break user trials, but user trials shouldn't involve unknown symbols anyway...?
-			m_Model.InsertEvent(new CEditEvent(1, m_strDisplayText, 0.0));
+			m_Model.m_DasherInterface.outputText(m_strDisplayText, 0.0);
 		}
 		
 		@Override public void Undo() {
 			super.Undo();
-			m_Model.InsertEvent(new CEditEvent(2, m_strDisplayText, 0.0));
+			m_Model.m_DasherInterface.deleteText(m_strDisplayText, 0.0);
 		}
 
 		@Override
@@ -436,7 +436,7 @@ public class CAlphabetManager<C> {
          */
     	@Override
         public void Output() {
-    		m_Model.InsertEvent(new CEditEvent(1, m_Alphabet.GetText(m_Symbol), GetProb()));
+    		m_Model.m_DasherInterface.outputText(m_Alphabet.GetText(m_Symbol), GetProb());
     		super.Output();
         }
 
@@ -458,7 +458,7 @@ public class CAlphabetManager<C> {
          */    
         public void Undo() {
         	super.Undo();
-        	m_Model.InsertEvent(new CEditEvent(2, m_Alphabet.GetText(m_Symbol), GetProb()));
+        	m_Model.m_DasherInterface.deleteText(m_Alphabet.GetText(m_Symbol), GetProb());
         }
         
         @Override
