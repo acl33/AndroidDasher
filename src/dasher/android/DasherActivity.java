@@ -1,14 +1,12 @@
 package dasher.android;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.List;
+import java.util.Collections;
 
 import android.os.Bundle;
-import android.preference.CheckBoxPreference;
 import android.preference.ListPreference;
-import android.preference.Preference;
 import android.preference.PreferenceActivity;
-import android.preference.PreferenceScreen;
 import android.util.Log;
 import dasher.Esp_parameters;
 
@@ -33,9 +31,10 @@ public class DasherActivity extends PreferenceActivity {
     }
     
     private void addPermittedValues(Esp_parameters param) {
-    	Collection<String> values = new ArrayList<String>();
+    	List<String> values = new ArrayList<String>();
        	ListPreference lp = (ListPreference)getPreferenceScreen().findPreference(param.regName());
         IMDasherInterface.INSTANCE.GetPermittedValues(param,values);
+        Collections.sort(values);
         CharSequence[] vals = new CharSequence[values.size()];
         int i=0;
         for (String s : values) {
