@@ -314,11 +314,11 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 					super.KeyUp(iTime, iID, pView, pInput, pModel);
 			}
 		});
-		RegisterModule(new CButtonMode(this, getSettingsStore(), 12, "Direct Mode"));
-		RegisterModule(new CMenuMode(this, getSettingsStore(), 11, "Scanning Menu Mode"));
-		RegisterModule(new CCompassMode(this,getSettingsStore()));
-		RegisterModule(new OneButtonDynamicFilter(this, getSettingsStore()));
-		RegisterModule(new TwoButtonDynamicFilter(this, getSettingsStore()));
+		RegisterModule(new AndroidDirectMode(this, getSettingsStore(), 12, "Direct Mode"));
+		RegisterModule(new AndroidMenuMode(this, getSettingsStore(), 11, "Scanning Menu Mode"));
+		RegisterModule(new AndroidCompass(this,getSettingsStore()));
+		RegisterModule(new Android1BDynamic(this, getSettingsStore()));
+		RegisterModule(new Android2BDynamic(this, getSettingsStore()));
 	}
 	
 	public void SetTiltAxes() {
@@ -410,6 +410,10 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			}
 		} else msg = pkgDir+" does not exist and could not create.";
 		android.util.Log.e("DasherIME", "Error writing training file: "+msg);
+	}
+	
+	/*package*/ int convertAndroidKeycode(int keyCode) {
+		return (m_InputFilter instanceof AndroidKeyMap) ? ((AndroidKeyMap)m_InputFilter).ConvertAndroidKeycode(keyCode) : -1;
 	}
 	
 	/** Cache of {@link #GetPackageDir()} */

@@ -68,42 +68,24 @@ public class DasherInputMethod extends InputMethodService {
 	}
 	
 	@Override public boolean onKeyUp(int keyCode, KeyEvent event) {
-		String im=PreferenceManager.getDefaultSharedPreferences(this).getString(IMCheckBox.SETTING, "");
-		final int key;
-		if (im.equals("AndroidCompass") && keyCode>=19 && keyCode<=22) {
-			key = ((keyCode-18)*2) % 5; //2,4,1,3
-		} else if (im.equals("AndroidSweep") && keyCode!=KeyEvent.KEYCODE_MENU && keyCode!=KeyEvent.KEYCODE_BACK && (keyCode<19 || keyCode>22)) {
-			//don't intercept menu/back (too useful!) or cursor movement (for editing textbox).
-			key=keyCode;
-		} else if (im.equals("AndroidTwoButtonDynamic") && (keyCode==KeyEvent.KEYCODE_VOLUME_UP || keyCode==KeyEvent.KEYCODE_VOLUME_DOWN)) {
-			key=(keyCode==KeyEvent.KEYCODE_VOLUME_UP) ? 0 : 1;
-		} else
-			return super.onKeyUp(keyCode, event);
+		final int id = IMDasherInterface.INSTANCE.convertAndroidKeycode(keyCode);
+		if (id==-1)	return super.onKeyUp(keyCode, event);
 		IMDasherInterface.INSTANCE.enqueue(new Runnable() {
 			private final long time = System.currentTimeMillis();
 			public void run() {
-				IMDasherInterface.INSTANCE.KeyUp(time, key);
+				IMDasherInterface.INSTANCE.KeyUp(time, id);
 			}
 		});
 		return true;
 	}			
 	
 	@Override public boolean onKeyDown(int keyCode, KeyEvent event) {
-		String im=PreferenceManager.getDefaultSharedPreferences(this).getString(IMCheckBox.SETTING, "");
-		final int key;
-		if (im.equals("AndroidCompass") && keyCode>=19 && keyCode<=22) {
-			key = ((keyCode-18)*2) % 5; //2,4,1,3
-		} else if (im.equals("AndroidSweep") && keyCode!=KeyEvent.KEYCODE_MENU && keyCode!=KeyEvent.KEYCODE_BACK && (keyCode<19 || keyCode>22)) {
-			//don't intercept menu/back (too useful!) or cursor movement (for editing textbox).
-			key=keyCode;
-		} else if (im.equals("AndroidTwoButtonDynamic") && (keyCode==KeyEvent.KEYCODE_VOLUME_UP || keyCode==KeyEvent.KEYCODE_VOLUME_DOWN)) {
-			key=(keyCode==KeyEvent.KEYCODE_VOLUME_UP) ? 0 : 1;
-		} else
-			return super.onKeyDown(keyCode, event);
+		final int id = IMDasherInterface.INSTANCE.convertAndroidKeycode(keyCode);
+		if (id==-1) return super.onKeyDown(keyCode, event);
 		IMDasherInterface.INSTANCE.enqueue(new Runnable() {
 			private final long time = System.currentTimeMillis();
 			public void run() {
-				IMDasherInterface.INSTANCE.KeyDown(time, key);
+				IMDasherInterface.INSTANCE.KeyDown(time, id);
 			}
 		});
 		return true;
