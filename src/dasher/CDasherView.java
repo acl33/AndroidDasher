@@ -30,6 +30,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import dasher.Opts.ScreenOrientations;
+
 /**	
  * Dasher views represent the visualisation of a Dasher model on the screen.
  * <p>
@@ -136,11 +138,9 @@ public abstract class CDasherView extends CDasherComponent {
 	protected long lpMaxY; // Caching result for dashery2screen
 	
 	/**
-	 * Stores the current value of LP_REAL_ORIENTATION again because
-	 * this parameter is requested many times during drawing, which
-	 * can become exceedingly inefficient.
+	 * The orientation in which the canvas will be drawn.
 	 */
-	protected int realOrientation; // Caching result for dasher2screen
+	private Opts.ScreenOrientations realOrientation;
 	
 	/**
 	 * Current font size used for drawing.
@@ -163,17 +163,28 @@ public abstract class CDasherView extends CDasherComponent {
 	 * @param SettingsStore Settings repository to use 
 	 * @param DasherScreen Screen object to wrap.
 	 */
-	public CDasherView(CEventHandler EventHandler, CSettingsStore SettingsStore, CDasherScreen DasherScreen) {
+	public CDasherView(CEventHandler EventHandler, CSettingsStore SettingsStore, CDasherScreen DasherScreen, ScreenOrientations orient) {
 		super(EventHandler, SettingsStore);
 		m_Screen = DasherScreen;
-		
-		lpMaxY = SettingsStore.GetLongParameter(Elp_parameters.LP_MAX_Y);
-		realOrientation = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_REAL_ORIENTATION);
-		lpFontSize = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_DASHER_FONTSIZE);
+		realOrientation = orient;
 		
 		// Value caching
+		lpMaxY = SettingsStore.GetLongParameter(Elp_parameters.LP_MAX_Y);
+		lpFontSize = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_DASHER_FONTSIZE);
 	}
 	
+	/** Tells the view which orientation to use. The view does not watch for
+	 * parameter changes to orientation, it just does as it's told via this method.
+	 * @param orient The orientation in which to render the canvas
+	 */
+	public void setOrientation(Opts.ScreenOrientations orient) {
+		realOrientation = orient;
+	}
+	
+	public Opts.ScreenOrientations getOrientation() {
+		return realOrientation;
+	}
+
 	/**
 	 * This class responds to the following events:
 	 * <p>
@@ -188,10 +199,7 @@ public abstract class CDasherView extends CDasherComponent {
 	public void HandleEvent(CEvent event) {
 		if(event instanceof CParameterNotificationEvent) {
 			CParameterNotificationEvent evt = (CParameterNotificationEvent)event;
-			if(evt.m_iParameter ==  Elp_parameters.LP_REAL_ORIENTATION) {
-				realOrientation = (int)GetLongParameter(Elp_parameters.LP_REAL_ORIENTATION);
-			}
-			else if (evt.m_iParameter == Elp_parameters.LP_MAX_Y) {
+			if (evt.m_iParameter == Elp_parameters.LP_MAX_Y) {
 				lpMaxY = GetLongParameter(Elp_parameters.LP_MAX_Y);
 			}
 			else if (evt.m_iParameter == Elp_parameters.LP_DASHER_FONTSIZE) {
@@ -208,7 +216,6 @@ public abstract class CDasherView extends CDasherComponent {
 	 */
 	public void ChangeScreen(CDasherScreen NewScreen) {
 		m_Screen = NewScreen;
-		textSizes.clear();
 	}
 	
 	/**
@@ -302,15 +309,6 @@ public abstract class CDasherView extends CDasherComponent {
 		Screen().DrawRectangle((int)temp1[0], (int)temp1[1], (int)temp2[0], (int)temp2[1], Color, iOutlineColour, iThickness);
 	}
 	
-	private final Map<Integer,Map<String,CDasherView.Point>> textSizes = new HashMap<Integer,Map<String,CDasherView.Point>>();
-	
-	private CDasherView.Point ScreenTextSize(String sText, int iSize) {
-		Map<String,CDasherView.Point> strings = textSizes.get(iSize);
-		if (strings == null) textSizes.put(iSize, strings = new HashMap<String, Point>());
-		Point p = strings.get(sText);
-		if (p==null) strings.put(sText, p = Screen().TextSize(sText, iSize));
-		return p;
-	}
 	private final long[] temp1=new long[2], temp2 = new long[2];
 	/**
 	 * Draws a given string inside a box specified in screen coordinates.
@@ -346,44 +344,7 @@ public abstract class CDasherView extends CDasherComponent {
 	 * string rendered by this call (i.e., pass into textedge parameter of calls
 	 * rendering children, to prevent text overlapping)
 	 */
-	protected int DrawText(int left, int top, int right, int bottom, int textedge, int size, String sDisplayText) {
 		
-		CDasherView.Point textDimensions = ScreenTextSize(sDisplayText, size);
-
-		// Position of text box relative to anchor depends on orientation
-		
-		int textleft,texttop; //in screen coordinates & screen orientation
-		
-		switch ((int)realOrientation) {
-		case (Opts.ScreenOrientations.LeftToRight):
-			textedge = (textleft = Math.max(left,textedge)) + textDimensions.x;
-			texttop = (top+bottom - textDimensions.y) / 2;
-			break;
-		case (Opts.ScreenOrientations.RightToLeft):
-			textedge = textleft = Math.min(left, Screen().GetWidth()-textedge) - textDimensions.x;
-			texttop = (top+bottom - textDimensions.y) / 2;
-			break;
-		case (Opts.ScreenOrientations.TopToBottom):
-			textleft = (top+bottom - textDimensions.x) / 2;
-			textedge = (texttop = Math.max(left, textedge)) + textDimensions.y;
-			break;
-		case (Opts.ScreenOrientations.BottomToTop):
-			textleft = (top+bottom - textDimensions.x) / 2;
-			textedge = texttop = Math.min(left, Screen().GetHeight()-textedge) - textDimensions.y;
-		break;
-		default:
-			throw new AssertionError();
-		}
-		
-		// Actually draw the text. We use DelayDrawText as the text should
-		// be overlayed once all of the boxes have been drawn.
-		
-		m_DelayDraw.DelayDrawText(sDisplayText, textleft, texttop, size);
-		
-		return textedge;
-		
-	}
-	
 	/**
 	 * Renders the entire model starting at a given Node and given
 	 * specific bounds in Dasher space. Output() and Erase() are called

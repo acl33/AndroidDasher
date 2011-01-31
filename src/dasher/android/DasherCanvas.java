@@ -208,6 +208,9 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 		p.setTextSize(Size);
 		p.setARGB(255, 0, 0, 0);
 		p.setStyle(Style.FILL_AND_STROKE);
+		p.getTextBounds(string, 0, string.length(), r);
+		y1-=r.top;
+		x1-=r.left;
 		canvas.drawText(string, x1, y1, p);
 	}
 	
@@ -241,9 +244,7 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 	public Point TextSize(String string, int iSize) {
 		p.setTextSize(iSize);
 		p.getTextBounds(string, 0, string.length(), r);
-		assert (r.top == 0);
-		assert (r.left == 0);
-		return new Point(r.right, r.bottom);// - r.left, r.bottom - r.top);
+		return new Point(r.right-r.left, r.bottom-r.top);// - r.left, r.bottom - r.top);
 	}
 	
 }

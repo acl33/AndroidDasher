@@ -30,6 +30,7 @@ package dasher;
  * CParamTables for a list and definitions.
  */
 public enum Esp_parameters implements EParameters {
+			SP_ORIENTATION("Orientation", PERS, "", "Orientation (TB/BT/LR/RL) - anything else = use alphabet"),
 			  SP_ALPHABET_ID("AlphabetID", PERS, "", "AlphabetID"),
 			  SP_ALPHABET_1("Alphabet1", PERS, "", "Alphabet History 1"),
 			  SP_ALPHABET_2("Alphabet2", PERS, "", "Alphabet History 2"),

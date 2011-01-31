@@ -90,7 +90,16 @@
 <string name="OneButtonReleaseTime_title">Use button-release time</string>
 <string name="OneButtonReleaseTime_summaryOn">Hold while sentence between markers - short or long press</string>
 <string name="OneButtonReleaseTime_summaryOff">Press when sentence passes either marker - short or long gap between two presses</string>
+<string name="Orientation_title">Orientation</string>
+<string name="Orientation_summary">Override alphabet writing direction</string>
 <!--Calibration Strings-->
 <string name="invert">Invert</string>
 <string name="calibChange">Change...</string>
+<array name="Orientation_entries">
+<item>Use Alphabet default</item>
+<item>Left-to-Right</item>
+<item>Right-to-Left</item>
+<item>Top-to-Bottom</item>
+<item>Bottom-to-Top</item>
+</array>
 </resources>

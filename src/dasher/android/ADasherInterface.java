@@ -203,17 +203,17 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 				DasherCanvas surf = (DasherCanvas)m_DasherScreen;
 				if (!surf.GetCoordinates(Coordinates)) return false;
 				if (prefs.getBoolean("AndroidDoubleX", false)) {
-					switch ((int)GetLongParameter(Elp_parameters.LP_REAL_ORIENTATION)) {
-					case Opts.ScreenOrientations.LeftToRight:
+					switch (pView.getOrientation()) {
+					case LEFT_TO_RIGHT:
 						Coordinates[0] = Math.min(Coordinates[0]*2,surf.getWidth());
 						break;
-					case Opts.ScreenOrientations.RightToLeft:
+					case RIGHT_TO_LEFT:
 						Coordinates[0] = Math.max(0, 2*Coordinates[0]-surf.getWidth());
 						break;
-					case Opts.ScreenOrientations.TopToBottom:
+					case TOP_TO_BOTTOM:
 						Coordinates[1] = Math.min(Coordinates[1]*2,surf.getHeight());
 						break;
-					case Opts.ScreenOrientations.BottomToTop:
+					case BOTTOM_TO_TOP:
 						Coordinates[1] = Math.max(0,2*Coordinates[1]-surf.getHeight());
 						break;
 					default:
@@ -232,8 +232,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 				long lastTouch;
 				@Override public boolean GetScreenCoords(CDasherView pView, long[] coords) {
 					if (!tilt.GetScreenCoords(pView, coords)) return false;
-					int orient = (int)GetLongParameter(Elp_parameters.LP_REAL_ORIENTATION);
-					boolean horiz = (orient == Opts.ScreenOrientations.LeftToRight) || (orient==Opts.ScreenOrientations.RightToLeft);
+					boolean horiz = pView.getOrientation().isHorizontal;
 					long tiltC = (horiz) ? coords[0] : coords[1];
 					if (touch.GetScreenCoords(pView, coords))
 						lastTouch = (horiz) ? coords[1] : coords[0];

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+	<array name="Orientation_values">
+		<item>Default</item>
+		<item>LR</item>
+		<item>RL</item>
+		<item>TB</item>
+		<item>BT</item>
+	</array>
+</resources>

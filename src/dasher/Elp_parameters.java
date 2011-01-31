@@ -30,8 +30,6 @@ package dasher;
  * CParamTables for a list and definitions.
  */
 public enum Elp_parameters implements EParameters {
-	LP_ORIENTATION("ScreenOrientation", PERS, -2, "Screen Orientation"),
-	  LP_REAL_ORIENTATION("RealOrientation", !PERS, 0, "Actual screen orientation (allowing for alphabet default)"),
 	  LP_MAX_BITRATE("MaxBitRateTimes100", PERS, 80, "Max Bit Rate Times 100"),
 	  LP_VIEW_ID("ViewID", PERS, 1, "ViewID"),
 	  LP_LANGUAGE_MODEL_ID("LanguageModelID", PERS, 0, "LanguageModelID"),

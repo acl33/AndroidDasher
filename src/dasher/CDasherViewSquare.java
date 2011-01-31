@@ -27,6 +27,11 @@ package dasher;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
+import dasher.CDasherView.Point;
+import dasher.Opts.ScreenOrientations;
 
 /**
  * An implementation (currently the one and only) of DasherView.
@@ -148,24 +153,31 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param SettingsStore Settings repository to use
 	 * @param DasherScreen Screen to wrap and use for primitive drawing
 	 */
-	public CDasherViewSquare(CEventHandler EventHandler, CSettingsStore SettingsStore, CDasherScreen DasherScreen)  {
+	public CDasherViewSquare(CEventHandler EventHandler, CSettingsStore SettingsStore, CDasherScreen DasherScreen, Opts.ScreenOrientations orient)  {
 		
-		super(EventHandler, SettingsStore, DasherScreen);
+		super(EventHandler, SettingsStore, DasherScreen, orient);
 		m_Y1 = 4;
 		m_Y2 = (long)(0.95 * lpMaxY);
 		m_Y3 = (long)(0.05 * lpMaxY);
 		
 		m_DelayDraw = new CDelayedDraw();
-		ChangeScreen(DasherScreen);
 		
 		minNodeSizeText = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_MIN_NODE_SIZE_TEXT);
 		bOutline = SettingsStore.GetBoolParameter(Ebp_parameters.BP_OUTLINE_MODE);
 		lpNormalisation = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_NORMALIZATION);
 		
+		SetScaleFactor();
+		
 		// These results are cached to make co-ordinate transformations quicker.
 		// We ought not to be caught out, as I have registered the class
 		// to watch for changes to these parameters.
 		
+	}
+	
+	@Override public void setOrientation(Opts.ScreenOrientations orient) {
+		super.setOrientation(orient);
+		visibleRegion = null;
+		SetScaleFactor();
 	}
 	
 	/**
@@ -187,11 +199,7 @@ public class CDasherViewSquare extends CDasherView {
 		if(Event instanceof CParameterNotificationEvent) {
 			CParameterNotificationEvent Evt = (CParameterNotificationEvent)Event;
 			
-			if (Evt.m_iParameter == Elp_parameters.LP_REAL_ORIENTATION) {
-				visibleRegion = null;
-				SetScaleFactor();
-			}
-			else if (Evt.m_iParameter == Elp_parameters.LP_MIN_NODE_SIZE_TEXT) {
+			if (Evt.m_iParameter == Elp_parameters.LP_MIN_NODE_SIZE_TEXT) {
 				minNodeSizeText = (int)GetLongParameter(Elp_parameters.LP_MIN_NODE_SIZE_TEXT);
 			}
 			else if (Evt.m_iParameter == Ebp_parameters.BP_OUTLINE_MODE) {
@@ -226,7 +234,14 @@ public class CDasherViewSquare extends CDasherView {
 		CDasherView.DRect visreg = VisibleRegion();
 		output = Root.Parent();
 		this.pol = pol;
-		RecursiveRender(Root, iRootMin, iRootMax, 0, 0);
+		int textedge;
+		switch (getOrientation()) {
+		case RIGHT_TO_LEFT: textedge = Screen().GetWidth(); break;
+		case BOTTOM_TO_TOP: textedge = Screen().GetHeight(); break;
+		default:
+			textedge = 0;
+		}
+		RecursiveRender(Root, iRootMin, iRootMax, textedge, 0);
 		
 		// DelayDraw the text nodes
 		m_DelayDraw.Draw(Screen());
@@ -282,24 +297,32 @@ public class CDasherViewSquare extends CDasherView {
 			
 			//ok, render the node...
 			long iDasherSize = (y2 - y1);
-			temp[0]=Math.min(iDasherSize,visreg.maxX);
-			temp[1]=Math.min(y2,visreg.maxY);
-			Dasher2Screen(temp);
-			int left=(int)temp[0], bottom=(int)temp[1];
-			temp[0] = 0;
-			temp[1] = Math.max(y1, visreg.minY);
-			Dasher2Screen(temp);
-			int right=(int)temp[0], top=(int)temp[1];
-			
-			if (Render.m_iColour !=parentColour) {
-				Screen().DrawRectangle(left, top, right, bottom, Render.m_iColour, -1, bOutline && Render.outline() ? 1 : 0);
-			}
-	
-			if( Render.m_strDisplayText.length() > 0 ) {
-				int textedge = DrawText(left, top, right, bottom, mostleft, fontSize(iDasherSize), Render.m_strDisplayText);
-				if (Render.shove()) mostleft=textedge;
-			}
+			{
+				temp[0]=Math.min(iDasherSize,visreg.maxX);
+				temp[1]=Math.min(y2,visreg.maxY);
+				Dasher2Screen(temp);
+				int left=(int)temp[0], bottom=(int)temp[1];
+				temp[0] = 0;
+				temp[1] = Math.max(y1, visreg.minY);
+				Dasher2Screen(temp);
+				int right=(int)temp[0], top=(int)temp[1];
+				switch (getOrientation()) {
+				case TOP_TO_BOTTOM:
+					{int temp = top; top = bottom; bottom = temp;}
+					//and fallthrough
+				case RIGHT_TO_LEFT:
+				case BOTTOM_TO_TOP:
+					{int temp = right; right = left; left = temp;}
+				}
+				if (Render.m_iColour !=parentColour) {
+					Screen().DrawRectangle(left, top, right, bottom, Render.m_iColour, -1, bOutline && Render.outline() ? 1 : 0);
+				}
 		
+				if( Render.m_strDisplayText.length() > 0 ) {
+					int textedge = DrawText(left, top, right, bottom, mostleft, fontSize(iDasherSize), Render.m_strDisplayText);
+					if (Render.shove()) mostleft=textedge;
+				}
+			}
 			collapse: {
 				if (output == Render.Parent()) {
 			
@@ -391,6 +414,54 @@ public class CDasherViewSquare extends CDasherView {
 		}
 	}
 	
+	private int DrawText(int left, int top, int right, int bottom, int textedge, int size, String sDisplayText) {
+		
+		CDasherView.Point textDimensions = ScreenTextSize(sDisplayText, size);
+
+		// Position of text box relative to anchor depends on orientation
+		
+		int textleft,texttop; //in screen coordinates & screen orientation
+		
+		switch (getOrientation()) {
+		case LEFT_TO_RIGHT:
+			textedge = (textleft = Math.max(left,textedge)) + textDimensions.x;
+			texttop = (top+bottom - textDimensions.y) / 2;
+			break;
+		case RIGHT_TO_LEFT:
+			textedge = textleft = Math.min(right, textedge) - textDimensions.x;
+			texttop = (top+bottom - textDimensions.y) / 2;
+			break;
+		case TOP_TO_BOTTOM:
+			textleft = (left+right - textDimensions.x) / 2;
+			textedge = (texttop = Math.max(top, textedge)) + textDimensions.y;
+			break;
+		case BOTTOM_TO_TOP:
+			textleft = (left+right - textDimensions.x) / 2;
+			textedge = texttop = Math.min(bottom, textedge) - textDimensions.y;
+		break;
+		default:
+			throw new AssertionError();
+		}
+		
+		// Actually draw the text. We use DelayDrawText as the text should
+		// be overlayed once all of the boxes have been drawn.
+		
+		m_DelayDraw.DelayDrawText(sDisplayText, textleft, texttop, size);
+		
+		return textedge;
+		
+	}
+	
+	private final Map<Integer,Map<String,CDasherView.Point>> textSizes = new HashMap<Integer,Map<String,CDasherView.Point>>();
+	
+	private CDasherView.Point ScreenTextSize(String sText, int iSize) {
+		Map<String,CDasherView.Point> strings = textSizes.get(iSize);
+		if (strings == null) textSizes.put(iSize, strings = new HashMap<String, Point>());
+		Point p = strings.get(sText);
+		if (p==null) strings.put(sText, p = Screen().TextSize(sText, iSize));
+		return p;
+	}
+
 	/**
 	 * Compute the font size to use for rendering a node label.
 	 * @param iDasherX Preferred text position, i.e. the extent of node (y2-y1, or max x) in dasher-coordinates.
@@ -450,20 +521,20 @@ public class CDasherViewSquare extends CDasherView {
 		int iScreenHeight = Screen().GetHeight();
 		
 		long rx,ry;
-		switch(realOrientation) {
-		case Opts.ScreenOrientations.LeftToRight:
+		switch(getOrientation()) {
+		case LEFT_TO_RIGHT:
 			rx = m_iCenterX - ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor / m_iScaleFactorX;
 			ry = lpMaxY / 2 + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor / m_iScaleFactorY;
 		break;
-		case Opts.ScreenOrientations.RightToLeft:
+		case RIGHT_TO_LEFT:
 			rx = (m_iCenterX + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
 			ry = (lpMaxY / 2 + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
 		break;
-		case Opts.ScreenOrientations.TopToBottom:
+		case TOP_TO_BOTTOM:
 			rx = (m_iCenterX - ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
 			ry = (lpMaxY / 2 + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
 		break;
-		case Opts.ScreenOrientations.BottomToTop:
+		case BOTTOM_TO_TOP:
 			rx = (m_iCenterX + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
 			ry = (lpMaxY / 2 + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
 		break;
@@ -472,7 +543,7 @@ public class CDasherViewSquare extends CDasherView {
 		}
 		
 		coords[0] = unapplyXMapping(rx);
-		coords[1] = (long)yunmap(ry);
+		coords[1] = yunmap(ry);
 	}
 	
 	/**
@@ -517,7 +588,7 @@ public class CDasherViewSquare extends CDasherView {
 		
 		double dScaleFactorX, dScaleFactorY;
 		
-		if (realOrientation == Opts.ScreenOrientations.LeftToRight || realOrientation == Opts.ScreenOrientations.RightToLeft) {
+		if (getOrientation().isHorizontal) {
 			dScaleFactorX = iScreenWidth / (double)( iMaxX - iMinX );
 			dScaleFactorY = iScreenHeight / (double)( iMaxY - iMinY );
 		} else {
@@ -587,22 +658,22 @@ public class CDasherViewSquare extends CDasherView {
 		int iScreenWidth = Screen().GetWidth();
 		int iScreenHeight = Screen().GetHeight();
 
-		switch( realOrientation ) {
-		case Opts.ScreenOrientations.LeftToRight:
+		switch( getOrientation() ) {
+		case LEFT_TO_RIGHT:
 			coords[0] = (int)(iScreenWidth / 2 - ( coords[0] - m_iCenterX ) * m_iScaleFactorX / m_iScalingFactor);
 			coords[1] = (int)(iScreenHeight / 2 + ( coords[1] - lpMaxY / 2 ) * m_iScaleFactorY / m_iScalingFactor);
 		break;
-		case Opts.ScreenOrientations.RightToLeft:
+		case RIGHT_TO_LEFT:
 			coords[0] = (int)(iScreenWidth / 2 + ( coords[0] - m_iCenterX ) * m_iScaleFactorX / m_iScalingFactor);
 			coords[1] = (int)(iScreenHeight / 2 + ( coords[1] - lpMaxY / 2 ) * m_iScaleFactorY / m_iScalingFactor);
 		break;
-		case Opts.ScreenOrientations.TopToBottom: {
+		case TOP_TO_BOTTOM: {
 			long temp = (int)(iScreenWidth / 2 + ( coords[1] - lpMaxY / 2 ) * m_iScaleFactorX / m_iScalingFactor);
 			coords[1] = (int)(iScreenHeight / 2 - ( coords[0] - m_iCenterX ) * m_iScaleFactorY / m_iScalingFactor);
 			coords[0] = temp;
 			break;
 		}
-		case Opts.ScreenOrientations.BottomToTop: {
+		case BOTTOM_TO_TOP: {
 			long temp = (int)(iScreenWidth / 2 + ( coords[1] - lpMaxY / 2 ) * m_iScaleFactorX / m_iScalingFactor);
 			coords[1] = (int)(iScreenHeight / 2 + ( coords[0] - m_iCenterX ) * m_iScaleFactorY / m_iScalingFactor);
 			coords[0] = temp;
@@ -630,25 +701,25 @@ public class CDasherViewSquare extends CDasherView {
 		
 		if(visibleRegion==null) {
 			DPoint m_iDasherMin,m_iDasherMax;		
-			switch( realOrientation ) {
-			case Opts.ScreenOrientations.LeftToRight:
+			switch( getOrientation() ) {
+			case LEFT_TO_RIGHT:
 				m_iDasherMin = Screen2Dasher(Screen().GetWidth(),0);
 				m_iDasherMax = Screen2Dasher(0,Screen().GetHeight());
 			break;
-			case Opts.ScreenOrientations.RightToLeft:
+			case RIGHT_TO_LEFT:
 				m_iDasherMin = Screen2Dasher(0,0);
 				m_iDasherMax = Screen2Dasher(Screen().GetWidth(),Screen().GetHeight());
 			break;
-			case Opts.ScreenOrientations.TopToBottom:
+			case TOP_TO_BOTTOM:
 				m_iDasherMin = Screen2Dasher(0,Screen().GetHeight());
 				m_iDasherMax = Screen2Dasher(Screen().GetWidth(),0);
 			break;
-			case Opts.ScreenOrientations.BottomToTop:
+			case BOTTOM_TO_TOP:
 				m_iDasherMin = Screen2Dasher(0,0);
 				m_iDasherMax = Screen2Dasher(Screen().GetWidth(),Screen().GetHeight());
 			break;
 			default:
-				throw new IllegalArgumentException("Unknown Orientation "+realOrientation);
+				throw new IllegalArgumentException("Unknown Orientation "+getOrientation());
 			}
 			
 			visibleRegion = new CDasherView.DRect(m_iDasherMin.x, m_iDasherMin.y,
@@ -694,6 +765,7 @@ public class CDasherViewSquare extends CDasherView {
 	 */
 	public void ChangeScreen(CDasherScreen NewScreen) {
 		super.ChangeScreen(NewScreen);
+		textSizes.clear();
 		visibleRegion = null;
 		SetScaleFactor();
 	}

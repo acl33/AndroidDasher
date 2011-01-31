@@ -79,9 +79,6 @@ public class CNodeCreationManager extends CDasherComponent {
 		
 		SetStringParameter(Esp_parameters.SP_DEFAULT_COLOUR_ID, m_cAlphabet.GetPalette());
 		
-		if(GetLongParameter(Elp_parameters.LP_ORIENTATION) == Opts.AlphabetDefault)
-			SetLongParameter(Elp_parameters.LP_REAL_ORIENTATION, m_cAlphabet.GetOrientation());
-		
 		// Create an appropriate language model;
 		
 		switch ((int)GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)) {
@@ -231,17 +228,8 @@ public class CNodeCreationManager extends CDasherComponent {
 			if (Evt.m_iParameter == Ebp_parameters.BP_CONTROL_MODE
 				|| Evt.m_iParameter == Elp_parameters.LP_UNIFORM) {
 				computeNormFactor();
+				m_DasherInterface.Redraw(true);
 			}
-			else if(Evt.m_iParameter ==  Elp_parameters.LP_ORIENTATION) {
-				SetLongParameter(Elp_parameters.LP_REAL_ORIENTATION, 
-						(GetLongParameter(Elp_parameters.LP_ORIENTATION) == Opts.AlphabetDefault)
-							? m_cAlphabet.GetOrientation()
-							: GetLongParameter(Elp_parameters.LP_ORIENTATION));
-			} else {
-				//parameter does not interest us
-				return;
-			}
-			m_DasherInterface.Redraw(true);
 		}
 	}
 

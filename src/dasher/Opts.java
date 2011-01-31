@@ -25,6 +25,8 @@
 
 package dasher;
 
+import java.util.Map;
+import java.util.HashMap;
 /**
  * List of miscellaneous constants, some of which are probably
  * now redundant, inclduing those describing encodings, as Java
@@ -45,14 +47,24 @@ public class Opts {
 	 * option means that the Alphabet's preferred orientation
 	 * is used.
 	 */
-	public static class ScreenOrientations {
-		public static final int Alphabet = -2; 
-		public static final int LeftToRight = 0;
-		public static final int RightToLeft = 1;
-		public static final int TopToBottom = 2;
-		public static final int BottomToTop = 3;
+	public static enum ScreenOrientations {
+		LEFT_TO_RIGHT(true),RIGHT_TO_LEFT(true),TOP_TO_BOTTOM(false),BOTTOM_TO_TOP(false);
+		
+		private ScreenOrientations(boolean bHoriz) {this.isHorizontal=bHoriz;}
+		public final boolean isHorizontal;
 	}
 	
+	public static ScreenOrientations orientationFromString(String s) {
+		return abbrevOrientations.get(s.trim().toUpperCase());
+	}
+	
+	private static final Map<String,ScreenOrientations> abbrevOrientations = new HashMap<String,ScreenOrientations>();
+	static {
+		abbrevOrientations.put("RL", ScreenOrientations.RIGHT_TO_LEFT);
+		abbrevOrientations.put("LR", ScreenOrientations.LEFT_TO_RIGHT);
+		abbrevOrientations.put("TB", ScreenOrientations.TOP_TO_BOTTOM);
+		abbrevOrientations.put("BT", ScreenOrientations.BOTTOM_TO_TOP);
+	}
 	/**
 	 * This appears to enumerate codepages, which is also very
 	 * much useless in Java.

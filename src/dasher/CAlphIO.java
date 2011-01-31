@@ -33,6 +33,9 @@ import java.io.*;
 
 import org.xml.sax.*;
 import org.xml.sax.helpers.DefaultHandler;
+
+import dasher.Opts.ScreenOrientations;
+
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.parsers.SAXParser;
 
@@ -69,7 +72,7 @@ public class CAlphIO extends XMLFileParser {
 		 * bottom-to-top screen orientation. Defaults to LeftToRight if
 		 * the XML does not specify any.
 		 */
-		private int m_Orientation=Opts.ScreenOrientations.LeftToRight;
+		private Opts.ScreenOrientations m_Orientation=Opts.ScreenOrientations.LEFT_TO_RIGHT;
 		
 		/** The symbol number of the new-paragraph character, -1 for none */
 		private int m_ParagraphSymbol=-1;
@@ -172,7 +175,7 @@ public class CAlphIO extends XMLFileParser {
 		 * @return This Alphabet's preferred orientation. 
 		 */
 		
-		public int GetOrientation() {
+		public Opts.ScreenOrientations GetOrientation() {
 			return m_Orientation;
 		}
 		
@@ -342,12 +345,12 @@ public class CAlphIO extends XMLFileParser {
 				
 				String tagName = (simpleName.equals("") ? qualName : simpleName);
 				
-				if(tagName == "alphabet") {
+				if(tagName.equals("alphabet")) {
 					/* A new alphabet is beginning. Find its name... */
 					String name=null; String ctxEscape="Â";
 				    for(int i = 0; i < tagAttributes.getLength(); i++) {
 				    	String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-				    	if(attributeName == "name") {
+				    	if(attributeName.equals("name")) {
 				    		name=tagAttributes.getValue(i);
 				    	} else if (attributeName.equals("escape")) {
 				    		ctxEscape = tagAttributes.getValue(i);
@@ -367,32 +370,19 @@ public class CAlphIO extends XMLFileParser {
 					}
 					
 				    bFirstGroup = true;
-				    
 				}
 				
-				else if(tagName == "orientation") {
-					//ACL TODO doesn't it make more sense for orientation to be an _attribute_ of the alphabet, not a (sub-)tag?
+				else if(tagName.equals("orientation")) {
 					for(int i = 0; i < tagAttributes.getLength(); i++) {
 						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-						if(attributeName == "type") {
-							String orient = tagAttributes.getValue(i);
-							if(orient == "RL") {
-								currentAlph.m_Orientation = Opts.ScreenOrientations.RightToLeft;
-							}
-							else if(orient == "TB") {
-								currentAlph.m_Orientation = Opts.ScreenOrientations.TopToBottom;
-							}
-							else if(orient == "BT") {
-								currentAlph.m_Orientation = Opts.ScreenOrientations.BottomToTop;
-							}
-							else {
-								currentAlph.m_Orientation = Opts.ScreenOrientations.LeftToRight;
-							}
+						if(attributeName.equals("type")) {
+							ScreenOrientations spec = Opts.orientationFromString(tagAttributes.getValue(i));
+							currentAlph.m_Orientation = (spec==null) ? Opts.ScreenOrientations.LEFT_TO_RIGHT : spec;
 						}
 					}
 				}
 				
-				else if(tagName == "encoding") {
+				else if(tagName.equals("encoding")) {
 					/*We don't actually do anything with this, so...I don't think we need it?
 					 * for(int i = 0; i < tagAttributes.getLength(); i++) {
 					 *
@@ -404,11 +394,11 @@ public class CAlphIO extends XMLFileParser {
 					 */
 				}
 				
-				else if(tagName == "palette") {
+				else if(tagName.equals("palette")) {
 					currentTag = "palette"; // will be handled by characters routine
 				}
 				
-				else if(tagName == "train") {
+				else if(tagName.equals("train")) {
 					currentTag = "train"; // Likewise
 				}
 				
@@ -417,7 +407,7 @@ public class CAlphIO extends XMLFileParser {
 						if (tagAttributes.getLocalName(i).equals("default"))
 							currentAlph.m_strDefaultContext = tagAttributes.getValue(i);
 				}
-				else if(tagName == "paragraph") {
+				else if(tagName.equals("paragraph")) {
 					//note index of paragraph symbol in order to handle \n / \r\n special-casing...
 					currentAlph.m_ParagraphSymbol = currentAlph.m_Characters.size();
 					//Extract default text as the line separator...
@@ -425,13 +415,13 @@ public class CAlphIO extends XMLFileParser {
 					readChar(getLineSeparator(),tagAttributes);
 				}
 				
-				else if(tagName == "space") {
+				else if(tagName.equals("space")) {
 					//note index of space symbol, it gets used occassionally...
 					currentAlph.m_SpaceSymbol = currentAlph.m_Characters.size();
 					readChar(null, tagAttributes);
 				}
 				
-				else if(tagName == "control") {
+				else if(tagName.equals("control")) {
 					//ACL Skip, as not implemented in Java. But we could read in display info, as follows...
 					/*for(int i = 0; i < tagAttributes.getLength(); i++) {
 						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
@@ -450,7 +440,7 @@ public class CAlphIO extends XMLFileParser {
 					}*/
 				}
 				
-				else if(tagName == "convert") {
+				else if(tagName.equals("convert")) {
 					//ACL Skip, as not implemented in Java. But we could read in display info, as follows...
 					/*for(int i = 0; i < tagAttributes.getLength(); i++) {
 						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
@@ -469,7 +459,7 @@ public class CAlphIO extends XMLFileParser {
 					}*/
 				}
 				
-				else if(tagName == "protect") {
+				else if(tagName.equals("protect")) {
 					//ACL Skip, as (conversion) not yet implemented in Java. But we could read in display info, as follows...
 					/*for(int i = 0; i < tagAttributes.getLength(); i++) {
 						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
@@ -488,16 +478,16 @@ public class CAlphIO extends XMLFileParser {
 					}*/
 				}
 				
-				else if(tagName == "group") {
+				else if(tagName.equals("group")) {
 					String label=""; boolean visible=!bFirstGroup; int col=0;
 					bFirstGroup=false;
 					
 					for(int i = 0; i < tagAttributes.getLength(); i++) {
 						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-						if(attributeName == "b") {
+						if(attributeName.equals("b")) {
 							col = Integer.parseInt(tagAttributes.getValue(i));
 						}
-						if(attributeName == "visible") {
+						if(attributeName.equals("visible")) {
 							if(tagAttributes.getValue(i).equals("yes") || tagAttributes.getValue(i).equals("on")) {
 								visible = true;
 							}
@@ -505,7 +495,7 @@ public class CAlphIO extends XMLFileParser {
 								visible = false;
 							}
 						}
-						if(attributeName == "label") {
+						if(attributeName.equals("label")) {
 							label = tagAttributes.getValue(i);
 						}
 					}
@@ -528,7 +518,7 @@ public class CAlphIO extends XMLFileParser {
 				    groupStack.push(currentGroup);
 				}
 						
-				else if(tagName == "s") {
+				else if(tagName.equals("s")) {
 					readChar(null, tagAttributes);
 				}
 			}
@@ -576,7 +566,7 @@ public class CAlphIO extends XMLFileParser {
 			public void endElement(String namespaceURI, String simpleName, String qualName) {
 				String tagName = (simpleName.equals("") ? qualName : simpleName);
 				
-				if(tagName == "alphabet") {
+				if(tagName.equals("alphabet")) {
 					if (currentAlph.name == null) return; //we warned at start, now drop it.
 					//alphabet finished, i.e. all read in. Groups will have been stored in linked-list
 					// in reverse order to how they were in the file, so put them the right way round...
@@ -600,17 +590,17 @@ public class CAlphIO extends XMLFileParser {
 					Alphabets.put(currentAlph.name, currentAlph);
 				}
 				
-				else if(tagName == "palette") {
+				else if(tagName.equals("palette")) {
 					currentTag = "";
 				}
 				
-				else if(tagName == "train") {
+				else if(tagName.equals("train")) {
 					currentTag = "";
 				}
 				// Both of these are to prevent the parser from dumping unwanted CDATA
 				// once the tags we're interested in have been closed.
 
-				else if(tagName == "group") {
+				else if(tagName.equals("group")) {
 					SGroupInfo finish = groupStack.pop();
 					finish.iEnd = numOrderedCharacters(currentAlph);
 					finish.Child = Reverse(finish.Child);
@@ -619,7 +609,7 @@ public class CAlphIO extends XMLFileParser {
 			}
 			
 			public void characters(char[] chars, int start, int length) throws SAXException {
-				
+				//pointer comparison ok, currentTag was set to a coded-in constant, so intern()d automatically.
 				if(currentTag == "palette") {
 					currentAlph.m_DefaultPalette = new String(chars, start, length);
 				}
@@ -736,7 +726,7 @@ public class CAlphIO extends XMLFileParser {
 		// last ditch effort in case file I/O totally fails.
 		AlphInfo Default = new AlphInfo("Default");
 		//Default.Type = Opts.AlphabetTypes.Western;
-		Default.m_Orientation = Opts.ScreenOrientations.LeftToRight;
+		//Is the default already: Default.m_Orientation = Opts.ScreenOrientations.LEFT_TO_RIGHT;
 		
 		Default.m_TrainingFile = "training_english_GB.txt";
 		Default.m_GameModeFile = "gamemode_english_GB.txt";

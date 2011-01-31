@@ -414,6 +414,8 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			} else if(Evt.m_iParameter == Elp_parameters.LP_DASHER_FONTSIZE) {
 				// TODO - make screen a CDasherComponent child?
 				Redraw(true);
+			} else if (Evt.m_iParameter == Esp_parameters.SP_ORIENTATION) {
+				if (m_DasherView!=null) m_DasherView.setOrientation(computeOrientation());
 			} else if(Evt.m_iParameter == Esp_parameters.SP_INPUT_DEVICE) {
 				CreateInput();
 			} else if(Evt.m_iParameter == Esp_parameters.SP_INPUT_FILTER) {
@@ -682,6 +684,12 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		// Lock Dasher to prevent changes from happening while we're training.
 		
 		CreateNCManager();
+		if (m_DasherView!=null) m_DasherView.setOrientation(computeOrientation());
+	}
+	
+	private Opts.ScreenOrientations computeOrientation() {
+		Opts.ScreenOrientations spec = Opts.orientationFromString(GetStringParameter(Esp_parameters.SP_ORIENTATION));
+		return (spec==null) ? m_pNCManager.getAlphabetManager().m_Alphabet.GetOrientation() : spec;
 	}
 	
 	/**
@@ -727,30 +735,12 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		m_MarkerScreen = (NewScreen instanceof CMarkerScreen) ? (CMarkerScreen)NewScreen : null;
 		m_DasherScreen.SetColourScheme(m_Colours);
 		
-		if(m_DasherView != null) {
+		if(m_DasherView == null)
+			m_DasherView = new CDasherViewSquare(this, m_SettingsStore, m_DasherScreen, computeOrientation());
+		else
 			m_DasherView.ChangeScreen(m_DasherScreen);
-		} else {
-			if(GetLongParameter(Elp_parameters.LP_VIEW_ID) != -1)
-				ChangeView();
-		}
 		
 		Redraw(true);
-	}
-	
-	/**
-	 * Creates an instance of DasherViewSquare, and, if they are present,
-	 * informs it of our current Input Filter and Screen.
-	 * <p>
-	 * This ought to respond to the LP_VIEW_ID parameter, but since
-	 * at present there is only one, it is ignored for now. 
-	 *
-	 */
-	private void ChangeView() {
-		// TODO: Actually respond to LP_VIEW_ID parameter (although there is only one view at the moment)
-		
-		if(m_DasherScreen != null && m_DasherModel != null) {
-			m_DasherView = new CDasherViewSquare(this, m_SettingsStore, m_DasherScreen);
-		}
 	}
 	
 	/**
