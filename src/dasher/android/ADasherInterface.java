@@ -25,6 +25,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Environment;
 import android.os.PowerManager;
+import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
@@ -261,7 +262,8 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			}
 		}));
 		RegisterModule(new COneDimensionalFilter(this, getSettingsStore(), 14, "Android Tilt Control") {
-			private final PowerManager.WakeLock wl = ((PowerManager)androidCtx.getSystemService(Context.POWER_SERVICE)).newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK,"tilting");
+			private final PowerManager mgr = (PowerManager)androidCtx.getSystemService(Context.POWER_SERVICE);
+			private final PowerManager.WakeLock wl = mgr.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK,"tilting");
 			private boolean bActive;
 			@Override public boolean supportsPause() {
 				return !prefs.getBoolean("AndroidTiltHoldToGo",false);
@@ -299,14 +301,9 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 						if (!wl.isHeld()) {Log.d("DasherIME","Acquiring Wakelock"); wl.acquire();}
 						else Log.d("DasherIME","Wakelock already held");
 					} else {
-						if (wl.isHeld()) {Log.d("DasherIME","Releasing Wakelock"); wl.release();}
+						if (wl.isHeld()) {Log.d("DasherIME","Releasing Wakelock"); wl.release(); mgr.userActivity(SystemClock.uptimeMillis(), false);}
 						else Log.d("DasherIME","Wakelock already released");
 					}
-				} else if (evt instanceof CParameterNotificationEvent && ((CParameterNotificationEvent)evt).m_iParameter==Ebp_parameters.BP_DASHER_PAUSED) {
-					if (!bActive) Log.d("DasherIME","Tilt not active");
-					else if (prefs.getBoolean("AndroidTiltHoldToGo",false))
-						Log.d("DasherIME","Tilt in hold-to-go mode");
-					else Log.d("DasherIME","Impossible?!?!");
 				}
 			}
 			
