@@ -255,7 +255,10 @@ public class CAlphabetManager<C> {
         }
         @Override
         public void DeleteNode() {
-        	probInfo=null;
+        	if (probInfo!=null) {
+        		m_Model.recycleProbArray(probInfo);
+        		probInfo=null;
+        	}
         	super.DeleteNode();
         	m_bCommitted=false;
         }
@@ -552,9 +555,11 @@ public class CAlphabetManager<C> {
     	@Override
     	protected long[] GetProbInfo() {
     		if (m_Group!=null && (Parent() instanceof CAlphabetManager<?>.CAlphNode)) {
+    			//subgroups use same probinfo as parent...
     			CAlphabetManager<?>.CAlphNode p = (CAlphabetManager<?>.CAlphNode)Parent();
     			assert p.mgr() == mgr();
     			return p.GetProbInfo();
+    			//note, long[] is still stored only in parent.
     		}
     		return super.GetProbInfo();
     	}

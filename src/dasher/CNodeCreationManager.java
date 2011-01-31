@@ -2,6 +2,7 @@ package dasher;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 import dasher.CControlManager.ControlAction;
@@ -122,15 +123,26 @@ public class CNodeCreationManager extends CDasherComponent {
 	}
 	
 	/**
-	 * Increments all symbol probabilities by the value of {@link #uniformAdd},
-	 * and sets the final probability to {@link #controlSpace}. (The first and last
-	 * elements of the vector are taken as being the root and control symbols,
-	 * respectively)
+	 * Gets a probability distribution for a context and language model. Detailed
+	 * predictions of characters are performed by {@link CLanguageModel#GetProbs(Object, long[], long)},
+	 * but here we handle<UL>
+	 * <LI>Object pooling of long[] arrays (useful on Android),
+	 * <LI>Uniformity / smoothing - all symbol probabilities by the value of {@link #uniformAdd}
+	 * <LI>Control mode - if control mode is on, we append an extra {@link #controlSpace} for the control node.
 	 * 
-	 * @param probs The probabilities to modify
+	 * @param model LanguageModel to use for symbol probabilities
+	 * @param context context to provide to language model
+	 * @return array of (non-cumulative) probabilities, with first element zero,
+	 *  
 	 */
 	public <C> long[] GetProbs(CLanguageModel<C> model, C context) {
-		long[] probs = new long[m_cAlphabet.GetNumberSymbols()+(controlSpace==0 ? 1 : 2)];
+		long[] probs;
+		if (freeArrayList.isEmpty())
+			probs = new long[m_cAlphabet.GetNumberSymbols()+(controlSpace==0 ? 1 : 2)];
+		else {
+			probs = freeArrayList.remove(freeArrayList.size()-1);
+			for (int i=0; i<probs.length; i++) probs[i]=0;
+		}
 		model.GetProbs(context, probs, nonUniformNorm);
 		
 		//element 0 is just a 0, to make computing upper/lower bounds easier...
@@ -139,6 +151,17 @@ public class CNodeCreationManager extends CDasherComponent {
 		if (controlSpace!=0) probs[probs.length-1]=controlSpace;
 		
 		return probs;
+	}
+	
+	private final List<long[]> freeArrayList=new ArrayList<long[]>();
+	
+	public void recycleProbArray(long[] ar) {
+		//Don't pool arrays that are too short. Not sure whether this'll
+		// actually happen, depends on timing of rebuilding, init'ing
+		// the control manager, etc., when turning control mode on/off,
+		// so programming defensively.
+		if (ar.length >= m_cAlphabet.GetNumberSymbols()+(controlSpace==0 ? 1 : 2))
+			freeArrayList.add(ar);
 	}
 	
 	public void addExtraNodes(CDasherNode pParent, long[] probInfo) {
@@ -185,10 +208,19 @@ public class CNodeCreationManager extends CDasherComponent {
 				public List<ControlAction> successors() {return actions;}
 			};
 			else break mk;
+			if (m_ControlManager==null) {
+				//control mode has just been turned on...
+				//delete any long[]s not big enough for a control-node probability.
+				for (int i=freeArrayList.size(); i-->0; )
+					if (freeArrayList.get(i).length<m_cAlphabet.GetNumberSymbols()+2)
+						freeArrayList.remove(i);
+			}
+				freeArrayList.clear(); //elements without space for a control-node probability.
 			m_ControlManager = new CControlManager(m_DasherInterface, m_DasherInterface.getSettingsStore(), this, c);
 			// TODO - sort out size of control node - for the timebeing I'll fix the control node at 5%
 			return iNorm/20;
 		}
+		//no need to clear list - the existing elements can be used by GetProbs, but will not be recycled 
 		m_ControlManager=null;
 		return 0;
 	}
