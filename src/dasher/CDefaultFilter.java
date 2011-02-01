@@ -157,14 +157,17 @@ public class CDefaultFilter extends CInputFilter {
 	@Override public boolean Timer(long Time, CDasherView pView, CDasherInput pInput, CDasherModel m_DasherModel) {
 		boolean bDidSomething;
 		if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
-			if (!pInput.GetDasherCoords(pView,lastInputCoords)) {
-				m_Interface.PauseAt(0,0);
-			}
-			ApplyTransform(pView, lastInputCoords);
-			m_DasherModel.oneStepTowards(lastInputCoords[0],lastInputCoords[1], Time, getSpeedMul(Time));
-		
-			m_AutoSpeedControl.SpeedControl(lastInputCoords[0], lastInputCoords[1], m_DasherModel.Framerate(), pView);
+			if (pInput.GetDasherCoords(pView,lastInputCoords)) {
+				ApplyTransform(pView, lastInputCoords);
+				float fSpeedMul = getSpeedMul(Time);
+				m_DasherModel.oneStepTowards(lastInputCoords[0],lastInputCoords[1], Time, fSpeedMul);
 			
+				//Only measure the user's accuracy (for speed control) when going at full speed
+				if (GetBoolParameter(Ebp_parameters.BP_AUTO_SPEEDCONTROL) && fSpeedMul==1.0f)
+					m_AutoSpeedControl.SpeedControl(lastInputCoords[0], lastInputCoords[1], m_DasherModel.Framerate(), pView);
+			} else {
+				m_Interface.PauseAt(0, 0);
+			}
 			bDidSomething = true;
 		} else {
 			bDidSomething = false;

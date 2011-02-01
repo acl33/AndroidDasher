@@ -44,10 +44,6 @@ import java.util.LinkedList;
 public class CAutoSpeedControl extends CDasherComponent {
 	
 	/**
-	 * Current maximum speed.
-	 */
-	protected double m_dBitrate; //  stores max bit rate internally
-	/**
 	 * TODO Find out what this does
 	 */
 	protected double m_dSampleScale, m_dSampleOffset; // internal, control sample size
@@ -77,10 +73,6 @@ public class CAutoSpeedControl extends CDasherComponent {
 	 */
 	protected double m_dMinRRate; // controls rate at which min. r adapts HIGHER===SLOWER!
 	/**
-	 * Currently unused; may be used to tune the sensitivity of auto speed-control in the future. 
-	 */
-	protected double m_dSensitivity; // not used, control sensitivity of auto speed control
-	/**
 	 * List of the previous angles observed.
 	 */
 	protected LinkedList<Double> m_dequeAngles = new LinkedList<Double>(); // store angles for statistics
@@ -106,7 +98,6 @@ public class CAutoSpeedControl extends CDasherComponent {
 	m_dSampleScale = 1.5;
 	m_dSampleOffset = 1.3;
 	m_dMinRRate = 80.0;
-	m_dSensitivity = GetLongParameter(Elp_parameters.LP_AUTOSPEED_SENSITIVITY) / 100.0; //param only, no GUI!
 		//tolerance for automatic speed control
 	m_dTier1 = 0.0005;  //  should be arranged so that tier4 > tier3 > tier2 > tier1 !!!
 	m_dTier2 = 0.01;
@@ -125,7 +116,6 @@ public class CAutoSpeedControl extends CDasherComponent {
 	m_dSigma2 = 0.05;
 		//Initialise auto-speed control
 	m_nSpeedCounter = 0;
-	m_dBitrate = (double)(round(GetLongParameter(Elp_parameters.LP_MAX_BITRATE) / 100.0));
 
 	  UpdateMinRadius();
 	  UpdateSampleSize(dFrameRate); 
@@ -149,7 +139,7 @@ public class CAutoSpeedControl extends CDasherComponent {
 	 * 
 	 * @return New calculated speed.
 	 */
-	protected double UpdateBitrate()
+	protected double UpdateBitrate(double m_dBitrate)
 	{
 	  double var = Variance();
 	  if(var < m_dTier1)
@@ -215,15 +205,13 @@ public class CAutoSpeedControl extends CDasherComponent {
 	 * @return Recommended number of samples
 	 */
 	
-	protected int UpdateSampleSize(double dFrameRate)
+	protected int UpdateSampleSize(double dFramerate)
 	{
-	  double dFramerate = dFrameRate;
-	  double dSpeedSamples = 0.0;
-	  double dBitrate = m_dBitrate; 
-	  if(dBitrate < 1.0)// for the purposes of this function
-	    dBitrate = 1.0; // we don't care exactly how slow we're going
-	                    // *really* low speeds are ~ equivalent?
-	  dSpeedSamples = dFramerate * (m_dSampleScale / dBitrate + m_dSampleOffset);
+	  double dBitrate = Math.max(1.0,GetLongParameter(Elp_parameters.LP_MAX_BITRATE)/100.0); 
+	  // for the purposes of this function
+	  // we don't care exactly how slow we're going
+	  // *really* low speeds are ~ equivalent?
+	  double dSpeedSamples = dFramerate * (m_dSampleScale / dBitrate + m_dSampleOffset);
 	 
 	  m_nSpeedSamples = (int)(round(dSpeedSamples));
 	  return m_nSpeedSamples;
@@ -254,9 +242,9 @@ public class CAutoSpeedControl extends CDasherComponent {
  	 * @param dFrameRate Current Dasher frame rate in FPS
  	 */
 
-	public void UpdateSigmas(double r, double dFrameRate)
+	public void UpdateSigmas(double r, double dFrameRate, double dBitrate)
 	{
-	  double dSamples = m_dMinRRate* dFrameRate / m_dBitrate;
+	  double dSamples = m_dMinRRate* dFrameRate / dBitrate;
 	  if(r > m_dMinRadius)
 	    m_dSigma1 = m_dSigma1 - (m_dSigma1 - r * r) / dSamples;
 	  else 
@@ -277,7 +265,6 @@ public class CAutoSpeedControl extends CDasherComponent {
  *             mouse position.
  */
 	public void SpeedControl(long iDasherX, long iDasherY, double dFrameRate, CDasherView View) {
-	  if(GetBoolParameter(Ebp_parameters.BP_AUTO_SPEEDCONTROL) && !GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
 	    
 //	  Coordinate transforms:    
 	    iDasherX = View.applyXMapping(iDasherX);
@@ -290,9 +277,9 @@ public class CAutoSpeedControl extends CDasherComponent {
 	    double y = -(iDasherY - iDasherOY) / (double)iDasherOY; 
 	    double theta = Math.atan2(y, x);
 	    double r = Math.sqrt(x * x + y * y);
-	    m_dBitrate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) / 100.0; //  stored as long(round(true bitrate * 100))
+	    double dBitrate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) / 100.0; //  stored as long(round(true bitrate * 100))
 
-	    UpdateSigmas(r, dFrameRate);
+	    UpdateSigmas(r, dFrameRate, dBitrate);
 
 //	  Data collection:
 	    
@@ -307,21 +294,18 @@ public class CAutoSpeedControl extends CDasherComponent {
 		    m_dequeAngles.removeFirst();
 	      }
 	      
+	      if(m_nSpeedCounter > round(m_nSpeedSamples *100.0 / GetLongParameter(Elp_parameters.LP_AUTOSPEED_SENSITIVITY))) {
+		      //do speed control every so often!
+		      
+		      UpdateSampleSize(dFrameRate);
+		      UpdateMinRadius();
+		      
+		      double dNewBitrate = UpdateBitrate(dBitrate);
+		      long lBitrateTimes100 =  (long)(round(dNewBitrate * 100)); //Dasher settings want long numerical parameters
+		      SetLongParameter(Elp_parameters.LP_MAX_BITRATE, lBitrateTimes100);
+		      m_nSpeedCounter = 0;	  
+	      }	
 	    }
-	    m_dSensitivity = GetLongParameter(Elp_parameters.LP_AUTOSPEED_SENSITIVITY) / 100.0;
-	    if(m_nSpeedCounter > round(m_nSpeedSamples / m_dSensitivity)) {
-	      //do speed control every so often!
-	      
-	      UpdateSampleSize(dFrameRate);
-	      UpdateMinRadius();
-	      UpdateBitrate();
-	      long lBitrateTimes100 =  (long)(round(m_dBitrate * 100)); //Dasher settings want long numerical parameters
-	      SetLongParameter(Elp_parameters.LP_MAX_BITRATE, lBitrateTimes100);
-	      m_nSpeedCounter = 0;	  
-	    
-	    }	
-	  
-	  }
 	}
 	  
 
