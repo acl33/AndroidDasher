@@ -59,6 +59,7 @@ public abstract class CDynamicPresses extends CDynamicFilter {
 			//Can argue we should do this in pause() / run() / reverse(), I'm being cautious...
 			// (e.g. if paused externally)
 		}
+		super.HandleEvent(evt);
 	}
 	
 }
