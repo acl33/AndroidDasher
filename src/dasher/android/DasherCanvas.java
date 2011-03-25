@@ -208,6 +208,7 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 		p.setTextSize(Size);
 		p.setARGB(255, 0, 0, 0);
 		p.setStyle(Style.FILL_AND_STROKE);
+		p.setStrokeWidth(1);
 		p.getTextBounds(string, 0, string.length(), r);
 		y1-=r.top;
 		x1-=r.left;

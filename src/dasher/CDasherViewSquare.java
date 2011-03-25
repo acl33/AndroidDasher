@@ -314,9 +314,7 @@ public class CDasherViewSquare extends CDasherView {
 				case BOTTOM_TO_TOP:
 					{int temp = right; right = left; left = temp;}
 				}
-				if (Render.m_iColour !=parentColour) {
-					Screen().DrawRectangle(left, top, right, bottom, Render.m_iColour, -1, bOutline && Render.outline() ? 1 : 0);
-				}
+				Screen().DrawRectangle(left, top, right, bottom, Render.m_iColour, -1, bOutline && Render.outline() ? 1 : 0);
 		
 				if( Render.m_strDisplayText.length() > 0 ) {
 					int textedge = DrawText(left, top, right, bottom, mostleft, fontSize(iDasherSize), Render.m_strDisplayText);
