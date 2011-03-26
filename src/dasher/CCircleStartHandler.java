@@ -25,6 +25,8 @@
 
 package dasher;
 
+import static dasher.CDasherModel.CROSS_X;
+import static dasher.CDasherModel.CROSS_Y;
 
 public class CCircleStartHandler extends CStartHandler{
 	
@@ -56,7 +58,7 @@ public class CCircleStartHandler extends CStartHandler{
 	/** Return the center of the circle in screen coordinates */
 	protected CDasherView.Point getScreenCenter(CDasherView pView) {
 		if (screenCircleCenter==null)
-			screenCircleCenter = pView.Dasher2Screen(GetLongParameter(Elp_parameters.LP_OX), GetLongParameter(Elp_parameters.LP_OY));
+			screenCircleCenter = pView.Dasher2Screen(CROSS_X, CROSS_Y);
 		return screenCircleCenter;
 	}
 	

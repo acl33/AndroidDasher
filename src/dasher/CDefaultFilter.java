@@ -25,6 +25,8 @@
 
 package dasher;
 
+import static dasher.CDasherModel.*;
+
 /**
  * Dasher's current default input filter, otherwise known as 
  * Normal Control. This causes Dasher, when unpaused, to zoom
@@ -119,8 +121,8 @@ public class CDefaultFilter extends CInputFilter {
 			
 			//Start of line is the crosshair location
 			//bah. Do we really have to do this every time? Would need notifying of screen changes...???
-			temp[0] = GetLongParameter(Elp_parameters.LP_OX);
-			temp[1] = GetLongParameter(Elp_parameters.LP_OY);
+			temp[0] = CROSS_X;
+			temp[1] = CROSS_Y;
 			View.Dasher2Screen(temp);
 			mouseX[0] = (int)temp[0];
 			mouseY[0] = (int)temp[1];
@@ -211,13 +213,12 @@ public class CDefaultFilter extends CInputFilter {
 		ApplyOffset(pView, coords);
 		if (GetBoolParameter(Ebp_parameters.BP_REMAP_XTREME)) {
 			// Y co-ordinate...
-			long dasherOY=GetLongParameter(Elp_parameters.LP_OY); 
-			double double_y = ((coords[1]-dasherOY)/(double)(dasherOY) ); // Fraction above the crosshair
+			double double_y = ((coords[1]-CROSS_Y)/(double)CROSS_Y ); // Fraction above the crosshair
 		  
-			coords[1] = (long)(dasherOY * (1.0 + double_y + (double_y*double_y*double_y * REPULSION_PARAM )));
+			coords[1] = (long)(CROSS_Y * (1.0 + double_y + (double_y*double_y*double_y * REPULSION_PARAM )));
 		  
 			// X co-ordinate...  
-		 	coords[0] = Math.max(coords[0],(long)(GetLongParameter(Elp_parameters.LP_OX) * xmax(double_y)));
+		 	coords[0] = Math.max(coords[0],(long)(CROSS_X * xmax(double_y)));
 		}
 	}
 	/**
@@ -229,9 +230,9 @@ public class CDefaultFilter extends CInputFilter {
 		coords[1] += GetLongParameter(Elp_parameters.LP_TARGET_OFFSET) * 10; //Urgh, arbitrary constants. Better would be screen range in dasher coords / pixels ???
 		if (GetBoolParameter(Ebp_parameters.BP_AUTOCALIBRATE)) {
 			if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
-			  m_iSum += (GetLongParameter(Elp_parameters.LP_OY) - coords[1]);
+			  m_iSum += (CROSS_Y - coords[1]);
 			  if (++m_iCounter>20) {
-				  if (Math.abs(m_iSum) > GetLongParameter(Elp_parameters.LP_MAX_Y)/2)
+				  if (Math.abs(m_iSum) > MAX_Y/2)
 					  SetLongParameter(Elp_parameters.LP_TARGET_OFFSET, GetLongParameter(Elp_parameters.LP_TARGET_OFFSET) + ((m_iSum>0) ? -1 : 1)) ;
 				  m_iSum=m_iCounter=0; //TODO, reset m_iSum only if increment/decrement applied?
 			  }

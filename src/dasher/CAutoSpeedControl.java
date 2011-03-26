@@ -26,7 +26,8 @@
 package dasher;
 
 import java.util.LinkedList;
-
+import static dasher.CDasherModel.CROSS_X;
+import static dasher.CDasherModel.CROSS_Y;
 /**
  * AutoSpeedControl is responsible for adaptively tuning Dasher's
  * maximum speed by observing user actions whilst dashing.
@@ -270,8 +271,8 @@ public class CAutoSpeedControl extends CDasherComponent {
 	    iDasherX = View.applyXMapping(iDasherX);
 	    iDasherY = View.ymap(iDasherY);
 
-	    long iDasherOX = View.applyXMapping(GetLongParameter(Elp_parameters.LP_OX));
-	    long iDasherOY = View.ymap(GetLongParameter(Elp_parameters.LP_OY));
+	    long iDasherOX = View.applyXMapping(CROSS_X);
+	    long iDasherOY = View.ymap(CROSS_Y);
 
 	    double x = -(iDasherX - iDasherOX) / (double)iDasherOX; //Use normalised coords so min r works 
 	    double y = -(iDasherY - iDasherOY) / (double)iDasherOY; 

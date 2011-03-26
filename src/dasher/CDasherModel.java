@@ -48,6 +48,12 @@ import java.util.ListIterator;
  * of a DasherView.
  */
 public class CDasherModel extends CFrameRate {
+	/** Extent of Y-axis (in theory! Exc. nonlinearities). TODO, make an int? */
+	public static final long MAX_Y=4096;
+	/** Coordinates of cross-hair. TODO, make ints? */
+	public static final long CROSS_X=2048, CROSS_Y=2048;
+	/** Interval i.e. denominator for ranges of child nodes wrt parent */
+	public static final long NORMALIZATION=1<<16;
 	
 	/**
 	 * Node which is currently root of the Node tree.
@@ -85,12 +91,12 @@ public class CDasherModel extends CFrameRate {
 	/**
 	 * Minimum allowable value of m_Rootmin
 	 */
-	protected long m_Rootmin_min;
+	private static final long ROOTMIN_MIN = Long.MIN_VALUE / NORMALIZATION / 2;
 	
 	/**
 	 * Maximum allowable value of m_Rootmax
 	 */
-	protected long m_Rootmax_max;
+	private static final long ROOTMAX_MAX = Long.MAX_VALUE / NORMALIZATION / 2;
 	
 	/**
 	 * Record of 'amount of information' entered so far, for logging purposes.
@@ -128,16 +134,6 @@ public class CDasherModel extends CFrameRate {
 	 */
 	public CDasherModel(CDasherInterfaceBase iface, CSettingsStore SettingsStore) {
 		super(iface, SettingsStore); 
-		
-		int iNormalization = (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
-		
-		/* CSFS: These used to be int64_max and int64_min.
-		 * As far as I can determine from the internet,
-		 * these are signed types like long.
-		 */
-		
-		m_Rootmin_min = Long.MIN_VALUE / iNormalization / 2;
-		m_Rootmax_max = Long.MAX_VALUE / iNormalization / 2;
 		
 		HandleEvent(new CParameterNotificationEvent(Elp_parameters.LP_NODE_BUDGET));
 	}
@@ -230,8 +226,8 @@ public class CDasherModel extends CFrameRate {
 		/* CSFS: These formerly used myint and have been changed to long */
 		
 		long range = m_Rootmax - m_Rootmin;
-		m_Rootmax = m_Rootmin + (range * m_Root.Hbnd()) / GetLongParameter(Elp_parameters.LP_NORMALIZATION);
-		m_Rootmin = m_Rootmin + (range * m_Root.Lbnd()) / GetLongParameter(Elp_parameters.LP_NORMALIZATION);
+		m_Rootmax = m_Rootmin + (range * m_Root.Hbnd()) / NORMALIZATION;
+		m_Rootmin = m_Rootmin + (range * m_Root.Lbnd()) / NORMALIZATION;
 		
 		for (SGotoItem sgi : m_deGotoQueue) {
 			//sgi contains pairs of coordinates for the _old_ root; we need to update it to contain the corresponding
@@ -240,11 +236,10 @@ public class CDasherModel extends CFrameRate {
 			// for a root node (and hence, when we try to NewGoTo them, we'll forcibly reparent); this means that we
 			// may have difficulty working with them...
 			final long r = sgi.iN2 - sgi.iN1;
-			final long iNorm = GetLongParameter(Elp_parameters.LP_NORMALIZATION);
 			sgi.iN2 = sgi.iN1 + //r * m_Root.Hbnd() / iNorm; //rewrite to ensure no overflow:
-				(r / iNorm) * m_Root.Hbnd() + ((r % iNorm) * m_Root.Hbnd())/iNorm;
+				(r / NORMALIZATION) * m_Root.Hbnd() + ((r % NORMALIZATION) * m_Root.Hbnd())/NORMALIZATION;
 		    sgi.iN1 += // r * m_Root.Lbnd() / iNorm;
-		    	(r/iNorm) * m_Root.Lbnd() + ((r % iNorm) * m_Root.Lbnd())/iNorm;
+		    	(r/NORMALIZATION) * m_Root.Lbnd() + ((r % NORMALIZATION) * m_Root.Lbnd())/NORMALIZATION;
 		}
 	}
 	
@@ -304,14 +299,13 @@ public class CDasherModel extends CFrameRate {
 			assert (NewRoot != null);
 		}
 		
-		final long lNorm = GetLongParameter(Elp_parameters.LP_NORMALIZATION);
 		assert NewRoot == m_Root.Parent();
 		
 		long upper = m_Root.Hbnd(), lower = m_Root.Lbnd(), iWidth = upper-lower;
 		long iRootWidth = m_Rootmax - m_Rootmin;
 		
-		if ((lNorm - upper) / (double)iWidth > (m_Rootmax_max - m_Rootmax) / (double)iRootWidth ||
-				lower / (double)iWidth > (m_Rootmin - m_Rootmin_min)/(double)iRootWidth) {
+		if ((NORMALIZATION - upper) / (double)iWidth > (ROOTMAX_MAX - m_Rootmax) / (double)iRootWidth ||
+				lower / (double)iWidth > (m_Rootmin - ROOTMIN_MIN)/(double)iRootWidth) {
 			//new node would be too big, so don't reparent.
 			// However, cache the root's parent, so (a) we don't repeatedly recreate it,
 			// (b) it'll get deleted if we clear the oldroots queue.
@@ -322,13 +316,13 @@ public class CDasherModel extends CFrameRate {
 		m_Root.commit(false);
 		m_Root = NewRoot;
 		
-		m_Rootmax +=  ((lNorm - upper)) * iRootWidth / iWidth;
+		m_Rootmax +=  ((NORMALIZATION - upper)) * iRootWidth / iWidth;
 	
 		m_Rootmin -= lower * iRootWidth / iWidth;
 	
 		for (SGotoItem it : m_deGotoQueue) {
 			iRootWidth = it.iN2 - it.iN1;
-			it.iN2 += (lNorm - upper) * iRootWidth / iWidth;
+			it.iN2 += (NORMALIZATION - upper) * iRootWidth / iWidth;
 			it.iN1 -= lower * iRootWidth / iWidth;
 		}
 		return true; //success!
@@ -365,21 +359,21 @@ public class CDasherModel extends CFrameRate {
 		
 		DeleteRoot();
 		
-		m_Root = alphMgr.GetRoot(null, 0,(int)GetLongParameter(Elp_parameters.LP_NORMALIZATION), iOffset, true);
+		m_Root = alphMgr.GetRoot(null, 0, NORMALIZATION, iOffset, true);
 		//we've already entered the node, as it was reconstructed from previously-written context
 		m_Root.Enter();
 		m_Root.Seen(true);
 		m_pLastOutput=m_Root;
 		Expand(m_Root);
 		
-		double dFraction = 1 - (1 - m_Root.MostProbableChild() / (double)(GetLongParameter(Elp_parameters.LP_NORMALIZATION)))/2.0;
+		double dFraction = 1 - (1 - m_Root.MostProbableChild() / (double)NORMALIZATION)/2.0;
 		
-		int iWidth = ( (int)( (GetLongParameter(Elp_parameters.LP_MAX_Y) / (2.0*dFraction)) ) );
+		int iWidth = ( (int)( (MAX_Y / (2.0*dFraction)) ) );
 		
 		MatchTarget();
 		
-		m_Rootmin = GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 - iWidth / 2;
-		m_Rootmax = GetLongParameter(Elp_parameters.LP_MAX_Y) / 2 + iWidth / 2;
+		m_Rootmin = MAX_Y / 2 - iWidth / 2;
+		m_Rootmax = MAX_Y / 2 + iWidth / 2;
 	
 	}
 	
@@ -419,16 +413,11 @@ public class CDasherModel extends CFrameRate {
 		// probably do it a little more scientifically)
 		if(miMousex > 60000000) miMousex = 60000000;
 
-		// Cache some results so we don't do a huge number of parameter lookups
-		long iMaxY = (GetLongParameter(Elp_parameters.LP_MAX_Y));
-		long iOX = (GetLongParameter(Elp_parameters.LP_OX));
-		long iOY = (GetLongParameter(Elp_parameters.LP_OY));
-
 		// Calculate what the extremes of the viewport will be when the
 		// point under the cursor is at the cross-hair. This is where 
 		// we want to be in iSteps updates
-		long iTargetMin = (miMousey - (iMaxY * miMousex) / (2 * iOX));
-		long iTargetMax = (miMousey + (iMaxY * miMousex) / (2 * iOY));
+		long iTargetMin = (miMousey - (MAX_Y * miMousex) / (2 * CROSS_X));
+		long iTargetMax = (miMousey + (MAX_Y * miMousex) / (2 * CROSS_Y));
 		//back these up, we may want them later
 		long origMin=iTargetMin,origMax=iTargetMax;
 		
@@ -444,19 +433,19 @@ public class CDasherModel extends CFrameRate {
 		// and (0,iMaxY), with weight iOldWeight; in the olg algorithm, the latter was
 		// (iSteps-1)*(iTargetMax-iTargetMin), but people wanted to reverse faster!
 		// (TODO: should this be a parameter? I'm resisting "too many user settings" atm, but maybe...)
-		final long iOldWeight = (iSteps-1) * Math.min(iTargetMax - iTargetMin, iMaxY+(iTargetMax-iTargetMin)>>>GetLongParameter(Elp_parameters.LP_REVERSE_BOOST));
-		long iDenom = iMaxY + iOldWeight;
-		long iNewTargetMin = (iTargetMin * iMaxY) / iDenom;
-		long iNewTargetMax = (iTargetMax+iOldWeight) * iMaxY / iDenom;
+		final long iOldWeight = (iSteps-1) * Math.min(iTargetMax - iTargetMin, MAX_Y+(iTargetMax-iTargetMin)>>>GetLongParameter(Elp_parameters.LP_REVERSE_BOOST));
+		long iDenom = MAX_Y + iOldWeight;
+		long iNewTargetMin = (iTargetMin * MAX_Y) / iDenom;
+		long iNewTargetMax = (iTargetMax+iOldWeight) * MAX_Y / iDenom;
 		iTargetMin = iNewTargetMin;
 		iTargetMax = iNewTargetMax;
 
 		// Calculate the minimum size of the viewport corresponding to the
 		// maximum zoom.
-		long iMinSize = (long)(iMaxY/(dSpeedMul*maxZoom()+(1.0f-dSpeedMul)));
+		long iMinSize = (long)(MAX_Y/(dSpeedMul*maxZoom()+(1.0f-dSpeedMul)));
 
 		if((iTargetMax - iTargetMin) < iMinSize) {
-			iNewTargetMin = iTargetMin * (iMaxY - iMinSize) / (iMaxY - (iTargetMax - iTargetMin));
+			iNewTargetMin = iTargetMin * (MAX_Y - iMinSize) / (MAX_Y - (iTargetMax - iTargetMin));
 		    iNewTargetMax = iNewTargetMin + iMinSize;
 
 		    iTargetMin = iNewTargetMin;
@@ -465,7 +454,7 @@ public class CDasherModel extends CFrameRate {
 		
 		//Now calculate the bounds of the root node, that put (y1,y2) at the screen edges...
 		// If |(0,Y2)| = |(y1,y2)|, the "zoom factor" is 1, so we just translate.
-		if (iMaxY == iTargetMax - iTargetMin) {
+		if (MAX_Y == iTargetMax - iTargetMin) {
 		    m_Rootmin -= iTargetMin;
 		    m_Rootmax -= iTargetMin;
 		    return;
@@ -480,7 +469,7 @@ public class CDasherModel extends CFrameRate {
 		//We prefer to compute C from the _original_ (y1,y2) pair, as this is more
 		// accurate (and avoids drifting up/down when heading straight along the
 		// x-axis in dynamic button modes). However...
-		if ((iTargetMax-iTargetMin) < iMaxY ^ (origMax-origMin) < iMaxY) {
+		if ((iTargetMax-iTargetMin) < MAX_Y ^ (origMax-origMin) < MAX_Y) {
 		    //Sometimes (very occasionally), the calculation of a single-step above
 		    // can turn a zoom-in into a zoom-out, or vice versa, when the movement
 		    // is mostly translation. In which case, must compute C consistently with
@@ -489,11 +478,11 @@ public class CDasherModel extends CFrameRate {
 		    // sense of translation will be reversed) !
 		    origMin=iTargetMin; origMax=iTargetMax;
 		}
-		final long C = (origMin * iMaxY) / (origMin + iMaxY - origMax);
+		final long C = (origMin * MAX_Y) / (origMin + MAX_Y - origMax);
 
 		//finally, update the rootnode bounds to put iTargetMin/iTargetMax at (0,LP_MAX_Y).
-		NewGoTo( ((m_Rootmin - C) * iMaxY) / (iTargetMax - iTargetMin) + C,
-				 ((m_Rootmax - C) * iMaxY) / (iTargetMax - iTargetMin) + C);
+		NewGoTo( ((m_Rootmin - C) * MAX_Y) / (iTargetMax - iTargetMin) + C,
+				 ((m_Rootmax - C) * MAX_Y) / (iTargetMax - iTargetMin) + C);
 	}
 	
 	public boolean nextScheduledStep(long time) {
@@ -540,14 +529,14 @@ public class CDasherModel extends CFrameRate {
 		
 		//Now actually move to the new location...
 		
-		while (newRootmax >= m_Rootmax_max || newRootmin <= m_Rootmin_min) {
+		while (newRootmax >= ROOTMAX_MAX || newRootmin <= ROOTMIN_MIN) {
 			//can't make existing root any bigger because of overflow. So force a new root
 			//to be chosen (so that Dasher doesn't just stop!)...
 			
 			//pick _child_ covering crosshair...
-			final long iWidth = m_Rootmax-m_Rootmin, iNorm = GetLongParameter(Elp_parameters.LP_NORMALIZATION), lpOY = GetLongParameter(Elp_parameters.LP_OY);
+			final long iWidth = m_Rootmax-m_Rootmin;
 			for (CDasherNode ch : m_Root.Children()) {
-				if (m_Rootmin + (ch.Hbnd() * iWidth / iNorm) > lpOY) {
+				if (m_Rootmin + (ch.Hbnd() * iWidth / NORMALIZATION) > CROSS_Y) {
 					//found child to make root. TODO, proceed only if new root is on the game path....
 					/*if (m_bGameMode && !pChild->GetFlag(NF_GAME)) {
 					  //If the user's strayed that far off the game path,
@@ -577,8 +566,8 @@ public class CDasherModel extends CFrameRate {
 		// Check that we haven't drifted too far. The rule is that we're not
 		// allowed to let the root max and min cross the midpoint of the
 		// screen.
-		newRootmin = Math.min(newRootmin, GetLongParameter(Elp_parameters.LP_OY) - 1 - m_iDisplayOffset);
-		newRootmax = Math.max(newRootmax, GetLongParameter(Elp_parameters.LP_OY) + 1 - m_iDisplayOffset);  
+		newRootmin = Math.min(newRootmin, CROSS_Y - 1 - m_iDisplayOffset);
+		newRootmax = Math.max(newRootmax, CROSS_Y + 1 - m_iDisplayOffset);  
 		
 			
 		// Only allow the update if it won't make the
@@ -586,7 +575,7 @@ public class CDasherModel extends CFrameRate {
 		// before now already, but the original root is an exception.
 		// (as is trying to go back beyond the earliest char in the current
 		// alphabet, if there are preceding characters not in that alphabet)
-		if ((newRootmax - newRootmin) > GetLongParameter(Elp_parameters.LP_MAX_Y) / 4) {
+		if ((newRootmax - newRootmin) > MAX_Y / 4) {
 		    m_Rootmax = newRootmax;
 		    m_Rootmin = newRootmin;
 		    
@@ -672,20 +661,20 @@ public class CDasherModel extends CFrameRate {
 		if (out!=m_pLastOutput) EraseBackTo(out);
 		
 		while (m_Root.m_OnlyChildRendered!=null) {
-			// We must have zoomed sufficiently that only one child of the root node 
-			// is still alive.  Let's make it the root.
+			// We have zoomed sufficiently that only one child of the root node 
+			// is still alive. We may be able to make it the root.
 				
 			long y1 = m_Rootmin;
 			long y2 = m_Rootmax;
 			long range = y2 - y1;
 			CDasherNode c = m_Root.m_OnlyChildRendered;	
-			long newy1 = y1 + (range * c.Lbnd()) / (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
-			long newy2 = y1 + (range * c.Hbnd()) / (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
+			long newy1 = y1 + (range * c.Lbnd()) / NORMALIZATION;
+			long newy2 = y1 + (range * c.Hbnd()) / NORMALIZATION;
 			if(View.NodeFillsScreen(newy1, newy2)) {
 				Make_root(c);
 				//and try again, looking for a child of the new root...
 			} else {
-				//more than one child on screen
+				//parent still on screen as well (to left)
 				break;
 			}
 		}
@@ -724,10 +713,9 @@ public class CDasherModel extends CFrameRate {
 		final int iSteps = (int)(GetLongParameter(Elp_parameters.LP_ZOOMSTEPS));
 			
 		final long y1 = dashery - dasherx, y2 = dashery + dasherx;
-		final long iMaxY = GetLongParameter(Elp_parameters.LP_MAX_Y);
 		long targetRootMin,targetRootMax;
 		
-		if (y2-y1 == iMaxY) {
+		if (y2-y1 == MAX_Y) {
 			//just translate
 			targetRootMin = m_Rootmin + y1;
 			targetRootMax = m_Rootmax + y1;
@@ -735,13 +723,13 @@ public class CDasherModel extends CFrameRate {
 			//find the center of expansion / contraction - this divides interval
 			// (iTarget1,iTarget2) into the same proportions as it divides (0,maxY),
 			// i.e. (C-iTarget1)/(C-0) == (C-iTarget2)/(C-iMaxY)
-			final long C = (y1 * iMaxY) / (y1 + iMaxY - y2);
+			final long C = (y1 * MAX_Y) / (y1 + MAX_Y - y2);
 			if (y1 != C) {
 		          targetRootMin = ((m_Rootmin - C) * (0 - C)) / (y1 - C) + C;
 		          targetRootMax = ((m_Rootmax - C) * (0 - C)) / (y1 - C) + C;
 		      } else if (y2 != C) {
-		          targetRootMin = ((m_Rootmin - C) * (iMaxY - C)) / (y2 - C) + C;
-		          targetRootMax = ((m_Rootmax - C) * (iMaxY - C)) / (y2 - C) + C;
+		          targetRootMin = ((m_Rootmin - C) * (MAX_Y - C)) / (y2 - C) + C;
+		          targetRootMax = ((m_Rootmax - C) * (MAX_Y - C)) / (y2 - C) + C;
 		      } else { // implies y1 = y2
 		          throw new AssertionError("Impossible geometry in CDasherModel.ScheduleZoom");
 		      }

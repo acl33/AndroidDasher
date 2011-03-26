@@ -1,11 +1,11 @@
 package dasher;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
 import dasher.CControlManager.ControlAction;
+
+import static dasher.CDasherModel.NORMALIZATION;
 
 public class CNodeCreationManager extends CDasherComponent {
 	
@@ -186,15 +186,14 @@ public class CNodeCreationManager extends CDasherComponent {
 //		 Total number of symbols in alphabet (i.e. to which we add uniformity)
 		int iSymbols = m_cAlphabet.GetNumberSymbols();
 		
-		long iNorm = GetLongParameter(Elp_parameters.LP_NORMALIZATION);
-		iNorm-= controlSpace = initControlManager(iNorm);
+		final long iNorm = NORMALIZATION - (controlSpace = initControlManager());
 		
 		uniformAdd = (int)((iNorm * GetLongParameter(Elp_parameters.LP_UNIFORM)) / 1000) / iSymbols; 
 		nonUniformNorm = iNorm - iSymbols * uniformAdd;
 		
 	}
 	
-	protected long initControlManager(long iNorm) {
+	protected long initControlManager() {
 		mk: if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE)) {
 			final List<ControlAction> actions = m_DasherInterface.getControlActions();
 			ControlAction c;
@@ -215,7 +214,7 @@ public class CNodeCreationManager extends CDasherComponent {
 				freeArrayList.clear(); //elements without space for a control-node probability.
 			m_ControlManager = new CControlManager(m_DasherInterface, m_DasherInterface.getSettingsStore(), this, c);
 			// TODO - sort out size of control node - for the timebeing I'll fix the control node at 5%
-			return iNorm/20;
+			return NORMALIZATION/20;
 		}
 		//no need to clear list - the existing elements can be used by GetProbs, but will not be recycled 
 		m_ControlManager=null;

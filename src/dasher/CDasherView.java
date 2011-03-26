@@ -130,14 +130,6 @@ public abstract class CDasherView extends CDasherComponent {
 	protected CDelayedDraw m_DelayDraw;
 	
 	/**
-	 * Stores the current value of LP_MAX_Y for efficiency.
-	 * <p>
-	 * We listen for parameter change events to update this
-	 * when necessary.
-	 */
-	protected long lpMaxY; // Caching result for dashery2screen
-	
-	/**
 	 * The orientation in which the canvas will be drawn.
 	 */
 	private Opts.ScreenOrientations realOrientation;
@@ -169,7 +161,6 @@ public abstract class CDasherView extends CDasherComponent {
 		realOrientation = orient;
 		
 		// Value caching
-		lpMaxY = SettingsStore.GetLongParameter(Elp_parameters.LP_MAX_Y);
 		lpFontSize = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_DASHER_FONTSIZE);
 	}
 	
@@ -199,10 +190,7 @@ public abstract class CDasherView extends CDasherComponent {
 	public void HandleEvent(CEvent event) {
 		if(event instanceof CParameterNotificationEvent) {
 			CParameterNotificationEvent evt = (CParameterNotificationEvent)event;
-			if (evt.m_iParameter == Elp_parameters.LP_MAX_Y) {
-				lpMaxY = GetLongParameter(Elp_parameters.LP_MAX_Y);
-			}
-			else if (evt.m_iParameter == Elp_parameters.LP_DASHER_FONTSIZE) {
+			if (evt.m_iParameter == Elp_parameters.LP_DASHER_FONTSIZE) {
 				lpFontSize = (int)GetLongParameter(Elp_parameters.LP_DASHER_FONTSIZE);
 			}
 		}

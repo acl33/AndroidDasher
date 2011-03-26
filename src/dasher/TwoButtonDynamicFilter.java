@@ -1,5 +1,7 @@
 package dasher;
 
+import static dasher.CDasherModel.CROSS_Y;
+
 public class TwoButtonDynamicFilter extends CDynamicPresses {
 
 	private BounceMarker up,down;
@@ -26,7 +28,7 @@ public class TwoButtonDynamicFilter extends CDynamicPresses {
 	@Override
 	public boolean TimerImpl(long iTime, CDasherView pView,CDasherModel pModel) {
 		super.TimerImpl(iTime, pView, pModel);
-		pModel.oneStepTowards(0, GetLongParameter(Elp_parameters.LP_OY), iTime, 1.0f);
+		pModel.oneStepTowards(0, CROSS_Y, iTime, 1.0f);
 		return true;
 	}
 
@@ -48,13 +50,13 @@ public class TwoButtonDynamicFilter extends CDynamicPresses {
 	
 	@Override public void KeyDown(long iTime, int iId, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
 		if (iId==100 && pInput.GetDasherCoords(pView, coords))
-			iId = (coords[1] < GetLongParameter(Elp_parameters.LP_OY)) ? 0 : 1;
+			iId = (coords[1] < CROSS_Y) ? 0 : 1;
 		super.KeyDown(iTime, iId, pView, pInput, pModel);
 	}
 	
 	@Override public void KeyUp(long iTime, int iId, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
 		if (iId==100 && pInput.GetDasherCoords(pView, coords))
-			iId = (coords[1] < GetLongParameter(Elp_parameters.LP_OY)) ? 0 : 1;
+			iId = (coords[1] < CROSS_Y) ? 0 : 1;
 		super.KeyUp(iTime, iId, pView, pInput, pModel);
 	}
 	

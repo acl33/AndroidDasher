@@ -32,6 +32,8 @@ import java.util.Map;
 
 import dasher.Opts.ScreenOrientations;
 
+import static dasher.CDasherModel.*;
+
 /**
  * An implementation (currently the one and only) of DasherView.
  * <p>
@@ -130,11 +132,6 @@ public class CDasherViewSquare extends CDasherView {
 	protected boolean bOutline;
 	
 	/**
-	 * Cache of LP_NORAMLIZATON
-	 */
-	protected int lpNormalisation;
-	
-	/**
 	 * Sole constructor. Creates a new view wrapping a specified
 	 * screen, fires the ChangeScreen method to configure itself
 	 * around said screen, creates a DelayedDraw object for
@@ -156,14 +153,13 @@ public class CDasherViewSquare extends CDasherView {
 		
 		super(EventHandler, SettingsStore, DasherScreen, orient);
 		m_Y1 = 4;
-		m_Y2 = (long)(0.95 * lpMaxY);
-		m_Y3 = (long)(0.05 * lpMaxY);
+		m_Y2 = (long)(0.95 * MAX_Y);
+		m_Y3 = (long)(0.05 * MAX_Y);
 		
 		m_DelayDraw = new CDelayedDraw();
 		
 		minNodeSizeText = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_MIN_NODE_SIZE_TEXT);
 		bOutline = SettingsStore.GetBoolParameter(Ebp_parameters.BP_OUTLINE_MODE);
-		lpNormalisation = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_NORMALIZATION);
 		
 		SetScaleFactor();
 		
@@ -203,9 +199,6 @@ public class CDasherViewSquare extends CDasherView {
 			}
 			else if (Evt.m_iParameter == Ebp_parameters.BP_OUTLINE_MODE) {
 				bOutline = GetBoolParameter(Ebp_parameters.BP_OUTLINE_MODE);
-			}
-			else if (Evt.m_iParameter == Elp_parameters.LP_NORMALIZATION) {
-				lpNormalisation = (int)GetLongParameter(Elp_parameters.LP_NORMALIZATION);
 			}
 		}
 	}
@@ -324,8 +317,7 @@ public class CDasherViewSquare extends CDasherView {
 				if (output == Render.Parent()) {
 			
 					//we may be seen as well
-					long lpOY = GetLongParameter(Elp_parameters.LP_OY);
-					if (y1<lpOY && y2>lpOY && (y2-y1)>GetLongParameter(Elp_parameters.LP_OX)) {
+					if (y1<CROSS_Y && y2>CROSS_Y && (y2-y1)>CROSS_X) {
 						//we are also seen!
 						m_model.Output(output=Render);
 						break collapse;
@@ -345,8 +337,8 @@ public class CDasherViewSquare extends CDasherView {
 			//fallthrough to here if not under crosshair (so enqueued to collapse) but has children from before.
 			if (Render.m_OnlyChildRendered != null) {
 				CDasherNode child=Render.m_OnlyChildRendered;
-				long newy1 = y1 + (iDasherSize * child.Lbnd()) / lpNormalisation;
-				long newy2 = y1 + (iDasherSize * child.Hbnd()) / lpNormalisation;
+				long newy1 = y1 + (iDasherSize * child.Lbnd()) / NORMALIZATION;
+				long newy2 = y1 + (iDasherSize * child.Hbnd()) / NORMALIZATION;
 				if ((y2-y1 < minNodeSizeText && newy2>visreg.minY && newy1<visreg.maxY) //too-small - but other children smaller still
 						|| (newy1 <= visreg.minY && newy2 >= visreg.maxY)) { //covers entire y axis
 					//only need to render this one child. Do it by looping round...
@@ -359,13 +351,13 @@ public class CDasherViewSquare extends CDasherView {
 			}
 			/* Step 3: Draw our child nodes */
 			long newy1 = y1, newy2;
-			int bestSz=lpNormalisation/3; CDasherNode bestCh=null;
+			int bestSz=(int)(NORMALIZATION/3); CDasherNode bestCh=null;
 			assert newy1 <= visreg.maxY;
 			int i=0; final int j=Render.ChildCount();
 			for(; i<j; i++, newy1=newy2) {
 				CDasherNode ch = Render.ChildAtIndex(i);
 					
-				newy2 = y1 + (iDasherSize * ch.Hbnd()) / lpNormalisation;
+				newy2 = y1 + (iDasherSize * ch.Hbnd()) / NORMALIZATION;
 				if (newy2 < visreg.minY) {
 					//not reached screen yet.
 					m_model.Collapse(ch);
@@ -394,13 +386,13 @@ public class CDasherViewSquare extends CDasherView {
 			}
 			//any remaining children are offscreen, and do not need rendering
 			while (++i<j) m_model.Collapse(Render.ChildAtIndex(i));
-			if (bestSz>lpNormalisation/3) {
+			if (bestSz>NORMALIZATION/3) {
 				if (bestSz!=Integer.MAX_VALUE) {
 					Render.m_OnlyChildRendered = bestCh;
 					//tail call...
 					parentColour = Render.m_iColour;
-					y2 = y1 + (bestCh.Hbnd() * iDasherSize)/lpNormalisation;
-					y1 += (bestCh.Lbnd() * iDasherSize)/lpNormalisation;
+					y2 = y1 + (bestCh.Hbnd() * iDasherSize)/NORMALIZATION;
+					y1 += (bestCh.Lbnd() * iDasherSize)/NORMALIZATION;
 					Render = bestCh;
 					continue tailcall;
 				} else if (bestCh!=null) m_model.Collapse(bestCh);
@@ -473,9 +465,9 @@ public class CDasherViewSquare extends CDasherView {
 		
 		long iLeftTimesFontSize = iDasherX *lpFontSize;
 		
-		if (iLeftTimesFontSize > lpMaxY/20)
+		if (iLeftTimesFontSize > MAX_Y/20)
 			return lpFontSize*20;
-		else if (iLeftTimesFontSize > lpMaxY/160)
+		else if (iLeftTimesFontSize > MAX_Y/160)
 			return lpFontSize*14;
 		else
 			return lpFontSize*11;
@@ -521,19 +513,19 @@ public class CDasherViewSquare extends CDasherView {
 		switch(getOrientation()) {
 		case LEFT_TO_RIGHT:
 			rx = m_iCenterX - ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor / m_iScaleFactorX;
-			ry = lpMaxY / 2 + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor / m_iScaleFactorY;
+			ry = MAX_Y / 2 + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor / m_iScaleFactorY;
 		break;
 		case RIGHT_TO_LEFT:
 			rx = (m_iCenterX + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
-			ry = (lpMaxY / 2 + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
+			ry = (MAX_Y / 2 + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
 		break;
 		case TOP_TO_BOTTOM:
 			rx = (m_iCenterX - ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
-			ry = (lpMaxY / 2 + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
+			ry = (MAX_Y / 2 + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
 		break;
 		case BOTTOM_TO_TOP:
 			rx = (m_iCenterX + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
-			ry = (lpMaxY / 2 + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
+			ry = (MAX_Y / 2 + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
 		break;
 		default:
 			throw new AssertionError();
@@ -567,21 +559,21 @@ public class CDasherViewSquare extends CDasherView {
 		// note previous value of m_dXmpa = 0.2, i.e. a value of LP_NONLINEAR_X =~= 4.8
 		m_dXMappingLogarithmicScaleFactor = Math.exp(GetLongParameter(Elp_parameters.LP_NON_LINEAR_X)/-3.0);
 		
-		long iDasherWidth = lpMaxY;
-		long iDasherHeight = iDasherWidth;
+		//long iDasherWidth = MAX_Y;
+		//long iDasherHeight = iDasherWidth;
 		
 		int iScreenWidth = Screen().GetWidth();
 		int iScreenHeight = Screen().GetHeight();
 		
 		// Try doing this a different way:
 		
-		long iDasherMargin = GetLongParameter(Elp_parameters.LP_DASHER_MARGIN);
+		final long iDasherMargin = GetLongParameter(Elp_parameters.LP_DASHER_MARGIN);
 		
-		long iMinX = ( 0-iDasherMargin );
-		long iMaxX = ( iDasherWidth );
+		final long iMinX = ( 0-iDasherMargin );
+		final long iMaxX = ( MAX_Y );
 		m_iCenterX = (int)((iMinX + iMaxX) / 2);
-		long iMinY = ( 0 );
-		long iMaxY = ( iDasherHeight );
+		final long iMinY = ( 0 );
+		final long iMaxY = ( MAX_Y );
 		
 		double dScaleFactorX, dScaleFactorY;
 		
@@ -617,15 +609,14 @@ public class CDasherViewSquare extends CDasherView {
 		// Vertical bar of crosshair
 
 		CDasherView.DRect visreg = VisibleRegion();
-		long sx = GetLongParameter(Elp_parameters.LP_OX);
-
-		cross_y[0] = Dasher2Screen(sx, visreg.minY);
-		cross_y[1] = Dasher2Screen(sx, visreg.maxY);
+		
+		cross_y[0] = Dasher2Screen(CROSS_X, visreg.minY);
+		cross_y[1] = Dasher2Screen(CROSS_X, visreg.maxY);
 		
 		//Horizontal bar
 
-		cross_x[0] = Dasher2Screen(12 * sx / 14, lpMaxY/2);
-		cross_x[1] = Dasher2Screen(17*sx/14, lpMaxY/2);
+		cross_x[0] = Dasher2Screen(12 * CROSS_X / 14, CROSS_Y);
+		cross_x[1] = Dasher2Screen(17*CROSS_X/14, CROSS_Y);
 	}
 	
 	/**
@@ -658,20 +649,20 @@ public class CDasherViewSquare extends CDasherView {
 		switch( getOrientation() ) {
 		case LEFT_TO_RIGHT:
 			coords[0] = (int)(iScreenWidth / 2 - ( coords[0] - m_iCenterX ) * m_iScaleFactorX / m_iScalingFactor);
-			coords[1] = (int)(iScreenHeight / 2 + ( coords[1] - lpMaxY / 2 ) * m_iScaleFactorY / m_iScalingFactor);
+			coords[1] = (int)(iScreenHeight / 2 + ( coords[1] - MAX_Y / 2 ) * m_iScaleFactorY / m_iScalingFactor);
 		break;
 		case RIGHT_TO_LEFT:
 			coords[0] = (int)(iScreenWidth / 2 + ( coords[0] - m_iCenterX ) * m_iScaleFactorX / m_iScalingFactor);
-			coords[1] = (int)(iScreenHeight / 2 + ( coords[1] - lpMaxY / 2 ) * m_iScaleFactorY / m_iScalingFactor);
+			coords[1] = (int)(iScreenHeight / 2 + ( coords[1] - MAX_Y / 2 ) * m_iScaleFactorY / m_iScalingFactor);
 		break;
 		case TOP_TO_BOTTOM: {
-			long temp = (int)(iScreenWidth / 2 + ( coords[1] - lpMaxY / 2 ) * m_iScaleFactorX / m_iScalingFactor);
+			long temp = (int)(iScreenWidth / 2 + ( coords[1] - MAX_Y / 2 ) * m_iScaleFactorX / m_iScalingFactor);
 			coords[1] = (int)(iScreenHeight / 2 - ( coords[0] - m_iCenterX ) * m_iScaleFactorY / m_iScalingFactor);
 			coords[0] = temp;
 			break;
 		}
 		case BOTTOM_TO_TOP: {
-			long temp = (int)(iScreenWidth / 2 + ( coords[1] - lpMaxY / 2 ) * m_iScaleFactorX / m_iScalingFactor);
+			long temp = (int)(iScreenWidth / 2 + ( coords[1] - MAX_Y / 2 ) * m_iScaleFactorX / m_iScalingFactor);
 			coords[1] = (int)(iScreenHeight / 2 + ( coords[0] - m_iCenterX ) * m_iScaleFactorY / m_iScalingFactor);
 			coords[0] = temp;
 			break;
@@ -792,12 +783,12 @@ public class CDasherViewSquare extends CDasherView {
 	 * @return Raw value
 	 */
 	public long unapplyXMapping(long lx) {
-		double x = lx/(double)lpMaxY;
+		double x = lx/(double)MAX_Y;
 		if(x < m_dXMappingLogLinearBoundary * m_dXMappingLinearScaleFactor)
 			x = x / m_dXMappingLinearScaleFactor;
 		else
 			x = m_dXMappingLogLinearBoundary - m_dXMappingLogarithmicScaleFactor + m_dXMappingLogarithmicScaleFactor * Math.exp((x / m_dXMappingLinearScaleFactor - m_dXMappingLogLinearBoundary) / m_dXMappingLogarithmicScaleFactor);
-		return (long)(x * lpMaxY);
+		return (long)(x * MAX_Y);
 	}
 
 	/**
@@ -809,11 +800,11 @@ public class CDasherViewSquare extends CDasherView {
 	 * @return Mapped value
 	 */
 	@Override public long applyXMapping(long lx) {
-		double x = lx / (double)lpMaxY;
+		double x = lx / (double)MAX_Y;
 		if(x < m_dXMappingLogLinearBoundary)
 			x = m_dXMappingLinearScaleFactor * x;
 		else
 			x = m_dXMappingLinearScaleFactor * (m_dXMappingLogarithmicScaleFactor * Math.log((x + m_dXMappingLogarithmicScaleFactor - m_dXMappingLogLinearBoundary) / m_dXMappingLogarithmicScaleFactor) + m_dXMappingLogLinearBoundary);
-		return (long)(x * lpMaxY);
+		return (long)(x * MAX_Y);
 	}
 }

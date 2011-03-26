@@ -1,5 +1,7 @@
 package dasher;
 
+import static dasher.CDasherModel.CROSS_X;
+
 /**
  *
  * @author acl33
@@ -69,7 +71,7 @@ public class CStylusFilter extends CDefaultFilter {
     @Override public void HandleEvent(CEvent evt) {
 		if (evt instanceof CParameterNotificationEvent
 				&& ((CParameterNotificationEvent)evt).m_iParameter==Elp_parameters.LP_MAX_ZOOM)
-			minX = Math.max(2, GetLongParameter(Elp_parameters.LP_OX)/GetLongParameter(Elp_parameters.LP_MAX_ZOOM));
+			minX = Math.max(2, CROSS_X/GetLongParameter(Elp_parameters.LP_MAX_ZOOM));
 		super.HandleEvent(evt);
 	}
     

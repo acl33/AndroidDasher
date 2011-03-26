@@ -1,5 +1,7 @@
 package dasher;
 
+import static dasher.CDasherModel.MAX_Y;
+
 /*static SModuleSettings sSettings[] = {
   // TRANSLATORS: The number of time steps over which to perform the zooming motion in button mode.
   {LP_ZOOMSTEPS, T_LONG, 1, 63, 1, 1, _("Zoom steps")},
@@ -22,7 +24,7 @@ public class CMenuMode extends CScanning {
 	}
 
 	protected SBox[] SetupBoxes() {
-		int iDasherY = (int)GetLongParameter(Elp_parameters.LP_MAX_Y);
+		final int iDasherY = (int)MAX_Y;
 
 		int iForwardBoxes = (int)GetLongParameter(Elp_parameters.LP_B);
 		SBox[] m_pBoxes = new SBox[iForwardBoxes+1];

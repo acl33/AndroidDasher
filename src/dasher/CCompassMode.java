@@ -1,5 +1,7 @@
 package dasher;
 
+import static dasher.CDasherModel.MAX_Y;
+
 public class CCompassMode extends CDasherButtons {
 	private int iTargetWidth;
 	public CCompassMode(CDasherInterfaceBase iface, CSettingsStore sets) {
@@ -7,7 +9,7 @@ public class CCompassMode extends CDasherButtons {
 	}
   
 	@Override protected SBox[] SetupBoxes() {
-		int iDasherY = (int)GetLongParameter(Elp_parameters.LP_MAX_Y);
+		final int iDasherY = (int)MAX_Y;
 
 		SBox[] m_pBoxes = new SBox[4];
 

@@ -31,6 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 
+import static dasher.CDasherModel.NORMALIZATION;
+
 /**
  * AlphabetManager is a specialisation of NodeManager which
  * knows about an Alphabet.
@@ -367,7 +369,7 @@ public class CAlphabetManager<C> {
 				//however, n won't generate us as a child. That's ok: we'll put in
 				// its children for it, now, giving this special character a probability of 1/4
 				// and reducing everything else accordingly (&all together)...
-				final long norm = m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION), cutOff = (norm*3)/4;
+				final long cutOff = (NORMALIZATION*3)/4;
 				//Firstly, a node containing what should be our _siblings_ - this could be our parent,
 				// if we were a normal symbol, but instead will contain all the
 				// sensible, normal, symbols the user could enter in our place.
@@ -375,7 +377,7 @@ public class CAlphabetManager<C> {
 				GetRoot(n, 0, cutOff, getOffset()-1, false);
 				
 				//make ourselves a child too - as long as n remembers...
-				SetRange(cutOff,norm);
+				SetRange(cutOff,NORMALIZATION);
 				SetParent(n);
 				//So if we ever reverse far enough that n is collapsed, and then
 				// regenerates its children, this SpecialNode'll be missing - and
@@ -541,7 +543,7 @@ public class CAlphabetManager<C> {
     		if (ChildCount()==1) {
     			//avoid colours blinking as the child entirely covers over this...
     			CDasherNode child = Children().get(0);
-    			assert (child.Lbnd() == 0 && child.Hbnd() == m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION));
+    			assert (child.Lbnd() == 0 && child.Hbnd() == NORMALIZATION);
     			child.setColour(Colour());
     		}
     	}
@@ -611,7 +613,7 @@ public class CAlphabetManager<C> {
     	final int iMin,iMax; //first & last syms
     	final long iRange; //range of probabilities for all children (syms as prev, plus "extras" e.g. Control Nodes)
     	if (parentGroup!=null) {iMin = parentGroup.iStart; iMax = parentGroup.iEnd; iRange = probInfo[iMax]-probInfo[iMin];}
-    	else {iMin = 0; iMax = m_Alphabet.GetNumberSymbols(); iRange = m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION);}
+    	else {iMin = 0; iMax = m_Alphabet.GetNumberSymbols(); iRange = NORMALIZATION;}
     	  
     	  // Create child nodes and add them
     	  
@@ -625,11 +627,9 @@ public class CAlphabetManager<C> {
     	                  || i < group.iStart; //not reached next subgroup
     	    final int iStart=i, iEnd = (bSymbol) ? i+1 : group.iEnd;
 
-    	    long iLbnd = ((probInfo[iStart] - probInfo[iMin]) *
-    	                          (m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION))) /
+    	    final long iLbnd = ((probInfo[iStart] - probInfo[iMin]) * NORMALIZATION) /
     	                         iRange;
-    	    long iHbnd = ((probInfo[iEnd] - probInfo[iMin]) *
-    	                          (m_Model.GetLongParameter(Elp_parameters.LP_NORMALIZATION))) /
+    	    final long iHbnd = ((probInfo[iEnd] - probInfo[iMin]) * NORMALIZATION) /
     	                         iRange;
     	    
     	    if (bSymbol) {

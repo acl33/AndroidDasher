@@ -1,5 +1,7 @@
 package dasher;
 
+import static dasher.CDasherModel.CROSS_Y;
+
 public class OneButtonDynamicFilter extends CDynamicFilter {
 
 	private BounceMarker upInner, downInner, upOuter, downOuter;
@@ -64,7 +66,7 @@ public class OneButtonDynamicFilter extends CDynamicFilter {
 				return false;
 			}
 		}
-		pModel.oneStepTowards(0, GetLongParameter(Elp_parameters.LP_OY), iTime, 1.0f);
+		pModel.oneStepTowards(0, CROSS_Y, iTime, 1.0f);
         return true;
 	}
 	

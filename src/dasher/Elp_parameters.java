@@ -43,7 +43,6 @@ public enum Elp_parameters implements EParameters {
 	  LP_LM_BETA("LMBeta", PERS, 77, "LMBeta"),
 	  //LP_LM_MIXTURE("LMMixture", PERS, 50, "LMMixture"),
 	  LP_MOUSE_POS_BOX("MousePosBox", !PERS, -1, "Mouse Position Box Indicator"),
-	  LP_NORMALIZATION("Normalization", !PERS, 1 << 16, "Interval for child nodes"),
 	  LP_LINE_WIDTH("LineWidth", PERS, 1, "Width to draw crosshair and mouse line"),
 	  //LP_LM_WORD_ALPHA("WordAlpha", PERS, 50, "Alpha value for word-based model"),
 	  LP_USER_LOG_LEVEL_MASK("UserLogLevelMask", PERS, 0, "Controls level of user logging, 0 = none, 1 = short, 2 = detailed, 3 = both"),
@@ -60,9 +59,6 @@ public enum Elp_parameters implements EParameters {
 	  LP_SOCKET_INPUT_X_MAX("SocketInputXMaxTimes1000", PERS, 1000, "Top of range of X values expected from network input"),
 	  LP_SOCKET_INPUT_Y_MIN("SocketInputYMinTimes1000", PERS, 0, "Bottom of range of Y values expected from network input"),
 	  LP_SOCKET_INPUT_Y_MAX("SocketInputYMaxTimes1000", PERS, 1000, "Top of range of Y values expected from network input"),*/
-	  LP_OX("OX", PERS, 2048, "X coordinate of crosshair"),
-	  LP_OY("OY", PERS, 2048, "Y coordinate of crosshair"),
-	  LP_MAX_Y("MaxY", PERS, 4096, "Maximum Y coordinate"),
 	  //LP_INPUT_FILTER("InputFilterID", PERS, 3, "Module ID of input filter"),
 	  LP_CIRCLE_PERCENT("CirclePercent", PERS, 10, "Percentage of nominal vertical range to use for radius of start circle"),
 	  LP_TWO_BUTTON_OFFSET("TwoButtonOffset", PERS, 1024, "Offset for two button dynamic mode"),

@@ -1,5 +1,7 @@
 package dasher;
 
+import static dasher.CDasherModel.*;
+
 /** Overrides ApplyTransform to apply 1D remapping (using old x coord as radius)
  * if and only if {@link Ebp_parameters#BP_ONE_DIMENSIONAL_MODE} is enabled.
  * @author Alan Lawrence <acl33@inf.phy.cam.ac.uk>
@@ -21,7 +23,7 @@ public class COneDimensionalFilter extends CDefaultFilter {
 			super.ApplyTransform(pView, coords);
 	}
 	
-	private final int forwardmax=(int)(GetLongParameter(Elp_parameters.LP_MAX_Y)/2.5); //of 1D transform
+	private final int forwardmax=(int)(MAX_Y/2.5); //of 1D transform
 	
 	/**
 	 * Applies the 1D remapping: as Y increases from 0 to LP_MAX_Y, starts & ends at the origin,
@@ -34,11 +36,11 @@ public class COneDimensionalFilter extends CDefaultFilter {
 	 */
 	protected void Apply1DTransform(CDasherView pView, long[] coords) {
 		// The distance between the Y coordinate and the centreline in pixels
-		final long disty=GetLongParameter(Elp_parameters.LP_OY)-coords[1];
+		final long disty=CROSS_Y-coords[1];
 		  
 		final long circlesize = (long)(forwardmax*(1.0-coords[0]/(double)pView.VisibleRegion().maxX));
-		final long yforwardrange = (GetLongParameter(Elp_parameters.LP_MAX_Y)*5)/16;
-		final long yfullrange = GetLongParameter(Elp_parameters.LP_MAX_Y)/2;
+		final long yforwardrange = (MAX_Y*5)/16;
+		final long yfullrange = MAX_Y/2;
 		  
 		double x,y; //0,0=on crosshair; positive=forwards/up...	
 		
@@ -61,8 +63,8 @@ public class COneDimensionalFilter extends CDefaultFilter {
 			//off limits, go nowhere
 			x=0; y=0;
 		} 
-		coords[0] = GetLongParameter(Elp_parameters.LP_OX)-(long)(x*circlesize);
-		coords[1] = GetLongParameter(Elp_parameters.LP_OY)+(long)(y*circlesize);
+		coords[0] = CROSS_X-(long)(x*circlesize);
+		coords[1] = CROSS_Y+(long)(y*circlesize);
 	}
 	
 	@Override protected void CreateStartHandler() {
@@ -74,8 +76,8 @@ public class COneDimensionalFilter extends CDefaultFilter {
 							&& GetBoolParameter(Ebp_parameters.BP_ONE_DIMENSIONAL_MODE)) {
 						//move circle
 						if (fwdCircle==null) {
-							long rad = GetLongParameter(Elp_parameters.LP_CIRCLE_PERCENT)*GetLongParameter(Elp_parameters.LP_OY)/100;
-							fwdCircle = pView.Dasher2Screen(GetLongParameter(Elp_parameters.LP_OX)-forwardmax+rad, GetLongParameter(Elp_parameters.LP_OY));
+							long rad = GetLongParameter(Elp_parameters.LP_CIRCLE_PERCENT)*CROSS_Y/100;
+							fwdCircle = pView.Dasher2Screen(CROSS_X-forwardmax+rad, CROSS_Y);
 							
 						}
 						return fwdCircle;

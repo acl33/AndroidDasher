@@ -1,5 +1,7 @@
 package dasher;
 
+import static dasher.CDasherModel.CROSS_Y;
+
 public abstract class CDynamicFilter extends CInputFilter {
 
 	protected static final int PAUSED = 0;
@@ -21,7 +23,7 @@ public abstract class CDynamicFilter extends CInputFilter {
 			return false;
 		}
 		if (m_iState==REVERSING) {
-			pModel.oneStepTowards(41904, GetLongParameter(Elp_parameters.LP_OY), iTime, 1.0f);
+			pModel.oneStepTowards(41904, CROSS_Y, iTime, 1.0f);
 			return true;
 		}
 		return TimerImpl(iTime, pView, pModel);
