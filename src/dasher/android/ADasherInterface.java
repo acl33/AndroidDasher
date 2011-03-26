@@ -263,7 +263,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		}));
 		RegisterModule(new COneDimensionalFilter(this, getSettingsStore(), 14, "Android Tilt Control") {
 			private final PowerManager mgr = (PowerManager)androidCtx.getSystemService(Context.POWER_SERVICE);
-			private final PowerManager.WakeLock wl = mgr.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK,"tilting");
+			private final PowerManager.WakeLock wl = mgr.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ON_AFTER_RELEASE,"tilting");
 			private boolean bActive;
 			@Override public boolean supportsPause() {
 				return !prefs.getBoolean("AndroidTiltHoldToGo",false);
@@ -298,11 +298,9 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 						((CParameterNotificationEvent)evt).m_iParameter == Ebp_parameters.BP_DASHER_PAUSED &&
 						!prefs.getBoolean("AndroidTiltHoldToGo", false)) {
 					if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
-						if (!wl.isHeld()) {Log.d("DasherIME","Acquiring Wakelock"); wl.acquire();}
-						else Log.d("DasherIME","Wakelock already held");
+						if (!wl.isHeld()) wl.acquire();
 					} else {
-						if (wl.isHeld()) {Log.d("DasherIME","Releasing Wakelock"); wl.release(); mgr.userActivity(SystemClock.uptimeMillis(), false);}
-						else Log.d("DasherIME","Wakelock already released");
+						if (wl.isHeld()) wl.release();
 					}
 				}
 			}

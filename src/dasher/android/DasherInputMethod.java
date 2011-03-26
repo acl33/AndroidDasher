@@ -146,7 +146,6 @@ public class DasherInputMethod extends InputMethodService {
 	        long time = System.currentTimeMillis();
 	        IMDasherInterface.INSTANCE.KeyDown(time, keyId);
 	        IMDasherInterface.INSTANCE.KeyUp(time, keyId);
-	        ((PowerManager)getSystemService(POWER_SERVICE)).userActivity(SystemClock.uptimeMillis(), false);
 	    }
 	};
 
