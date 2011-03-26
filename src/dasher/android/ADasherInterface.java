@@ -339,8 +339,8 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			// We do not (and cannot) call super.ChangeScreen(null),
 			// or construct a View around a null screen, so for now - we don't!
 		} else if (surf instanceof DasherCanvas) {
-			if (surf!=m_DasherScreen)
-				super.ChangeScreen(surf);
+			//even if same object as before - may have changed size...
+			super.ChangeScreen(surf);
 		} else
 			throw new IllegalArgumentException(surf+" is not a DasherCanvas!");
 	}

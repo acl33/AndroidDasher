@@ -25,10 +25,11 @@
 	      android:max="10000" min="400"/>
 	      
 	     <dasher.android.SeekBarPreference
-	       android:key="NonLinearX"
-	       android:title="@string/NonLinearX_title"
-	       android:summary="@string/NonLinearX_summary"
-	       android:max="10"/>
+			android:key="DisplayHeight"
+			android:title="@string/DisplayHeight_title"
+			android:summary="@string/DisplayHeight_summary"
+			android:defaultValue="100"
+			min="50" max="100"/>
 	    
 	    <dasher.android.SeekBarPreference
 		  android:key="DasherFontSize"
@@ -52,6 +53,12 @@
       	  android:summary="@string/Orientation_summary"
       	  android:entries="@array/Orientation_entries"
       	  android:entryValues="@array/Orientation_values"/>
+	
+		<dasher.android.SeekBarPreference
+	       android:key="NonLinearX"
+	       android:title="@string/NonLinearX_title"
+	       android:summary="@string/NonLinearX_summary"
+	       android:max="10"/>
 	
 	</PreferenceScreen>
 

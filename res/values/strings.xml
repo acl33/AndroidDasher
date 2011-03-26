@@ -16,6 +16,8 @@
 <string name="DasherFontSize_summary">Small / medium / large</string>
 <string name="MarginWidth_title">Margin Width</string>
 <string name="MarginWidth_summary">Space on RHS for finger</string>
+<string name="DisplayHeight_title">Display Height %</string>
+<string name="DisplayHeight_summary">Compress display vertically to take up less space</string>
 <string name="ControlMode_title">Commands</string>
 <string name="ControlMode_summary">Generate nodes for e.g. IME actions</string>
 <string name="AlphabetID_title">Alphabet Name</string>

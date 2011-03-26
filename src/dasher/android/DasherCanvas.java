@@ -10,6 +10,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Paint.Style;
+import android.preference.PreferenceManager;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -36,49 +37,55 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 
 	protected void onMeasure(int widthMS, int heightMS) {
 		Log.d("DasherIME","onMeasure ("+MeasureSpec.toString(widthMS)+","+MeasureSpec.toString(heightMS)+")");
-		int w,h;
+		final int aspectPercent = (int)PreferenceManager.getDefaultSharedPreferences(getContext()).getLong("DisplayHeight", 100);
+		//compute desired width, such that height can be aspectPercent of that, and satisfy constraints.
+		int w;
 		switch (MeasureSpec.getMode(widthMS)) {
 		case MeasureSpec.EXACTLY:
 			w = MeasureSpec.getSize(widthMS);
 			switch (MeasureSpec.getMode(heightMS)) {
 			case MeasureSpec.AT_MOST:
-				h=Math.min(MeasureSpec.getSize(heightMS),w);
-				break;
-			case MeasureSpec.UNSPECIFIED:
-				h=w;
-				break;
-			default://case MeasureSpec.EXACTLY:
-				h=MeasureSpec.getSize(heightMS);
-			}
-			break;
-		case MeasureSpec.AT_MOST:
-			w = MeasureSpec.getSize(widthMS);
-			switch (MeasureSpec.getMode(heightMS)) { 
+				if (MeasureSpec.getSize(heightMS) >= (w*aspectPercent)/100)
+					break; //ok, as normal, just use aspect ratio
+				//else fall through: even max height is not enough 
 			case MeasureSpec.EXACTLY:
-				h=MeasureSpec.getSize(heightMS);
-				w=Math.min(w,h);
-				break;
-			case MeasureSpec.AT_MOST:
-				w=h=Math.min(w,MeasureSpec.getSize(heightMS));
-				break;
-			default://case MeasureSpec.EXACTLY:
-				h=w; //height unspec'd - use width
+				//we'll have to use the height provided in the MeasureSpec,
+				// and ignore the aspect ratio: we can't follow it!
+				setMeasuredDimension(w,MeasureSpec.getSize(heightMS));
+				return;
 			}
 			break;
-		default: //case MeasureSpec.EXACTLY://width unspecified
+		case MeasureSpec.AT_MOST: //width
+			w = MeasureSpec.getSize(widthMS);
+			if (MeasureSpec.getMode(heightMS)!=MeasureSpec.UNSPECIFIED) {
+				int targetWidth = (MeasureSpec.getSize(heightMS)*100 + aspectPercent-1)/aspectPercent;
+				if (targetWidth>w) {
+					//to get desired aspect ratio, want canvas wider than allowed
+					if (MeasureSpec.getMode(heightMS)==MeasureSpec.EXACTLY) {
+						//and can't shrink height! So cannot obtain desired ratio.
+						setMeasuredDimension(widthMS, MeasureSpec.getSize(heightMS));
+						return;
+					}
+					//else, leave w at it's legal maximum; we'll shrink height
+				} else
+					w=targetWidth; //shrink width: computed height will be as spec'd.
+			}
+			break;
+		default: //case MeasureSpec.UNSPECIFIED for width
 			switch (MeasureSpec.getMode(heightMS)) {
 			case MeasureSpec.EXACTLY: case MeasureSpec.AT_MOST: 
-				w=h=MeasureSpec.getSize(heightMS);
+				//compute width that'll produce exactly the right height
+				w=(MeasureSpec.getSize(heightMS)*100 + aspectPercent-1) / aspectPercent;
 				break;
 			default:{
 					WindowManager wm = (WindowManager)getContext().getSystemService(Context.WINDOW_SERVICE);
 					DisplayMetrics dm = new DisplayMetrics();
 					wm.getDefaultDisplay().getMetrics(dm);
-					w=h=Math.min(dm.heightPixels,dm.widthPixels);
+					w=Math.min((dm.heightPixels*100 + aspectPercent-1)/aspectPercent,dm.widthPixels);
 				}
 			}
 		}
-		setMeasuredDimension(w,h);
+		setMeasuredDimension(w,(w*aspectPercent)/100);
 	}
 	
 	public void surfaceChanged(SurfaceHolder holder, int format, int width,
