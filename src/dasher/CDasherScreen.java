@@ -99,31 +99,15 @@ public interface CDasherScreen {
 	public abstract void DrawCircle(int iCX, int iCY, int iR, int iFillColour, int iLineColour, int iLineWidth);
 	
 	/**
-	 * Draws a sequence of lines.
-	 * 
-	 * @param Points Array of Points describing the vertices of the line.
+	 * Draws a line segment.
+	 * @param x0 Starting x coordinate
+	 * @param y0 Starting y coordinate
+	 * @param x1 End x coordinate
+	 * @param y1 End y coordinate
 	 * @param iWidth Line width
 	 * @param Colour Colour number. Use -1 if you don't want to specify a colour...
 	 */
-	public abstract void Polyline(CDasherView.Point[] Points, int iWidth, int Colour);
-	
-	/**
-	 * Alternative form of {@link #Polyline(dasher.CDasherView.Point[], int, int)} not requiring
-	 * creation of (immutable, non-reusable) Points.
-	 * 
-	 * Note that if <code>xs.length!=ys.length</code>, the subclass may at its discretion:
-	 * <ul>
-	 * <li> throw an ArrayIndexOutOfBoundsException;</li>
-	 * <li> throw an IllegalArgumentException;</li>
-	 * <li> Ignore surplus values from the longer array</li>
-	 * </ul> 
-	 * 
-	 * @param xs array of x co-ordinates of vertices
-	 * @param ys array of y co-ordinates of vertices
-	 * @param iWidth Line width
-	 * @param Colour Colour number. Use -1 if you don't want to specify a colour...
-	 */
-	public abstract void Polyline(int[] xs, int[] ys, int iWidth, int Colour);
+	public abstract void drawLine(int x0, int y0, int x1, int y1, int iWidth, int Colour);
 	
    /**
 	* Draw a filled polygon - given vertices and color id.

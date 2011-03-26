@@ -116,19 +116,16 @@ public class CDefaultFilter extends CInputFilter {
 			 * mouse position.
 			 */
 			// End of line is the mouse cursor location...(set above)
-			mouseX[1] = (int)temp[0];
-			mouseY[1] = (int)temp[1];
+			final int mouseX = (int)temp[0], mouseY = (int)temp[1];
 			
 			//Start of line is the crosshair location
 			//bah. Do we really have to do this every time? Would need notifying of screen changes...???
 			temp[0] = CROSS_X;
 			temp[1] = CROSS_Y;
 			View.Dasher2Screen(temp);
-			mouseX[0] = (int)temp[0];
-			mouseY[0] = (int)temp[1];
 			
 			// Actually plot the line
-			View.Screen().Polyline(mouseX, mouseY, (int)GetLongParameter(Elp_parameters.LP_LINE_WIDTH), GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 1 : -1);
+			View.Screen().drawLine((int)temp[0], (int)temp[1], mouseX, mouseY, (int)GetLongParameter(Elp_parameters.LP_LINE_WIDTH), GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 1 : -1);
 
 			bDidSomething = true;
 		}
@@ -340,6 +337,5 @@ public class CDefaultFilter extends CInputFilter {
 		}
 	}
 	
-	private final int[] mouseX=new int[2],mouseY=new int[2];
 	private final long[] temp=new long[2];
 }

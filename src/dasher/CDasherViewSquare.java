@@ -613,13 +613,13 @@ public class CDasherViewSquare extends CDasherView {
 
 		CDasherView.DRect visreg = VisibleRegion();
 		
-		cross_y[0] = Dasher2Screen(CROSS_X, visreg.minY);
-		cross_y[1] = Dasher2Screen(CROSS_X, visreg.maxY);
+		cross_v0 = Dasher2Screen(CROSS_X, visreg.minY);
+		cross_v1 = Dasher2Screen(CROSS_X, visreg.maxY);
 		
 		//Horizontal bar
 
-		cross_x[0] = Dasher2Screen(12 * CROSS_X / 14, CROSS_Y);
-		cross_x[1] = Dasher2Screen(17*CROSS_X/14, CROSS_Y);
+		cross_h0 = Dasher2Screen(12 * CROSS_X / 14, CROSS_Y);
+		cross_h1 = Dasher2Screen(17*CROSS_X/14, CROSS_Y);
 	}
 	
 	/**
@@ -771,11 +771,11 @@ public class CDasherViewSquare extends CDasherView {
 	 */
 	private void Crosshair() {
 		int iColour = GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 5 : -1;
-		Screen().Polyline(cross_y, 1, iColour);
-		Screen().Polyline(cross_x, 1, iColour);
+		Screen().drawLine(cross_h0.x, cross_h0.y, cross_h1.x, cross_h1.y, 1, iColour);
+		Screen().drawLine(cross_v0.x, cross_v0.y, cross_v1.x, cross_v1.y, 1, iColour);
 	}
 	/** Cache screen coordinates of the vertical & horizontal lines forming the crosshair */
-	private final Point[] cross_y = new Point[2], cross_x = new Point[2];
+	private Point cross_v0, cross_v1, cross_h0, cross_h1;
 	
 	/**
 	 * Reverse the x co-ordinate nonlinearity.

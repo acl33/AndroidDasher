@@ -235,14 +235,12 @@ public abstract class CDasherView extends CDasherComponent {
 	public void Dasherline(long x0, long y0, long x1, long y1, int iWidth, int iColour) {
 		temp1[0]=x0; temp1[1]=y0;
 		Dasher2Screen(temp1);
-		x[0]=(int)temp1[0]; y[0]=(int)temp1[1];
+		final int ix0=(int)temp1[0], iy0=(int)temp1[1];
 		
 		temp1[0]=x1; temp1[1]=y1;
 		Dasher2Screen(temp1);
-		x[1]=(int)temp1[0]; y[1]=(int)temp1[1];
-		Screen().Polyline(x, y, iWidth, iColour);
+		Screen().drawLine(ix0, iy0, (int)temp1[0], (int)temp1[1], iWidth, iColour);
 	}
-	private final int[] x=new int[2], y=new int[2];
 	
 	/**
 	 * Draws a filled polygon given a series of points in Dasher space.

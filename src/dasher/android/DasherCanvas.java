@@ -226,18 +226,10 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 		// TODO Auto-generated method stub
 		
 	}
-	public void Polyline(Point[] Points, int iWidth, int iColour) {
+	public void drawLine(int x0, int y0, int x1, int y1, int iWidth, int iColour) {
 		p.setStrokeWidth(iWidth);
 		p.setARGB(255, colours.GetRed(iColour), colours.GetGreen(iColour), colours.GetBlue(iColour));
-		for (int i = 0; i < Points.length-1; i++) {
-			canvas.drawLine(Points[i].x, Points[i].y, Points[i+1].x, Points[i+1].y, p);
-		}
-	}
-	public void Polyline(int[] xs, int[] ys, int iWidth, int iColour) {
-		p.setStrokeWidth(iWidth);
-		p.setARGB(255, colours.GetRed(iColour), colours.GetGreen(iColour), colours.GetBlue(iColour));
-		for (int i=0; i<xs.length-1; i++)
-			canvas.drawLine(xs[i], ys[i], xs[i+1], ys[i+1], p);
+		canvas.drawLine(x0, y0, x1, y1, p);
 	}
 	public void SetColourScheme(CCustomColours colours) {
 		this.colours = colours;
