@@ -320,6 +320,9 @@ public class CDasherViewSquare extends CDasherView {
 					if (y1<CROSS_Y && y2>CROSS_Y && (y2-y1)>CROSS_X) {
 						//we are also seen!
 						m_model.Output(output=Render);
+						//That immediately expands the node; and we don't let the policy see/collapse it, either.
+						// Hence, we must set a cost, as every child's cost will be limited to < parent.
+						Render.m_dCost = Double.MAX_VALUE;
 						break collapse;
 					}
 				}
@@ -374,7 +377,7 @@ public class CDasherViewSquare extends CDasherView {
 					//and loop round
 				} else {
 					if (ch.Range() > bestSz) {
-						if (bestCh!=null) m_model.Collapse(bestCh);;
+						if (bestCh!=null) m_model.Collapse(bestCh);
 						bestCh = ch;
 						bestSz = (int)ch.Range();
 					} else {
