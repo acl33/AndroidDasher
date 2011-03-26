@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<!-- Preference Strings -->
+<string name="MaxBitRateTimes100_title">Max Snelheid</string>
+<string name="MaxBitRateTimes100_summary">Max data inbreng in bits/sec</string>
+<string name="AndroidDisplaySettings_title">Scherm Instellingen</string>
+<string name="MinNodeSizeForText_title">Tekstgrootte</string>
+<string name="MinNodeSizeForText_summary">Kleinste kader met tekst, 4096=gans scherm</string>
+<string name="NodeBudget_title">Node budget</string>
+<string name="NodeBudget_summary">Hoger = meer detail; lager = sneller</string>
+<string name="NonLinearX_title">X Non-lineariteit</string>
+<string name="DasherFontSize_title">Lettergrootte</string>
+<string name="DasherFontSize_summary">Klein / medium / groot</string>
+<string name="MarginWidth_title">Marge Breedte</string>
+<string name="MarginWidth_summary">Ruimte op RHS voor vinger</string>
+<string name="ControlMode_title">Commando's</string>
+<string name="ControlMode_summary">Creëer nodes voor bvb. IME acties</string>
+<string name="AlphabetID_title">Alfabet naam</string>
+<string name="AndroidInputMethod_title">Input instelling</string>
+<string name="AndroidInputMethod_summary">Kies hoe Dasher te gebruiken</string>
+<string name="AndroidTilt_title">Accelerometer</string>
+<string name="OneDimensionalMode_title">Gebruik enkel 1 dimensie</string>
+<string name="OneDimensionalMode_summaryOff">Vooruit/achteruit &amp; omhoog/omlaag met gebruik van 2 kantel assen</string>
+<string name="OneDimensionalMode_summaryOn">Kantel omhoog/omlaag om in een complete cirkel te gaan</string>
+<string name="AndroidTiltHoldToGo_title">Druk met vinger om te starten</string>
+<string name="AndroidTiltUsesTouchX_title">X Coördinaat van de aanraking</string>
+<string name="CircleStart_title">Start op de cirkel</string>
+<string name="CircleStart_summary">Sta still bij centrum van scherm om te starten/stoppen</string>
+<string name="AndroidCalibrateTilting_title">Callibreer het kantelen</string>
+<string name="AndroidTouch_title">Aanrakingscontrole</string>
+<string name="AndroidTouchUsesTiltX_title">X Coördinaat van het kantelen</string>
+<string name="TargetOffset_title">Compensatie Doel</string>
+<string name="TargetOffset_summary">Boven/onder de actuele vinger positie (400=scherm hoogte)</string>
+<string name="AutoAdjust_title">Automatisch aanpassen</string>
+<string name="AutoAdjust_summary">Leer de (vorige) compensatie automatisch</string>
+<string name="TapTime_title">Max tijd voor 'aanraking'</string>
+<string name="TapTime_summary">Alles dat langer duurt geldt als slepen</string>
+<string name="Zoomsteps_title">Kaders voor aanraking</string>
+<string name="MaxZoom_title">Max zoom voor aanraking</string>
+<string name="MaxZoom_summary">Max zomen op een aanraking</string>
+<string name="AndroidBoxes_title">Kader instellingen</string>
+<string name="AndroidBoxes_summary">Verdeel in kaders en scan of raak aan</string>
+<string name="ButtonMenuBoxes_title">Aantal kaders om vooruit te gaan</string>
+<string name="ButtonMenuSafety_title">Veiligheidsmarge</string>
+<string name="ButtonMenuSafety_summary">Zoom niet helemaal in op de kaders</string>
+<string name="ButtonModeNonuniformity_title">Niet uniformiteit van kader groottes</string>
+<string name="AndroidScan_title">Scan door de kaders</string>
+<string name="AndroidScan_summaryOn">Raak scherm aan voor oplichtend kader</string>
+<string name="AndroidScan_summaryOff">Druk in een kader om te selecteren</string>
+<string name="ButtonScanTime_title">Scan duur</string>
+<string name="ButtonScanTime_summary">0 = raak bovenste helft kader aan om scan uit te voeren</string>
+<string name="AndroidCompass_title">Compas instelling</string>
+<string name="AndroidCompass_summary">Controleer met een rugmuis (trackball)</string>
+<string name="ButtonCompassModeRightZoom_title">Zoemfactor</string>
+<string name="AndroidGeneralInputSettings_title">Algemene input instellingen</string>
+<string name="AutoSpeedControl_title">Automatische snelheid controle</string>
+<string name="RemapXtreme_title">Stel boven/onder opnieuw in</string>
+<string name="RemapXtreme_summary">...om meer te schuiven en minder in te zoemen</string>
+<string name="AndroidDoubleX_title">Raak enkel de linkerhelft aan</string>
+<string name="AndroidDoubleX_summary">Alsof de vinger tweemaal zo ver naar rechts was</string>
+<string name="SlowStartTime_title">Trage opstart tijd</string>
+<string name="SlowStartTime_summary">Duur om volledige snelheid te bereiken (0=onmiddellijk)</string>
+<string name="ReverseBoost_title">Draai vlugger om</string>
+<string name="ReverseBoost_summary">Verhoog snelheid van omdraaien (0=niet)</string>
+<string name="ColourID_title">Kleur schema</string>
+<string name="AndroidTwoButtonDynamic_title">2 knoppen dynamische instelling</string>
+<string name="AndroidTwoButtonDynamic_summary">Raak boven/onder aan of gebruik de volume regelaar</string>
+<string name="TwoButtonOffset_title">indicator compensatie</string>
+<string name="TwoButtonOffset_summary">Vertikale afstand tot omhoog/omlaag indicator</string>
+<string name="LongPressTime_title">Tijd voor lang aanraken</string>
+<string name="LongPressTime_summary">Tijd voor een lange aanraking (=&gt;omgekeerde)</string>
+<string name="DoublePressTime_title">Tijd dubbele aanraking</string>
+<string name="DoublePressTime_summary">Duur voor twee opeenvolgende aanrakingen om als dubbele aanraking te tellen (=&gt; omgekeerde)</string>
+<string name="AndroidOneButtonDynamic_title">Eén knop Dynamische Instelling</string>
+<string name="AndroidOneButtonDynamic_summary">Raak scherm aan of op druk op eender welke knop, tweemaal</string>
+<string name="OneButtonShortGap_title">Kleine pauze %age</string>
+<string name="OneButtonShortGap_summary">Afstand tussen twee indicators,  %age van omlaag</string>
+<string name="OneButtonLongGap_title">Lange afstand</string>
+<string name="OneButtonLongGap_summary">Afstand tussen indicators omlaag</string>
+<string name="OneButtonOuter_title">Buitenste indicator</string>
+<string name="OneButtonOuter_summary">Afstand to buitenste indicator (omhoog en omlaag)</string>
+<string name="OneButtonReleaseTime_title">Gebruik tijd knop-vrijgave</string>
+<string name="OneButtonReleaseTime_summaryOn">Vasthouden wanneer zin tussen twee indicators is – korte of lange aanraking</string>
+<string name="OneButtonReleaseTime_summaryOff">Druk wanneer de zin één van de indicators passeert -korte of lange pauze tussen twee aanrakingen</string>
+<string name="Orientation_title">Orientatie</string>
+<string name="Orientation_summary">Hef de schrijfrichting van het alfabet op</string>
+<!-- Calibration strings -->
+<string name="invert">Inverteer</string>
+<string name="calibChange">Verander...</string>
+<array name="Orientation_entries">
+<item>Gebruik standaard alfabet</item>
+<item>Links-naar-Rechts</item>
+<item>Rechts-naar-Links</item>
+<item>Boven-naar-Beneden</item>
+<item>Beneden-naar-Boven</item>
+</array>
+</resources>
