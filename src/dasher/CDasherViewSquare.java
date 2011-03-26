@@ -587,7 +587,7 @@ public class CDasherViewSquare extends CDasherView {
 			dScaleFactorX = iScreenHeight / (double)( iMaxX - iMinX );
 			dScaleFactorY = iScreenWidth / (double)( iMaxY - iMinY );
 		}
-		String temp = "SetScaleFactor: dx "+dScaleFactorX+", dy "+dScaleFactorY;
+
 		if (dScaleFactorX < dScaleFactorY) {
 		    //fewer (pixels per dasher coord) in X direction - i.e., X is more compressed.
 		    //So, use X scale for Y too...except first, we'll _try_ to reduce the difference
@@ -597,7 +597,6 @@ public class CDasherViewSquare extends CDasherView {
 		    dScaleFactorX /= dMul;
 		    m_iScaleFactorX = (long)(dScaleFactorX * m_iScalingFactor);
 		    m_iScaleFactorY = (long)(Math.max(dScaleFactorX, dScaleFactorY / 4.0) * m_iScalingFactor);
-		    temp+=" => dX /= "+dMul;
 		} else {
 		    //X has more room; use Y scale for both -> will get lots history
 		    m_iScaleFactorX = (long)(Math.max(dScaleFactorY, dScaleFactorX / 4.0) * m_iScalingFactor);
@@ -605,7 +604,6 @@ public class CDasherViewSquare extends CDasherView {
 		    // however, "compensate" by relaxing the default "relative scaling" of X
 		    // (normally only 90% of Y) towards 1...
 		    m_dXMappingLinearScaleFactor = Math.min(1.0,0.9 * dScaleFactorX / dScaleFactorY);
-		    temp+=" => Xscale "+m_dXMappingLinearScaleFactor;
 		}
 		m_iCenterX *= m_dXMappingLinearScaleFactor;
 		
