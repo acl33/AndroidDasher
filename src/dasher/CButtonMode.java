@@ -1,7 +1,5 @@
 package dasher;
 
-import dasher.CDasherButtons.SBox;
-
 /*static SModuleSettings sSettings[] = {
   // TRANSLATORS: The number of time steps over which to perform the zooming motion in button mode.
   {LP_ZOOMSTEPS, T_LONG, 1, 63, 1, 1, _("Zoom steps")},

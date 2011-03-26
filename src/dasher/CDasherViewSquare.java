@@ -30,7 +30,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import dasher.CDasherView.Point;
 import dasher.Opts.ScreenOrientations;
 
 /**

@@ -25,19 +25,6 @@
 
 package dasher;
 
-/**
- * Displays a circle centred around the crosshair
- * which the user can click to start dasher.
- * <p>
- *  Status flags:<br>
- * -1 undefined<br>
- * 0 = out of circle, stopped<br>
- * 1 = out of circle, started<br>
- * 2 = in circle, stopped<br>
- * 3 = in circle, started<br>
- * 4 = in circle, stopping<br>
- * 5 = in circle, starting
- */
 
 public class CCircleStartHandler extends CStartHandler{
 	
