@@ -125,12 +125,6 @@ public interface CDasherScreen {
 	public abstract void Polygon(CDasherView.Point[] Points, int fillColour, int iOutlineColour, int iWidth);
 	
 	/**
-	 * Signals the beginning of a new frame.
-	 *
-	 */
-	public abstract void Blank();
-	
-	/**
 	 * Sets the colour scheme to use
 	 * 
 	 * @param ColourScheme New colour scheme

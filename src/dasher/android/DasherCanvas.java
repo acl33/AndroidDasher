@@ -175,9 +175,6 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 		synchronized(this) {this.notify();}
 	}
 	
-	public void Blank() {
-		canvas.drawARGB(255, 255, 255, 255);
-	}
 	public void DrawCircle(int iCX, int iCY, int iR, int iFillColour, int iLineColour, int iLineWidth) {
 		if (iFillColour!=-1) {
 			p.setARGB(255, colours.GetRed(iFillColour), colours.GetGreen(iFillColour), colours.GetBlue(iFillColour));

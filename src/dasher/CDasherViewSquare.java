@@ -221,10 +221,19 @@ public class CDasherViewSquare extends CDasherView {
 	 */
 	public CDasherNode Render(CDasherNode Root, long iRootMin, long iRootMax, ExpansionPolicy pol, CDasherModel model) {
 		m_model=model;
-		Screen().Blank();
 		
 		CDasherView.DRect visreg = VisibleRegion();
 		output = Root.Parent();
+		if (output!=null) {
+			//to left of Y axis in root node's parent colour...
+			DasherDrawRectangle(visreg.maxX, visreg.minY, 0, visreg.maxY, output.m_iColour, -1, -1);
+			//to right of Y axis in white...
+			DasherDrawRectangle(0, visreg.minY, visreg.minX, visreg.maxY, 0, -1, -1);
+		} else {
+			//whole screen in white...
+			Screen().DrawRectangle(0, 0, Screen().GetWidth(), Screen().GetWidth(),0, -1, -1);
+		}
+		
 		this.pol = pol;
 		int textedge;
 		switch (getOrientation()) {
@@ -306,7 +315,8 @@ public class CDasherViewSquare extends CDasherView {
 				case BOTTOM_TO_TOP:
 					{int temp = right; right = left; left = temp;}
 				}
-				Screen().DrawRectangle(left, top, right, bottom, Render.m_iColour, -1, bOutline && Render.outline() ? 1 : 0);
+				if (Render.visible())
+					Screen().DrawRectangle(left, top, right, bottom, Render.m_iColour, -1, bOutline ? 1 : 0);
 		
 				if( Render.m_strDisplayText.length() > 0 ) {
 					int textedge = DrawText(left, top, right, bottom, mostleft, fontSize(iDasherSize), Render.m_strDisplayText);

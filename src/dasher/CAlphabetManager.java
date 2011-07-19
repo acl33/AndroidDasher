@@ -529,7 +529,7 @@ public class CAlphabetManager<C> {
 		}
 
     	@Override
-    	public boolean outline() {
+    	public boolean visible() {
     		return (m_Group==null || m_Group.bVisible);
     	}
     	

@@ -102,11 +102,10 @@ public abstract class CDasherNode {
      */
     public boolean shove() {return true;}
     
-    /** Whether to draw an outline for this node (assuming the renderer
-     * draws outlines!). Default is true; returning false would merge
-     * the node into it's parent (_if_ it has the same colour!)
+    /** Whether to render this node, i.e. both fill it in its own colour, and outline it.
+     * Setting to false means the node appears as part of its parent (irrespective of colours)
      */
-    public boolean outline() {return true;}
+    public boolean visible() {return true;}
 	
     protected CDasherNode() {
     	
