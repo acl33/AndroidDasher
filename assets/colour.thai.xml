@@ -2,11 +2,10 @@
 <!DOCTYPE colours SYSTEM "colour.dtd">
 <?xml-stylesheet type="text/xsl" href="colour.xsl"?>
 <colours>
-<palette name="Rainbow">
+<palette name="Thai">
 <!-- Summary: 
  Letters 10-109 are divided up as follows:
-   10-39: principal European area. Currently coloured with 3 cycling colours. 
-   40-69: unused    European area. Currently coloured with 3 cycling colours. 
+   10-50: Coloured with high, mid, and low tone groups
    70-79: 10 Hiragana rainbow colours
    80-89: 10 Hiragana rainbow colours, slightly different shades
    90-: Distinctive Colours recommended for use in Punctuation, numerals
@@ -42,69 +41,91 @@
 <!-- space 9  (off-white)  -->
 <colour r="235" g="235" b="235"/>
 <!-- letters (10-109) -->
-<!-- first 30 colours for use by european alphabets -->
-<colour r="255" g="119" b="119"/>
-<colour r="245" g="0" b="0"/>
-<colour r="255" g="69" b="69"/>
-<colour r="249" g="139" b="0"/>
-<colour r="255" g="156" b="96"/>
-<colour r="255" g="200" b="136"/>
-<colour r="255" g="230" b="0"/>
-<colour r="255" g="250" b="0"/>
-<colour r="255" g="240" b="130"/>
-<colour r="230" g="255" b="160"/>
-<colour r="223" g="255" b="0"/>
-<colour r="200" g="255" b="80"/>
-<colour r="0" g="250" b="0"/>
-<colour r="0" g="247" b="20"/>
-<colour r="100" g="255" b="120"/>
-<colour r="100" g="255" b="200"/>
-<colour r="0" g="255" b="185"/>
-<colour r="0" g="255" b="200"/>
+<!--
+  The colours for hi, middle, low tone will be chosen from
+
+  Blue is high  
+  bright cyan       <colour r="0" g="255" b="255"/>
+  medium blue       <colour r="135" g="206" b="255"/>
+some slate blues of which the last is lightest
+<colour r="142" g="172" b="222"/>
+<colour r="110" g="130" b="188"/>
+<colour r="170" g="200" b="232"/>
+<colour r="114" g="154" b="204"/>
+<colour r="200" g="228" b="243"/>
+
+mid: 
+  magenta           <colour r="255" g="187" b="255"/>
+<colour r="255" g="145" b="255"/>
+<colour r="255" g="82"  b="255"/>
+<colour r="255" g="162" b="255"/>
+<colour r="255" g="128" b="255"/>
+<colour r="255" g="182" b="255"/>
+
+low
+  soft salmon pink  <colour r="255" g="174" b="185"/>
+  some more sand/pinks
+<colour r="255" g="172" b="172"/>
+<colour r="255" g="132" b="132"/>
+<colour r="255" g="192" b="192"/>
+<colour r="255" g="154" b="154"/>
+<colour r="255" g="210" b="210"/>
+  
+Unassigned:   
+  khaki             <colour r="180" g="238" b="180"/>
+
+-->
+<!-- thai colour scheme -->
+<colour r="255" g="187" b="255" note="10 middle-tone 0E01 KO KAI"/>		     
+<colour r="200" g="228" b="243" note="11 high-tone 0E02 KHO KHAI"/>		     
+<colour r="170" g="200" b="232" note="12 high-tone 0E03 KHO KHUAT  UNUSED?"/>	     
+<colour r="255" g="174" b="185" note="13 low-tone 0E04 KHO KHWAI "/>		     
+<colour r="255" g="210" b="210" note="14 low-tone 0E05 KHO KHON    UNUSED?"/>	     
+<colour r="255" g="154" b="154" note="15 low-tone 0E06 KHO RAKHANG"/>		     
+<colour r="255" g="174" b="185" note="16 low-tone 0E07 NGO NGU"/>		     
+<colour r="255" g="187" b="255" note="17 middle-tone 0E08 CHO CHAN"/>		     
+<colour r="200" g="228" b="243" note="18 high-tone 0E09 CHO CHING"/>		     
+<colour r="255" g="174" b="185" note="19 low-tone 0E0A CHO CHANG"/>		     
+<colour r="255" g="210" b="210" note="20 low-tone 0E0B SO SO"/>		     
+<colour r="255" g="154" b="154" note="21 low-tone 0E0C CHO CHOE"/>		     
+<colour r="255" g="174" b="185" note="22 low-tone 0E0D YO YING"/>		     
+<colour r="255" g="187" b="255" note="23 middle-tone 0E0E DO CHADA"/>		     
+<colour r="255" g="128" b="255" note="24 middle-tone 0E0F TO PATAK"/>		     
+<colour r="200" g="228" b="243" note="25 high-tone 0E10 THO THAN"/>		     
+<colour r="255" g="174" b="185" note="26 low-tone 0E11 THO NANGMONTHO"/>	     
+<colour r="255" g="210" b="210" note="27 low-tone 0E12 THO PHUTHAO"/>		     
+<colour r="255" g="154" b="154" note="28 low-tone 0E13 NO NEN"/>		     
+<colour r="255" g="187" b="255" note="29 middle-tone 0E14 DO DEK"/>		     
+<colour r="255" g="128" b="255" note="30 middle-tone 0E15 TO TAO"/>		     
+<colour r="200" g="228" b="243" note="31 high-tone 0E16 THO THUNG"/>		     
+<colour r="255" g="174" b="185" note="32 low-tone 0E17 THO THAHAN"/>		     
+<colour r="255" g="210" b="210" note="33 low-tone 0E18 THO THONG"/>		     
+<colour r="255" g="154" b="154" note="34 low-tone 0E19 NO NU"/>		     
+<colour r="255" g="187" b="255" note="35 middle-tone 0E1A BO BAIMAI"/>		     
+<colour r="255" g="128" b="255" note="36 middle-tone 0E1B PO PLA"/>		     
+<colour r="200" g="228" b="243" note="37 high-tone 0E1C PHO PHUNG"/>		     
+<colour r="170" g="200" b="232" note="38 high-tone 0E1D FO FA"/>		     
+<colour r="255" g="174" b="185" note="39 low-tone 0E1E PHO PHAN"/>		     
+<colour r="255" g="210" b="210" note="40 low-tone 0E1F FO FAN"/>		     
+<colour r="255" g="154" b="154" note="41 low-tone 0E20 PHO SAMPHAO"/>		     
+<colour r="255" g="174" b="185" note="42 low-tone 0E21 MO MA"/>		     
+<colour r="255" g="210" b="210" note="43 low-tone 0E22 YO YAK"/>		     
+<colour r="255" g="154" b="154" note="44 low-tone 0E23 RO RUA"/>		     
+<colour r="180" g="238" b="180" note="45 0E24 RU      WHAT TONE GROUP?"/>	     
+<colour r="255" g="174" b="185" note="46 low-tone 0E25 LO LING"/>		     
+<colour r="180" g="238" b="180" note="47 0E26 LU    UNUSED?"/>			     
+<colour r="255" g="174" b="185" note="48 low-tone 0E27 WO WAEN"/>		     
+<colour r="200" g="228" b="243" note="49 high-tone 0E28 SO SALA"/>		     
+<colour r="170" g="200" b="232" note="50 high-tone 0E29 SO RUSI"/>		     
+<colour r="0" g="255" b="255"   note="51 high-tone 0E2A SO SUA"/>		     
+<colour r="200" g="228" b="243" note="52 high-tone 0E2B HO HIP"/>		     
+<colour r="255" g="174" b="185" note="53 low-tone 0E2C LO CHULA"/>		     
+<colour r="255" g="187" b="255" note="54 middle-tone 0E2D O ANG (null consonant)"/> 
+<colour r="255" g="174" b="185" note="55 low-tone 0E2E HO NOKHUK"/>
+<!-- from here on, leave Euro/Asian colours -->
 <colour r="0" g="215" b="240"/>
-<colour r="140" g="215" b="255"/>
-<colour r="0" g="205" b="255"/>
-<colour r="90" g="90" b="255"/>
 <colour r="0" g="100" b="245"/>
-<colour r="140" g="140" b="255"/>
-<colour r="195" g="90" b="255"/>
-<colour r="215" g="110" b="255"/>
-<colour r="255" g="119" b="209"/>
 <colour r="215" g="0" b="250"/>
-<colour r="250" g="0" b="209"/>
-<colour r="255" g="90" b="192"/>
-<!-- next 10 letters unallocated -->
-<colour r="0" g="255" b="255"/>
-<colour r="180" g="238" b="180"/>
-<colour r="155" g="205" b="155"/>
-<colour r="0" g="255" b="255"/>
-<colour r="180" g="238" b="180"/>
-<colour r="155" g="205" b="155"/>
-<colour r="0" g="255" b="255"/>
-<colour r="180" g="238" b="180"/>
-<colour r="155" g="205" b="155"/>
-<colour r="0" g="255" b="255"/>
-<!-- that is the first 40 letters --> 
-<!-- Here I have a DARK, INTENSE Hiragana section, for use as an additional group  resource -->
-<!-- red colour 50+10 -->
-<colour r="245" g="0" b="0"/>
-<!-- orange 50+11 -->
-<colour r="249" g="139" b="0"/>
-<!-- yel  50+12 -->
-<colour r="255" g="250" b="0"/>
-<!-- NEW lime yel/green  50+13 <colour r="190" g="255" b="0"/> -->
-<colour r="223" g="255" b="0"/>
-<!-- green 14 -->
-<colour r="0" g="250" b="0"/>
-<!-- NEW greenblue  60+15 -->
-<colour r="0" g="255" b="200"/>
-<!-- NEW light blue 16  -->
-<colour r="0" g="215" b="240"/>
-<!-- darkerblue 17   -->
-<colour r="0" g="100" b="245"/>
-<!-- blue purple 18  -->
-<colour r="215" g="0" b="250"/>
-<!-- red purple  60+19   -->
 <colour r="250" g="0" b="209"/>
 <!-- that is the first 50 letters --> 
 <!-- Here I have a pale Hiragana section, for use as an additional group  resource -->
@@ -265,67 +286,80 @@
 <!-- alternate space -->
 <colour r="255" g="255" b="255"/>
 <!-- alternate colours for letters (140-239) -->
-<colour r="255" g="119" b="119"/>
+<colour r="255" g="187" b="255" note="10 middle-tone 0E01 KO KAI"/>		     
+<colour r="200" g="228" b="243" note="11 high-tone 0E02 KHO KHAI"/>		     
+<colour r="170" g="200" b="232" note="12 high-tone 0E03 KHO KHUAT  UNUSED?"/>	     
+<colour r="255" g="174" b="185" note="13 low-tone 0E04 KHO KHWAI "/>		     
+<colour r="255" g="210" b="210" note="14 low-tone 0E05 KHO KHON    UNUSED?"/>	     
+<colour r="255" g="154" b="154" note="15 low-tone 0E06 KHO RAKHANG"/>		     
+<colour r="255" g="174" b="185" note="16 low-tone 0E07 NGO NGU"/>		     
+<colour r="255" g="187" b="255" note="17 middle-tone 0E08 CHO CHAN"/>		     
+<colour r="200" g="228" b="243" note="18 high-tone 0E09 CHO CHING"/>		     
+<colour r="255" g="174" b="185" note="19 low-tone 0E0A CHO CHANG"/>		     
+<colour r="255" g="210" b="210" note="20 low-tone 0E0B SO SO"/>		     
+<colour r="255" g="154" b="154" note="21 low-tone 0E0C CHO CHOE"/>		     
+<colour r="255" g="174" b="185" note="22 low-tone 0E0D YO YING"/>		     
+<colour r="255" g="187" b="255" note="23 middle-tone 0E0E DO CHADA"/>		     
+<colour r="255" g="128" b="255" note="24 middle-tone 0E0F TO PATAK"/>		     
+<colour r="200" g="228" b="243" note="25 high-tone 0E10 THO THAN"/>		     
+<colour r="255" g="174" b="185" note="26 low-tone 0E11 THO NANGMONTHO"/>	     
+<colour r="255" g="210" b="210" note="27 low-tone 0E12 THO PHUTHAO"/>		     
+<colour r="255" g="154" b="154" note="28 low-tone 0E13 NO NEN"/>		     
+<colour r="255" g="187" b="255" note="29 middle-tone 0E14 DO DEK"/>		     
+<colour r="255" g="128" b="255" note="30 middle-tone 0E15 TO TAO"/>		     
+<colour r="200" g="228" b="243" note="31 high-tone 0E16 THO THUNG"/>		     
+<colour r="255" g="174" b="185" note="32 low-tone 0E17 THO THAHAN"/>		     
+<colour r="255" g="210" b="210" note="33 low-tone 0E18 THO THONG"/>		     
+<colour r="255" g="154" b="154" note="34 low-tone 0E19 NO NU"/>		     
+<colour r="255" g="187" b="255" note="35 middle-tone 0E1A BO BAIMAI"/>		     
+<colour r="255" g="128" b="255" note="36 middle-tone 0E1B PO PLA"/>		     
+<colour r="200" g="228" b="243" note="37 high-tone 0E1C PHO PHUNG"/>		     
+<colour r="170" g="200" b="232" note="38 high-tone 0E1D FO FA"/>		     
+<colour r="255" g="174" b="185" note="39 low-tone 0E1E PHO PHAN"/>		     
+<colour r="255" g="210" b="210" note="40 low-tone 0E1F FO FAN"/>		     
+<colour r="255" g="154" b="154" note="41 low-tone 0E20 PHO SAMPHAO"/>		     
+<colour r="255" g="174" b="185" note="42 low-tone 0E21 MO MA"/>		     
+<colour r="255" g="210" b="210" note="43 low-tone 0E22 YO YAK"/>		     
+<colour r="255" g="154" b="154" note="44 low-tone 0E23 RO RUA"/>		     
+<colour r="180" g="238" b="180" note="45 0E24 RU      WHAT TONE GROUP?"/>	     
+<colour r="255" g="174" b="185" note="46 low-tone 0E25 LO LING"/>		     
+<colour r="180" g="238" b="180" note="47 0E26 LU    UNUSED?"/>			     
+<colour r="255" g="174" b="185" note="48 low-tone 0E27 WO WAEN"/>		     
+<colour r="200" g="228" b="243" note="49 high-tone 0E28 SO SALA"/>		     
+<colour r="170" g="200" b="232" note="50 high-tone 0E29 SO RUSI"/>		     
+<colour r="0" g="255" b="255"   note="51 high-tone 0E2A SO SUA"/>		     
+<colour r="200" g="228" b="243" note="52 high-tone 0E2B HO HIP"/>		     
+<colour r="255" g="174" b="185" note="53 low-tone 0E2C LO CHULA"/>		     
+<colour r="255" g="187" b="255" note="54 middle-tone 0E2D O ANG (null consonant)"/> 
+<colour r="255" g="174" b="185" note="55 low-tone 0E2E HO NOKHUK"/>
+<!-- from here on, leave Euro/Asian colours -->
+<colour r="255" g="174" b="185"/>
+<colour r="255" g="187" b="255"/>
+<colour r="135" g="206" b="255"/>
+<colour r="255" g="174" b="185"/>
+<!-- that is the first 50 letters --> 
+<!-- Here I have a DARK, INTENSE Hiragana section, for use as an additional group  resource. Used to be known as 50-59.
+     Now known as 130+60 = 190-199 -->
+<!-- red colour 50+10 -->
 <colour r="245" g="0" b="0"/>
-<colour r="255" g="69" b="69"/>
+<!-- orange 50+11 -->
 <colour r="249" g="139" b="0"/>
-<colour r="255" g="156" b="96"/>
-<colour r="255" g="200" b="136"/>
-<colour r="255" g="230" b="0"/>
+<!-- yel  50+12 -->
 <colour r="255" g="250" b="0"/>
-<colour r="255" g="240" b="130"/>
-<colour r="230" g="255" b="160"/>
+<!-- NEW lime yel/green  50+13 <colour r="190" g="255" b="0"/> -->
 <colour r="223" g="255" b="0"/>
-<colour r="200" g="255" b="80"/>
+<!-- green 14 -->
 <colour r="0" g="250" b="0"/>
-<colour r="0" g="247" b="20"/>
-<colour r="100" g="255" b="120"/>
-<colour r="100" g="255" b="200"/>
-<colour r="0" g="255" b="185"/>
+<!-- NEW greenblue  60+15 -->
 <colour r="0" g="255" b="200"/>
+<!-- NEW light blue 16  -->
 <colour r="0" g="215" b="240"/>
-<colour r="140" g="215" b="255"/>
-<colour r="0" g="205" b="255"/>
-<colour r="90" g="90" b="255"/>
+<!-- darkerblue 17   -->
 <colour r="0" g="100" b="245"/>
-<colour r="140" g="140" b="255"/>
-<colour r="195" g="90" b="255"/>
-<colour r="215" g="110" b="255"/>
-<colour r="255" g="119" b="209"/>
+<!-- blue purple 18  -->
 <colour r="215" g="0" b="250"/>
+<!-- red purple  60+19   -->
 <colour r="250" g="0" b="209"/>
-<colour r="255" g="90" b="192"/>
-<!-- end of first 30 letters -->
-<colour r="135" g="206" b="255"/>
-<colour r="255" g="174" b="185"/>
-<colour r="255" g="187" b="255"/>
-<colour r="135" g="206" b="255"/>
-<colour r="255" g="174" b="185"/>
-<colour r="255" g="187" b="255"/>
-<colour r="135" g="206" b="255"/>
-<colour r="255" g="174" b="185"/>
-<colour r="255" g="187" b="255"/>
-<colour r="135" g="206" b="255"/>
-<colour r="255" g="174" b="185"/>
-<colour r="255" g="187" b="255"/>
-<colour r="135" g="206" b="255"/>
-<colour r="255" g="174" b="185"/>
-<colour r="255" g="187" b="255"/>
-<colour r="135" g="206" b="255"/>
-<colour r="255" g="174" b="185"/>
-<colour r="255" g="187" b="255"/>
-<colour r="135" g="206" b="255"/>
-<colour r="255" g="174" b="185"/>
-<colour r="255" g="187" b="255"/>
-<colour r="135" g="206" b="255"/>
-<colour r="255" g="174" b="185"/>
-<colour r="255" g="187" b="255"/>
-<colour r="135" g="206" b="255"/>
-<colour r="255" g="174" b="185"/>
-<colour r="255" g="187" b="255"/>
-<colour r="135" g="206" b="255"/>
-<colour r="255" g="174" b="185"/>
-<colour r="255" g="187" b="255"/>
 <!-- end of 60 letters -->
 <!-- red colour 10 -->
 <colour r="255" g="69" b="69"/>

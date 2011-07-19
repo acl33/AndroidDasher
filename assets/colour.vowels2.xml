@@ -2,8 +2,9 @@
 <!DOCTYPE colours SYSTEM "colour.dtd">
 <?xml-stylesheet type="text/xsl" href="colour.xsl"?>
 <colours>
-<palette name="Rainbow">
-<!-- Summary: 
+<palette name="Vowels2">
+<!--  Same as European/Asian except for vowels
+ Summary: 
  Letters 10-109 are divided up as follows:
    10-39: principal European area. Currently coloured with 3 cycling colours. 
    40-69: unused    European area. Currently coloured with 3 cycling colours. 
@@ -43,36 +44,63 @@
 <colour r="235" g="235" b="235"/>
 <!-- letters (10-109) -->
 <!-- first 30 colours for use by european alphabets -->
-<colour r="255" g="119" b="119"/>
-<colour r="245" g="0" b="0"/>
-<colour r="255" g="69" b="69"/>
-<colour r="249" g="139" b="0"/>
-<colour r="255" g="156" b="96"/>
+<!-- orange  a -->
 <colour r="255" g="200" b="136"/>
-<colour r="255" g="230" b="0"/>
-<colour r="255" g="250" b="0"/>
-<colour r="255" g="240" b="130"/>
-<colour r="230" g="255" b="160"/>
-<colour r="223" g="255" b="0"/>
-<colour r="200" g="255" b="80"/>
-<colour r="0" g="250" b="0"/>
-<colour r="0" g="247" b="20"/>
-<colour r="100" g="255" b="120"/>
-<colour r="100" g="255" b="200"/>
-<colour r="0" g="255" b="185"/>
-<colour r="0" g="255" b="200"/>
-<colour r="0" g="215" b="240"/>
-<colour r="140" g="215" b="255"/>
-<colour r="0" g="205" b="255"/>
-<colour r="90" g="90" b="255"/>
-<colour r="0" g="100" b="245"/>
-<colour r="140" g="140" b="255"/>
-<colour r="195" g="90" b="255"/>
-<colour r="215" g="110" b="255"/>
-<colour r="255" g="119" b="209"/>
-<colour r="215" g="0" b="250"/>
-<colour r="250" g="0" b="209"/>
-<colour r="255" g="90" b="192"/>
+<!-- saturated g -->
+<colour r="25" g="255" b="180"/>
+<!-- unsaturated blue green   -->
+<colour r="155" g="219" b="219"/>
+<!-- saturated b -->
+<colour r="55"  g="215" b="255"/>
+<!-- orange  e -->
+<colour r="255" g="200" b="136"/>
+<!-- saturated g -->
+<colour r="25" g="255" b="180"/>
+<!-- unsaturated blue green   -->
+<colour r="155" g="219" b="219"/>
+<!-- saturated b -->
+<colour r="55"  g="215" b="255"/>
+<!-- orange  i -->
+<colour r="255" g="200" b="136"/>
+<!-- saturated g -->
+<colour r="25" g="255" b="180"/>
+<!-- unsaturated blue green   -->
+<colour r="155" g="219" b="219"/>
+<!-- saturated b -->
+<colour r="55"  g="215" b="255"/>
+<!-- saturated g -->
+<colour r="25" g="255" b="180"/>
+<!-- unsaturated blue green   -->
+<colour r="155" g="219" b="219"/>
+<!-- orange  o -->
+<colour r="255" g="200" b="136"/>
+<!-- saturated g -->
+<colour r="25" g="255" b="180"/>
+<!-- unsaturated blue green   -->
+<colour r="155" g="219" b="219"/>
+<!-- saturated b -->
+<colour r="55"  g="215" b="255"/>
+<!-- saturated g -->
+<colour r="25" g="255" b="180"/>
+<!-- unsaturated blue green   -->
+<colour r="155" g="219" b="219"/>
+<!-- orange  u -->
+<colour r="255" g="200" b="136"/>
+<!-- saturated g -->
+<colour r="25" g="255" b="180"/>
+<!-- unsaturated blue green   -->
+<colour r="155" g="219" b="219"/>
+<!-- saturated b -->
+<colour r="55"  g="215" b="255"/>
+<!-- saturated g -->
+<colour r="25" g="255" b="180"/>
+<!-- unsaturated blue green   -->
+<colour r="155" g="219" b="219"/>
+<!-- saturated b -->
+<colour r="55"  g="215" b="255"/>
+<colour r="0" g="255" b="255"/>
+<colour r="180" g="238" b="200"/>
+<colour r="155" g="205" b="255"/>
 <!-- next 10 letters unallocated -->
 <colour r="0" g="255" b="255"/>
 <colour r="180" g="238" b="180"/>
@@ -265,36 +293,58 @@
 <!-- alternate space -->
 <colour r="255" g="255" b="255"/>
 <!-- alternate colours for letters (140-239) -->
-<colour r="255" g="119" b="119"/>
-<colour r="245" g="0" b="0"/>
-<colour r="255" g="69" b="69"/>
-<colour r="249" g="139" b="0"/>
-<colour r="255" g="156" b="96"/>
-<colour r="255" g="200" b="136"/>
-<colour r="255" g="230" b="0"/>
-<colour r="255" g="250" b="0"/>
-<colour r="255" g="240" b="130"/>
-<colour r="230" g="255" b="160"/>
-<colour r="223" g="255" b="0"/>
-<colour r="200" g="255" b="80"/>
-<colour r="0" g="250" b="0"/>
-<colour r="0" g="247" b="20"/>
-<colour r="100" g="255" b="120"/>
-<colour r="100" g="255" b="200"/>
-<colour r="0" g="255" b="185"/>
-<colour r="0" g="255" b="200"/>
-<colour r="0" g="215" b="240"/>
-<colour r="140" g="215" b="255"/>
-<colour r="0" g="205" b="255"/>
-<colour r="90" g="90" b="255"/>
-<colour r="0" g="100" b="245"/>
-<colour r="140" g="140" b="255"/>
-<colour r="195" g="90" b="255"/>
-<colour r="215" g="110" b="255"/>
-<colour r="255" g="119" b="209"/>
-<colour r="215" g="0" b="250"/>
-<colour r="250" g="0" b="209"/>
-<colour r="255" g="90" b="192"/>
+<colour r="255" g="156" b="96"   />
+<!-- unsaturated green side  -->
+<colour r="155" g="244" b="200"/>
+<!-- saturated blue-green  -->
+<colour r="55" g="247" b="247"/>
+<!-- unsaturated blue side  -->
+<colour r="155" g="170" b="245"/>
+<colour r="255" g="156" b="96"   />
+<!-- unsaturated green side  -->
+<colour r="155" g="244" b="200"/>
+<!-- saturated blue-green  -->
+<colour r="55" g="247" b="247"/>
+<!-- unsaturated blue side  -->
+<colour r="155" g="170" b="245"/>
+<colour r="255" g="156" b="96"   />
+<!-- unsaturated green side  -->
+<colour r="155" g="244" b="200"/>
+<!-- saturated blue-green  -->
+<colour r="55" g="247" b="247"/>
+<!-- unsaturated blue side  -->
+<colour r="155" g="170" b="245"/>
+<!-- unsaturated green side  -->
+<colour r="155" g="244" b="200"/>
+<!-- saturated blue-green  -->
+<colour r="55" g="247" b="247"/>
+<colour r="255" g="156" b="96"   />
+<!-- unsaturated green side  -->
+<colour r="155" g="244" b="200"/>
+<!-- saturated blue-green  -->
+<colour r="55" g="247" b="247"/>
+<!-- unsaturated blue side  -->
+<colour r="155" g="170" b="245"/>
+<!-- unsaturated green side  -->
+<colour r="155" g="244" b="200"/>
+<!-- saturated blue-green  -->
+<colour r="55" g="247" b="247"/>
+<colour r="255" g="156" b="96"   />
+<!-- unsaturated green side  -->
+<colour r="155" g="244" b="200"/>
+<!-- saturated blue-green  -->
+<colour r="55" g="247" b="247"/>
+<!-- unsaturated blue side  -->
+<colour r="155" g="170" b="245"/>
+<!-- unsaturated green side  -->
+<colour r="155" g="244" b="200"/>
+<!-- saturated blue-green  -->
+<colour r="55" g="247" b="247"/>
+<!-- unsaturated blue side  -->
+<colour r="155" g="170" b="245"/>
+<colour r="135" g="206" b="255"/>
+<colour r="255" g="174" b="185"/>
+<colour r="255" g="187" b="255"/>
 <!-- end of first 30 letters -->
 <colour r="135" g="206" b="255"/>
 <colour r="255" g="174" b="185"/>
@@ -316,16 +366,28 @@
 <colour r="255" g="187" b="255"/>
 <colour r="135" g="206" b="255"/>
 <colour r="255" g="174" b="185"/>
-<colour r="255" g="187" b="255"/>
-<colour r="135" g="206" b="255"/>
-<colour r="255" g="174" b="185"/>
-<colour r="255" g="187" b="255"/>
-<colour r="135" g="206" b="255"/>
-<colour r="255" g="174" b="185"/>
-<colour r="255" g="187" b="255"/>
-<colour r="135" g="206" b="255"/>
-<colour r="255" g="174" b="185"/>
-<colour r="255" g="187" b="255"/>
+<!-- Here I have a DARK, INTENSE Hiragana section, for use as an additional group  resource. Used to be known as 50-59.
+     Now known as 130+60 = 190-199 -->
+<!-- red colour 50+10 -->
+<colour r="245" g="0" b="0"/>
+<!-- orange 50+11 -->
+<colour r="249" g="139" b="0"/>
+<!-- yel  50+12 -->
+<colour r="255" g="250" b="0"/>
+<!-- NEW lime yel/green  50+13 <colour r="190" g="255" b="0"/> -->
+<colour r="223" g="255" b="0"/>
+<!-- green 14 -->
+<colour r="0" g="250" b="0"/>
+<!-- NEW greenblue  60+15 -->
+<colour r="0" g="255" b="200"/>
+<!-- NEW light blue 16  -->
+<colour r="0" g="215" b="240"/>
+<!-- darkerblue 17   -->
+<colour r="0" g="100" b="245"/>
+<!-- blue purple 18  -->
+<colour r="215" g="0" b="250"/>
+<!-- red purple  60+19   -->
+<colour r="250" g="0" b="209"/>
 <!-- end of 60 letters -->
 <!-- red colour 10 -->
 <colour r="255" g="69" b="69"/>
