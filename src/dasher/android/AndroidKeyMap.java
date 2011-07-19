@@ -90,11 +90,11 @@ class AndroidMenuMode extends CMenuMode implements AndroidKeyMap {
 	public int ConvertAndroidKeycode(int keyCode) {
 		switch (keyCode) {
 		//case KeyEvent.KEYCODE_DPAD_DOWN:
-		case KeyEvent.KEYCODE_VOLUME_DOWN:
+		case KeyEvent.KEYCODE_VOLUME_UP:
 		case KeyEvent.KEYCODE_SPACE:
 			return 1; //scan
 		//case KeyEvent.KEYCODE_DPAD_RIGHT:
-		case KeyEvent.KEYCODE_VOLUME_UP:
+		case KeyEvent.KEYCODE_VOLUME_DOWN:
 		case KeyEvent.KEYCODE_ENTER:
 			return 2; //select
 		}
