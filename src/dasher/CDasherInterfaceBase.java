@@ -426,20 +426,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			}
 				
 		}
-		else if(Event instanceof CControlEvent) {
-			/* CControlEvent ControlEvent = ((CControlEvent)(Event));
-			
-			switch(ControlEvent.m_iID) {
-			case CControlManager.CTL_STOP:
-				PauseAt(0,0);
-			break;
-			case CControlManager.CTL_PAUSE:
-				Halt();
-			break;
-			} */
-			
-			// CSFS: Do nothing for the time being until Control Mode is brought back
-		}
 		else if(Event instanceof CLockEvent) {
 			// TODO: 'Reference counting' for locks?
 			CLockEvent LockEvent = (CLockEvent)Event;
