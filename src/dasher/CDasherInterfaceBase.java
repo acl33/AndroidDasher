@@ -418,8 +418,10 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 				if (m_DasherView!=null) m_DasherView.setOrientation(computeOrientation());
 			} else if(Evt.m_iParameter == Esp_parameters.SP_INPUT_DEVICE) {
 				CreateInput();
+				Redraw(false);
 			} else if(Evt.m_iParameter == Esp_parameters.SP_INPUT_FILTER) {
 				CreateInputFilter();
+				Redraw(false);
 			} else if (Evt.m_iParameter == Ebp_parameters.BP_TRAINING) {
 				if (!GetBoolParameter(Ebp_parameters.BP_TRAINING))
 					forceRebuild();
@@ -1087,21 +1089,19 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	protected void CreateModules() {
 		RegisterModule(setDefaultInputFilter(new CDefaultFilter(this, m_SettingsStore, 3, "Normal Control")));
-		//RegisterModule(new COneDimensionalFilter(this, m_SettingsStore, this, m_DasherModel));
-		//RegisterModule(new CEyetrackerFilter(this, m_SettingsStore, this, m_DasherModel));
+		RegisterModule(new COneDimensionalFilter(this, m_SettingsStore, 4, "One Dimensional Mode"));
+		RegisterModule(new CStylusFilter(this, m_SettingsStore));
+		
 		RegisterModule(new CClickFilter(this, m_SettingsStore));
-		//RegisterModule(new CDynamicFilter(this, m_SettingsStore, this));
-		//RegisterModule(new CTwoButtonDynamicFilter(this, m_SettingsStore, this));
-		// TODO: specialist factory for button mode
-		//RegisterModule(new CDasherButtons(this, m_SettingsStore, this, 5, 1, true,8, "Menu Mode"));
-		//RegisterModule(new CDasherButtons(this, m_SettingsStore, this, 3, 0, false,10, "Direct Mode"));
-		//  RegisterModule(new CDasherButtons(this, m_SettingsStore, this, 4, 0, false,11, "Buttons 3"));
+		RegisterModule(new TwoButtonDynamicFilter(this, m_SettingsStore));
+		RegisterModule(new OneButtonDynamicFilter(this, m_SettingsStore));
+		
+		RegisterModule(new CCompassMode(this, m_SettingsStore));
+		RegisterModule(new CMenuMode(this, m_SettingsStore, 8, "Menu Mode"));
+		RegisterModule(new CButtonMode(this, m_SettingsStore, 10, "Direct Mode"));
+
+		//Not yet implemented:
 		//RegisterModule(new CDasherButtons(this, m_SettingsStore, this, 3, 3, false,12, "Alternating Direct Mode"));
-		//RegisterModule(new CDasherButtons(this, m_SettingsStore, this, 4, 2, false,13, "Compass Mode"));
-		//RegisterModule(new CStylusFilter(this, m_SettingsStore, this, m_DasherModel,15, "Stylus Control")); 
-		
-		/* CSFS: The commented out filters are not yet implemented. */
-		
 	}
 	
 	
