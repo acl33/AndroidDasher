@@ -61,7 +61,7 @@ public abstract class CInputFilter extends CDasherModule {
 	/**
 	 * Interface which this InputFilter may control
 	 */	
-	protected CDasherInterfaceBase m_Interface;
+	protected final CDasherInterfaceBase m_Interface;
 	
 	/**
 	 * Creates a new filter. See DasherModule for information

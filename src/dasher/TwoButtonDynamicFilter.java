@@ -79,19 +79,14 @@ public class TwoButtonDynamicFilter extends CDynamicPresses {
 	}
 	
 	@Override public void reverse(long iTime, CDasherModel pModel) {
-		pModel.MatchTarget();
+		pModel.AbortOffset();
 		up.clearPushes(); down.clearPushes();
 		super.reverse(iTime, pModel);
 	}
 	
-	@Override public void Activate() {
-		super.Activate();
-		m_Interface.SetBoolParameter(Ebp_parameters.BP_DELAY_VIEW, true);
+	@Override public void pause(long iTime, CDasherModel pModel) {
+		pModel.AbortOffset();
+		super.pause(iTime,pModel);
 	}
-	
-	@Override public void Deactivate() {
-		m_Interface.SetBoolParameter(Ebp_parameters.BP_DELAY_VIEW, false);
-		super.Deactivate();
-	}
-	
+
 }

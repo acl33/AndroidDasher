@@ -146,8 +146,6 @@ public class CDasherModel extends CFrameRate {
 	 * <p>
 	 * <i>BP_CONTROL_MODE</i>: Rebuilds the model (calls RebuildAroundNode) to include/exclude a control node.
 	 * <p>
-	 * <i>BP_DELAY_VIEW</i>: Sets the TargetMax to match RootMax and similarly RootMin.
-	 * <p>
 	 * <i>LP_UNIFORM</i>: Updates our internally cached value (uniformAdd)
 	 * to reflect the new value. 
 	 */	
@@ -161,9 +159,6 @@ public class CDasherModel extends CFrameRate {
 					ResetFramecount();
 					total_nats = 0.0;
 				}
-			}
-			else if(Evt.m_iParameter == Ebp_parameters.BP_DELAY_VIEW) {
-				MatchTarget();
 			} else if (Evt.m_iParameter == Elp_parameters.LP_NODE_BUDGET) {
 				pol = new AmortizedPolicy((int)GetLongParameter(Elp_parameters.LP_NODE_BUDGET));
 			}
@@ -365,7 +360,7 @@ public class CDasherModel extends CFrameRate {
 		
 		int iWidth = ( (int)( (MAX_Y / (2.0*dFraction)) ) );
 		
-		MatchTarget();
+		AbortOffset();
 		
 		m_Rootmin = MAX_Y / 2 - iWidth / 2;
 		m_Rootmax = MAX_Y / 2 + iWidth / 2;
@@ -752,19 +747,18 @@ public class CDasherModel extends CFrameRate {
 	public void Offset(int iOffset) {
 		m_Rootmin += iOffset;
 		m_Rootmax += iOffset;
-		if (GetBoolParameter(Ebp_parameters.BP_DELAY_VIEW)) {
-			double d = Math.log(Math.abs(iOffset));
-			int s = (iOffset>0) ? -1 : 1;
-			for (int i=0; i<offsetQueue.length; i++)
-				offsetQueue[(nextOffset+i) % offsetQueue.length]+= (int)(s*Math.exp(d*(offsetQueue.length-i)/(double)offsetQueue.length));
-		}
+
+		double d = Math.log(Math.abs(iOffset));
+		int s = (iOffset>0) ? -1 : 1;
+		for (int i=0; i<offsetQueue.length; i++)
+			offsetQueue[(nextOffset+i) % offsetQueue.length]+= (int)(s*Math.exp(d*(offsetQueue.length-i)/(double)offsetQueue.length));		
 	} 
 	
 	/**
 	 * Sets each of RootMin and RootMax to match
 	 * their TargetMax and TargetMin partners.
 	 */
-	protected void MatchTarget() {
+	public void AbortOffset() {
 		m_Rootmin += m_iDisplayOffset;
 		m_Rootmax += m_iDisplayOffset;
 		m_iDisplayOffset = 0;
