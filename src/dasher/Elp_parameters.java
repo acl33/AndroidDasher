@@ -42,7 +42,6 @@ public enum Elp_parameters implements EParameters {
 	  LP_LM_ALPHA("LMAlpha", PERS, 49, "LMAlpha"),
 	  LP_LM_BETA("LMBeta", PERS, 77, "LMBeta"),
 	  //LP_LM_MIXTURE("LMMixture", PERS, 50, "LMMixture"),
-	  LP_MOUSE_POS_BOX("MousePosBox", !PERS, -1, "Mouse Position Box Indicator"),
 	  LP_LINE_WIDTH("LineWidth", PERS, 1, "Width to draw crosshair and mouse line"),
 	  //LP_LM_WORD_ALPHA("WordAlpha", PERS, 50, "Alpha value for word-based model"),
 	  LP_USER_LOG_LEVEL_MASK("UserLogLevelMask", PERS, 0, "Controls level of user logging, 0 = none, 1 = short, 2 = detailed, 3 = both"),
