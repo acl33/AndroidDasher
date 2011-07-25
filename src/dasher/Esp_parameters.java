@@ -37,7 +37,6 @@ public enum Esp_parameters implements EParameters {
 			  SP_ALPHABET_3("Alphabet3", PERS, "", "Alphabet History 3"),
 			  SP_ALPHABET_4("Alphabet4", PERS, "", "Alphabet History 4"),
 			  SP_COLOUR_ID("ColourID", PERS, "", "ColourID"), 
-			  SP_DEFAULT_COLOUR_ID("DefaultColourID", !PERS, "", "Default Colour ID (Used for auto-colour mode)"),
 			  SP_DASHER_FONT("DasherFont", PERS, "", "DasherFont"),
 			  SP_GAME_TEXT_FILE("GameTextFile", !PERS, "gamemode_english_GB.txt", "File with strings to practice writing"),
 			  SP_SOCKET_INPUT_X_LABEL("SocketInputXLabel", PERS, "x", "Label preceding X values for network input"),

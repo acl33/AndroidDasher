@@ -400,11 +400,9 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 				ChangeAlphabet();
 				Redraw(true);
 			} else if(Evt.m_iParameter ==  Esp_parameters.SP_COLOUR_ID) {
+				//User has requested a new colour scheme
 				ChangeColours();
 				Redraw(true);
-			} else if(Evt.m_iParameter == Ebp_parameters.BP_PALETTE_CHANGE || Evt.m_iParameter == Esp_parameters.SP_DEFAULT_COLOUR_ID) { 
-				if(GetBoolParameter(Ebp_parameters.BP_PALETTE_CHANGE))
-					SetStringParameter(Esp_parameters.SP_COLOUR_ID, GetStringParameter(Esp_parameters.SP_DEFAULT_COLOUR_ID));
 			} else if(Evt.m_iParameter == Elp_parameters.LP_LANGUAGE_MODEL_ID
 					|| (Evt.m_iParameter == Esp_parameters.SP_LM_HOST && GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)==5)) {
 				CreateNCManager();
@@ -470,6 +468,8 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		
 		//Then we construct a new NCMgr and (untrained) LM...
 		m_pNCManager = new CNodeCreationManager(this, m_SettingsStore);
+		if (m_ColourIO.getByName(GetStringParameter(Esp_parameters.SP_COLOUR_ID))==null)
+			ChangeColours(); //we must have been using the alphabet palette, which may have changed
 		
 		//Then, we rebuild the tree, so that any old nodes (referring to the old LM) are gone...
 		forceRebuild();
@@ -701,17 +701,17 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * scheme. Finally, if successful, the screen is informed of the
 	 * new scheme by calling its SetColourScheme method.
 	 */
-	public void ChangeColours() {
+	private void ChangeColours() {
 		if(m_ColourIO == null)
 			return;
 		
-		if(m_Colours != null) {
-			m_Colours = null;
+		CColourIO.ColourInfo info = m_ColourIO.getByName(GetStringParameter(Esp_parameters.SP_COLOUR_ID));
+		if (info==null) {
+			if (m_pNCManager!=null) info  = m_ColourIO.getByName(m_pNCManager.getDefaultColourScheme());
+			if (info == null)
+				info = m_ColourIO.getDefault();
 		}
-		
-		
-		CColourIO.ColourInfo oColourInfo = (m_ColourIO.GetInfo(GetStringParameter(Esp_parameters.SP_COLOUR_ID)));
-		m_Colours = new CCustomColours(oColourInfo);
+		m_Colours = new CCustomColours(info);
 		
 		if(m_DasherScreen != null) {
 			m_DasherScreen.SetColourScheme(m_Colours);
@@ -730,7 +730,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	public void ChangeScreen(CDasherScreen NewScreen) {
 		m_DasherScreen = NewScreen;
 		m_MarkerScreen = (NewScreen instanceof CMarkerScreen) ? (CMarkerScreen)NewScreen : null;
-		m_DasherScreen.SetColourScheme(m_Colours);
+		if (m_Colours!=null) m_DasherScreen.SetColourScheme(m_Colours);
 		
 		if(m_DasherView == null)
 			m_DasherView = new CDasherViewSquare(this, m_SettingsStore, m_DasherScreen, computeOrientation());

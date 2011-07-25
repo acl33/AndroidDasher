@@ -77,8 +77,6 @@ public class CNodeCreationManager extends CDasherComponent {
 		
 		m_cAlphabet = intf.GetInfo(GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
 		
-		SetStringParameter(Esp_parameters.SP_DEFAULT_COLOUR_ID, m_cAlphabet.GetPalette());
-		
 		// Create an appropriate language model;
 		
 		switch ((int)GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)) {
@@ -118,6 +116,8 @@ public class CNodeCreationManager extends CDasherComponent {
 		
 		computeNormFactorNoCheck();
 	}
+	
+	public String getDefaultColourScheme() {return m_cAlphabet.GetPalette();}
 	
 	/**
 	 * Gets a probability distribution for a context and language model. Detailed

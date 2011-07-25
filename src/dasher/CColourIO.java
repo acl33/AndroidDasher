@@ -211,30 +211,25 @@ public class CColourIO extends XMLFileParser {
 	}
 	
 	/**
-	 * Retrieves the ColourInfo object associated with a given colour scheme.
+	 * Retrieves the ColourInfo object with the given name, if any.
 	 * <p>
-	 * If the specified name cannot be found, the Default scheme
-	 * will be retrieved. To avoid this happening, make sure that
-	 * only schemes enumerated by GetColours are requested.
-	 * <p>
-	 * Schemes' names may consist of any Unicode character in the
-	 * Basic Multilingual Plane.
+	 * If the specified name cannot be found, then we return null.
+	 * This means the user's specified name cannot be found; in that case,
+	 * the client will fall back to getting a palette name from the
+	 * alphabet; and if that is not found either, then will fall back to
+	 * GetDefault().
 	 * 
 	 * @param ColourID Name of the colour scheme to retrieve.
-	 * @return ColourInfo object representing the named scheme, or the Default if this is not possible.
+	 * @return ColourInfo object representing the named scheme, or null
+	 * if no scheme has the specified name.
 	 */
-	public ColourInfo GetInfo(String ColourID) {
-		if(ColourID == "")            // return Default if no colour scheme is specified
-			return Colours.get("Default");
-		else {
-			if(Colours.containsKey(ColourID)) {
-				return Colours.get(ColourID);
-			}
-			else {
-				// if we don't have the colour scheme they asked for, return default
-				return Colours.get("Default");
-			}
-		}
+	public ColourInfo getByName(String ColourID) {
+		return Colours.get(ColourID);
+	}
+	
+	public ColourInfo getDefault() {
+		assert Colours.containsKey("Default");
+		return Colours.get("Default");
 	}
 	
 	/**

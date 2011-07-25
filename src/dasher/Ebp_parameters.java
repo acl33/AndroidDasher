@@ -42,7 +42,6 @@ public enum Ebp_parameters implements EParameters {
 			  BP_COLOUR_MODE("ColourMode", PERS, true, "ColourMode"),
 			  BP_MOUSEPOS_MODE("StartOnMousePosition", PERS, false, "StartOnMousePosition"),
 			  BP_OUTLINE_MODE("OutlineBoxes", PERS, true, "OutlineBoxes"),
-			  BP_PALETTE_CHANGE("PaletteChange", PERS, true, "PaletteChange"),
 			  BP_AUTOCALIBRATE("AutoAdjust", PERS, false, "Auto-adjust offset for eyetracker miscalibration"),
 			  BP_DASHER_PAUSED("DasherPaused", !PERS, true, "Dasher Paused"),
 			  BP_GAME_MODE("GameMode", PERS, false, "Dasher Game Mode"),
