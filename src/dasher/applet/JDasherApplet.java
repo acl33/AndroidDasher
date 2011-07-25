@@ -29,21 +29,32 @@ import java.awt.Font;
 import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import java.awt.datatransfer.Clipboard;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 import javax.swing.*;
 
 import dasher.*;
 
 /**
- * Applet containing a JDasherScreen panel, a JDasherEdit TextBox,
- * and a set of menus to set relevant parameters.
- *
+ * <p>Applet containing a JDasherScreen panel, a JDasherEdit TextBox,
+ * and a set of menus to set relevant parameters.</p>
+ * <p>Also instantiates a {@link JDasher} object, implementing resource-getting
+ * methods to attempt to get files over http from the applet codebase directory
+ * as well as within the .jar (in the same package as this class) as a fallback.
+ * Both of these methods require the existence of a "files.txt" in the relevant
+ * location (in the applet codebase directory, or in dasher/applet/ within the .jar).
  */
 public class JDasherApplet extends JApplet implements MouseListener, KeyListener, JDasherMenuBarListener, dasher.applet.font.FontListener {
 
@@ -88,7 +99,24 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	 * Date of last build; appears in About box
 	 */
 	public final String buildDate = "22:17 08/10/2008";
-					
+	
+	//try to fill in resourceFiles...
+	{
+		List<String> res = new ArrayList<String>();
+		InputStream in = getClass().getResourceAsStream("files.txt");
+		if (in!=null) { 
+			BufferedReader rdr = new BufferedReader(new InputStreamReader(in));
+			try {
+				for (String line; (line=rdr.readLine())!=null;)
+					res.add(line);
+				rdr.close();
+			} catch (IOException e) {
+				System.out.println("In reading package resource files.txt: "+e);
+			}
+		}
+		//hope we got something useful out of that!
+		resourceFiles = res.toArray(new String[res.size()]);
+	}
 	/**
 	 * Instantiates Dasher, gets a handle to the system clipboard
 	 * if possible, calls constructGUIPanel to produce our GUI,
@@ -98,8 +126,22 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	 * Finally, we call constructMenus to produce our menu bar.
 	 */
 	public void init() {
-				
 		Dasher = new JDasher() {
+			private final List<String> webFiles = new ArrayList<String>();
+			/**Constructor - look for file list over http...*/
+			{
+				try {
+					java.net.URLConnection conn = new URL(getCodeBase(),"files.txt").openConnection();
+					BufferedReader rdr = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+					for (String line; (line=rdr.readLine())!=null;)
+						webFiles.add(line);
+					Collections.sort(webFiles);
+				} catch (Exception e) {
+					System.out.println("Could not open file list:");
+					e.printStackTrace(System.out);
+				}
+			}
+				
 			@Override
 			protected void CreateModules() {
 				super.CreateModules();
@@ -144,16 +186,28 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 				JDasherApplet.this.repaint();
 			}
 			
-			/** Try to get an InputStream for the file of the specified name, in
-			 * each/all locations (system, per-user, etc.). This implementation
-			 * <em>only</em> looks for a packaged resource of the specified name,
-			 * i.e. in the same directory as this class file (inc. package). TODO
-			 * A better approach would be to try to read files from the webserver
-			 * serving up our codebase, using an HttpUrlConnection.
+			/** First looks for a file over http in the same location as our codebase;
+			 * <em>if</em> that fails, we fall back to looking for a packaged resource
+			 * of the specified name, i.e. baked into the .jar file. Note if we find
+			 * a file over http, we do not look in the jar file as well - the assumption
+			 * is that both are "system" training texts and alternatives to each other,
+			 * rather than supplements, and the files accessible over http supercede
+			 * those in the archive.
 			 */
 		    @Override
 			protected void GetStreams(String fname, Collection<InputStream> into) {
-				InputStream in = getClass().getResourceAsStream(fname);
+		    	try {
+		    		//System.out.println("Opening "+new URL(getCodeBase(),fname));
+		    		InputStream in = new URL(getCodeBase(),fname).openConnection().getInputStream();
+		    		if (in!=null) {
+		    			into.add(in);
+		    			return;
+		    		}
+		    	} catch (Exception e) {
+		    		System.out.println(e.toString());
+		    	}
+		    	System.out.println("Could not find "+fname+" over web");
+		    	InputStream in = getClass().getResourceAsStream(fname);
 				if (in!=null) into.add(in);
 			}
 
@@ -167,17 +221,31 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 		     */
 			@Override
 			protected void ScanXMLFiles(XMLFileParser parser, String prefix) {
-				for (String s : fileList) {
+				//We load the hard-baked-in files first....
+				for (String s : resourceFiles) {
 					if (!s.startsWith(prefix) || !s.endsWith(".xml")) continue;
 					InputStream in = getClass().getResourceAsStream(s);
 					if (in==null) {
-						System.out.println("No inputstream could be obtained for "+s);
+						System.out.println("No resource inputstream for "+s);
 						continue;
 					}
 					try {
 						parser.ParseFile(in, false);
 					} catch (Exception e) {
 						e.printStackTrace();
+					}
+				}
+				//and _then_ look on the web: both AlphIO and ColourIO will replace
+				// any existing definitions of alphabets with the same name
+				// (and files on the latter location supercede the former)
+				int i = Collections.binarySearch(webFiles, prefix);
+				if (i<0) i=-(i+1); //not found => start at first index after
+				for (String s; i < webFiles.size() && (s=webFiles.get(i)).startsWith(prefix); i++) {
+					if (!s.endsWith(".xml")) continue;
+					try {
+						parser.ParseFile(new URL(getCodeBase(),s).openConnection().getInputStream(), false);
+					} catch (Exception e) {
+						System.out.println("Error trying to read URLConnection for "+s+": "+e.toString());
 					}
 				}
 			}
@@ -307,14 +375,11 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 
 	}
 	
-	private static final String[] fileList = new String[] {
-		"alphabet.english.xml",
-		"alphabet.englishC.xml",
-		"alphabet.Thai.xml",
-		"colour.euroasian.xml",
-		"colour.rainbow.xml",
-		"colour.euroasian-new.xml",
-		"colour.thai.xml"};
+	/** List of alphabet/colour files hard-baked into the .jar.
+	 * Read in from files.txt (itself a resource in the .jar) by constructor.
+	 * We use these as a fallback if http retrieval fails.
+	 */
+	private final String[] resourceFiles;
 	
 	/**
 	 * Produces our menu bar (a JDasherMenuBar) and returns it.
