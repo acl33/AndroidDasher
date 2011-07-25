@@ -47,7 +47,6 @@ public enum Ebp_parameters implements EParameters {
 			  BP_DASHER_PAUSED("DasherPaused", !PERS, true, "Dasher Paused"),
 			  BP_GAME_MODE("GameMode", PERS, false, "Dasher Game Mode"),
 			  BP_TRAINING("Training", !PERS, false, "Provides locking during training"),
-			  BP_REDRAW("Redraw", !PERS, false, "Force a full redraw at the next timer event"),
 			  BP_LM_DICTIONARY("Dictionary", PERS, true, "Whether the word-based language model uses a dictionary"),
 			  BP_AUTO_SPEEDCONTROL("AutoSpeedControl", PERS, true, "AutoSpeedControl"),
 			  BP_LM_ADAPTIVE("LMAdaptive", PERS, true, "Whether language model should learn as you enter text"),

@@ -101,9 +101,10 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	
 	@Override
 	public void Redraw(final boolean bChanged) {
-		if (Thread.currentThread()==taskThread)
+		if (Thread.currentThread()==taskThread) {
+			super.Redraw(bChanged);
 			m_bRedrawRequested=true;
-		else
+		} else
 			enqueue(new Runnable() {
 				public void run() {
 					Redraw(bChanged);

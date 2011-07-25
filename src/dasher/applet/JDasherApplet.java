@@ -182,7 +182,8 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 			 * 
 			 * @param bChanged ignored
 			 */
-			public void Redraw(boolean bChanged) {
+			@Override public void Redraw(boolean bChanged) {
+				super.Redraw(bChanged);
 				JDasherApplet.this.repaint();
 			}
 			

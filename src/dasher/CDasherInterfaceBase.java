@@ -492,9 +492,8 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	}
 	
 	/**
-	 * Pauses Dasher at a given mouse location, and sets
-	 * BP_REDRAW so that a full redraw will be performed next
-	 * frame.
+	 * Pauses Dasher at a given mouse location, and schedules
+	 * a full redraw of the nodes at the next frame.
 	 * <p>
 	 * Also generates a StopEvent to notify other components.
 	 * 
@@ -505,7 +504,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
 		m_DasherModel.clearScheduledSteps();
 		// Request a full redraw at the next time step.
-		SetBoolParameter(Ebp_parameters.BP_REDRAW, true);
+		Redraw(true);
 		
 		CStopEvent oEvent = new CStopEvent();
 		InsertEvent(oEvent);
@@ -564,6 +563,11 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	
 	private final List<Runnable> endOfFrameTasks = new ArrayList<Runnable>();
 	
+	/** Whether we have been requested to totally redraw the nodes at the next time step
+	 * (i.e. even if the model/filter doesn't move).
+	 */
+	private boolean m_bForceRedrawNodes;
+	
 	/**
 	 * Encapsulates the entire process of drawing a
 	 * new frame of the Dasher world.
@@ -597,7 +601,8 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		//ok, we want to render some nodes...if there are any...
 		if (m_DasherModel == null) return;
 		
-		boolean bRedrawNodes = false;
+		boolean bRedrawNodes = m_bForceRedrawNodes;
+		m_bForceRedrawNodes = false;
 		
 		if(m_InputFilter != null) {
 			bRedrawNodes = m_InputFilter.Timer(iTime, m_DasherView, m_Input, m_DasherModel); // FIXME - need logging stuff here
@@ -636,15 +641,19 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	}
 	
 	/**
-	 * Abstract method which will be called whenever a screen
-	 * redraw is required. This is implemented for architectures
-	 * which require drawing to happen in a top-down fashion.
-	 * Implementations which allow drawing to be initiated from
-	 * the bottom up may do so my recalling Draw.
+	 * Called whenever we need to redraw the screen. Architectures in which
+	 * drawing must be initiated from the outside (e.g. Swing/AWT: app calls
+	 * repaint(), and eventually Swings calls back to paint), should override
+	 * to additionally request a repaint from the external framework.
+	 * Architectures with e.g. a regular 20ms repaint, need do nothing (the
+	 * existing method will cause NewFrame to repaint the nodes, or not, as
+	 * needed.)
 	 * 
-	 * @param bChanged True if the model has changed since the last frame
+	 * @param bChanged True if the nodes must be repainted in the next call to NewFrame.
 	 */
-	public abstract void Redraw(boolean bChanged);
+	public void Redraw(boolean bChanged) {
+		if (bChanged) m_bForceRedrawNodes=true;
+	}
 	
 	/**
 	 * Changes the alphabet in use to that described by SP_ALPHABET_ID.
