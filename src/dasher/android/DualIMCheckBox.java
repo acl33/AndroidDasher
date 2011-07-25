@@ -2,6 +2,7 @@ package dasher.android;
 
 import dasher.Esp_parameters;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.preference.CheckBoxPreference;
 import android.preference.Preference;
 import android.preference.PreferenceManager;
@@ -48,8 +49,15 @@ public class DualIMCheckBox extends IMCheckBox {
 		} else {
 			d=inputDevOff; f=inputFilOff;
 		}
-		IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_DEVICE, d);
-		IMDasherInterface.INSTANCE.SetStringParameter(Esp_parameters.SP_INPUT_FILTER, f);
+		//writing to the persistent settings store will trigger an 
+		// OnSharedPreferencesChanged listener in the main/IME service
+		// (if its active) which will update the in-memory parameters
+		// there. (Using an AndroidSettings might be more modular, but
+		// would entail reading all settings into memory every time!)
+		SharedPreferences.Editor edit = PreferenceManager.getDefaultSharedPreferences(getContext()).edit();
+		edit.putString(Esp_parameters.SP_INPUT_DEVICE.regName(), d);
+		edit.putString(Esp_parameters.SP_INPUT_FILTER.regName(), f);
+		edit.commit();
 	}
 
 }

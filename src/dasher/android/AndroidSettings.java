@@ -30,9 +30,7 @@ import java.util.prefs.Preferences;
 
 import android.content.SharedPreferences;
 
-import dasher.CEventHandler;
 import dasher.CParameterNotFoundException;
-import dasher.CParameterNotificationEvent;
 import dasher.CSettingsStore;
 import dasher.EParameters;
 import dasher.Ebp_parameters;
@@ -42,9 +40,7 @@ import dasher.Esp_parameters;
 public class AndroidSettings extends CSettingsStore implements SharedPreferences.OnSharedPreferenceChangeListener {
 
 	private final SharedPreferences pref;
-	public AndroidSettings(CEventHandler handler, SharedPreferences pref) {
-		
-		super(handler, false);
+	public AndroidSettings(SharedPreferences pref) {
 		this.pref=pref;
 		pref.registerOnSharedPreferenceChangeListener(this);
 		LoadPersistent();

@@ -20,9 +20,11 @@ import android.widget.LinearLayout;
 
 public class DasherInputMethod extends InputMethodService {
 	private DasherCanvas surf;
+	private IMDasherInterface intf;
 	@Override public void onCreate() {
 		super.onCreate();
-		IMDasherInterface.INSTANCE.Realize(this);
+		//load data (now), and start training in background
+		intf = new IMDasherInterface(this, true);
 	}
 	
 	@Override public void onDestroy() {
@@ -32,8 +34,7 @@ public class DasherInputMethod extends InputMethodService {
 	}
 	
 	@Override public DasherCanvas onCreateInputView() {
-		IMDasherInterface.INSTANCE.Realize(this); //if already initialized by this IME instance, does nothing!
-		surf = new DasherCanvas(DasherInputMethod.this, IMDasherInterface.INSTANCE);
+		surf = new DasherCanvas(DasherInputMethod.this, intf);
 		Log.d("DasherIME", this+" onCreateInputView creating surface "+surf);
 		return surf;
 	}
@@ -49,8 +50,8 @@ public class DasherInputMethod extends InputMethodService {
 		//get current cursor position...
 		int initCursorPos=Math.min(attribute.initialSelStart,attribute.initialSelEnd),initNumSel=Math.abs(attribute.initialSelEnd-attribute.initialSelStart);
 		Log.d("DasherIME",msg+" cursor "+initCursorPos+" actionLabel "+attribute.actionLabel);
-		IMDasherInterface.INSTANCE.SetInputConnection(ic, attribute);
-		IMDasherInterface.INSTANCE.setSelection(Math.max(0,initCursorPos),initNumSel,true);
+		intf.SetInputConnection(ic, attribute);
+		intf.setSelection(Math.max(0,initCursorPos),initNumSel,true);
 		//that'll ensure a setOffset() task is enqueued first...
 		//onCreateInputView().startAnimating();
 		//...and then any repaint task afterwards.
@@ -68,24 +69,24 @@ public class DasherInputMethod extends InputMethodService {
 	}
 	
 	@Override public boolean onKeyUp(int keyCode, KeyEvent event) {
-		final int id = IMDasherInterface.INSTANCE.convertAndroidKeycode(keyCode);
+		final int id = intf.convertAndroidKeycode(keyCode);
 		if (id==-1)	return super.onKeyUp(keyCode, event);
-		IMDasherInterface.INSTANCE.enqueue(new Runnable() {
+		intf.enqueue(new Runnable() {
 			private final long time = System.currentTimeMillis();
 			public void run() {
-				IMDasherInterface.INSTANCE.KeyUp(time, id);
+				intf.KeyUp(time, id);
 			}
 		});
 		return true;
 	}			
 	
 	@Override public boolean onKeyDown(int keyCode, KeyEvent event) {
-		final int id = IMDasherInterface.INSTANCE.convertAndroidKeycode(keyCode);
+		final int id = intf.convertAndroidKeycode(keyCode);
 		if (id==-1) return super.onKeyDown(keyCode, event);
-		IMDasherInterface.INSTANCE.enqueue(new Runnable() {
+		intf.enqueue(new Runnable() {
 			private final long time = System.currentTimeMillis();
 			public void run() {
-				IMDasherInterface.INSTANCE.KeyDown(time, id);
+				intf.KeyDown(time, id);
 			}
 		});
 		return true;
@@ -95,7 +96,7 @@ public class DasherInputMethod extends InputMethodService {
 	public void onFinishInput() {
 		Log.d("DasherIME",this + " onFinishInput");
 		//if (surf!=null) surf.stopAnimating(); //yeah, we can get sent onFinishInput before/without onCreate...
-		IMDasherInterface.INSTANCE.SetInputConnection(null, null);
+		intf.SetInputConnection(null, null);
 		tekla: if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidTeklaShield", false)) {
 			Log.d("DasherIME","Stopping Tekla Service...");
 			try {
@@ -113,7 +114,7 @@ public class DasherInputMethod extends InputMethodService {
 	public void onUpdateSelection(int oldSelStart, int oldSelEnd,
 								  int newSelStart, int newSelEnd,
 								  int candidatesStart, int candidatesEnd) {
-		IMDasherInterface.INSTANCE.setSelection(Math.min(newSelStart,newSelEnd),Math.abs(newSelEnd - newSelStart),false);
+		intf.setSelection(Math.min(newSelStart,newSelEnd),Math.abs(newSelEnd - newSelStart),false);
 	}
 	
 	@Override
@@ -124,7 +125,7 @@ public class DasherInputMethod extends InputMethodService {
 	private final BroadcastReceiver sepBroadcastReceiver = new BroadcastReceiver() {
 	    @Override
 	    public void onReceive(Context context, Intent intent) {
-	    	int keyId;
+	    	final int keyId;
 	    	switch(intent.getExtras().getInt("ca.idi.tekla.sep.extra.SWITCH_EVENT")) {
 	            case 10: //up
 	            	keyId=4;
@@ -143,9 +144,13 @@ public class DasherInputMethod extends InputMethodService {
                 	//don't know what to do with this switch id?!?!
                 	return;
 	            }
-	        long time = System.currentTimeMillis();
-	        IMDasherInterface.INSTANCE.KeyDown(time, keyId);
-	        IMDasherInterface.INSTANCE.KeyUp(time, keyId);
+	        final long time = System.currentTimeMillis();
+	        intf.enqueue(new Runnable() {
+	        	public void run() {
+	        		intf.KeyDown(time, keyId);
+	        		intf.KeyUp(time, keyId);
+	        	}
+	        });
 	    }
 	};
 

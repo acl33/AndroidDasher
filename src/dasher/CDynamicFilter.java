@@ -10,9 +10,8 @@ public abstract class CDynamicFilter extends CInputFilter {
 
 	private int m_iState;
 
-	public CDynamicFilter(CDasherInterfaceBase iface,
-			CSettingsStore SettingsStore, long iID, String szName) {
-		super(iface, SettingsStore, iID, szName);
+	public CDynamicFilter(CDasherComponent creator, CDasherInterfaceBase iface, String szName) {
+		super(creator, iface, szName);
 	}
 
 
@@ -42,10 +41,8 @@ public abstract class CDynamicFilter extends CInputFilter {
 
 	protected int getState() {return m_iState;}
 	
-	@Override public void HandleEvent(CEvent evt) {
-		if (evt instanceof CParameterNotificationEvent
-				&& ((CParameterNotificationEvent)evt).m_iParameter==Ebp_parameters.BP_DASHER_PAUSED
-				&& GetStringParameter(Esp_parameters.SP_INPUT_FILTER).equals(this.GetName())) {
+	@Override public void HandleEvent(EParameters eParam) {
+		if (eParam==Ebp_parameters.BP_DASHER_PAUSED && m_Interface.GetActiveInputFilter()==this) {
 			//just make sure our state is consistent...
 			if (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
 				m_iState=PAUSED;

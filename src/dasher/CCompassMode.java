@@ -4,8 +4,8 @@ import static dasher.CDasherModel.MAX_Y;
 
 public class CCompassMode extends CDasherButtons {
 	private int iTargetWidth;
-	public CCompassMode(CDasherInterfaceBase iface, CSettingsStore sets) {
-		super(iface, sets, 13, "Compass Mode");
+	public CCompassMode(CDasherComponent creator, CDasherInterfaceBase iface) {
+		super(creator, iface, "Compass Mode");
 	}
   
 	@Override protected SBox[] SetupBoxes() {
@@ -45,12 +45,9 @@ public class CCompassMode extends CDasherButtons {
 		return false; //never changes!
 	}
  
-	@Override public void HandleEvent(CEvent pEvent) {
-		if(pEvent instanceof CParameterNotificationEvent) {
-			CParameterNotificationEvent pEvt = (CParameterNotificationEvent)pEvent;
-    		if (pEvt.m_iParameter == Elp_parameters.LP_RIGHTZOOM) {
-    			m_pBoxes=SetupBoxes(); m_bDecorationChanged = true;
-    		}
-  		}
+	@Override public void HandleEvent(EParameters eParam) {
+		if (eParam == Elp_parameters.LP_RIGHTZOOM) {
+			m_pBoxes=SetupBoxes(); m_bDecorationChanged = true;
+		}
 	}
 }

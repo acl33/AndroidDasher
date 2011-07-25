@@ -19,8 +19,8 @@ import static dasher.CDasherModel.MAX_Y;
 };*/
 
 public class CMenuMode extends CScanning {
-	public CMenuMode(CDasherInterfaceBase iface, CSettingsStore sets, int iID, String szName) {
-		super(iface,sets,iID,szName);
+	public CMenuMode(CDasherComponent creator, CDasherInterfaceBase iface, String szName) {
+		super(creator, iface, szName);
 	}
 
 	protected SBox[] SetupBoxes() {
@@ -59,13 +59,10 @@ public class CMenuMode extends CScanning {
 		return m_pBoxes;
 	}
 
-	@Override public void HandleEvent(CEvent pEvent) {
-		if(pEvent instanceof CParameterNotificationEvent) {
-			CParameterNotificationEvent pEvt = (CParameterNotificationEvent)pEvent;
-
-			if (pEvt.m_iParameter == Elp_parameters.LP_B || pEvt.m_iParameter==Elp_parameters.LP_R) {
-				m_pBoxes = SetupBoxes(); m_bDecorationChanged = true;
-			}
+	@Override public void HandleEvent(EParameters eParam) {
+		if (eParam == Elp_parameters.LP_B || eParam == Elp_parameters.LP_R) {
+			m_pBoxes = SetupBoxes(); m_bDecorationChanged = true;
 		}
 	}
+
 }

@@ -8,8 +8,8 @@ import static dasher.CDasherModel.NORMALIZATION;
 public class CControlManager extends CDasherComponent {
 	private final CNodeCreationManager m_pNCMgr;
 	private final ControlAction root;
-	CControlManager(CDasherInterfaceBase intf, CSettingsStore sets, CNodeCreationManager pNCMgr, ControlAction root) {
-		super(intf,sets);
+	CControlManager(CDasherComponent creator, CDasherInterfaceBase intf, CNodeCreationManager pNCMgr, ControlAction root) {
+		super(creator);
 		this.m_pNCMgr=pNCMgr;
 		this.root=root;
 	}

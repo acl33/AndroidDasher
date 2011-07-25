@@ -65,7 +65,7 @@ import dasher.CControlManager.ControlAction;
  * input of some sort, and implement DasherScreen to provide visual 
  * (or other) display.   
  */
-abstract public class CDasherInterfaceBase extends CEventHandler {
+abstract public class CDasherInterfaceBase extends CDasherComponent {
 	
 		
 	public CFileLogger g_Logger; // CSFS: No logging yet.
@@ -79,10 +79,9 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	
 	/**
 	 * The DasherModel, i.e. tracks locations of nodes on screen. Only one need be created,
-	 * as it can be fed nodes from multiple NodeCreation/AlphabetManagers; this is done in
-	 * Realize().
+	 * as it can be fed nodes from multiple NodeCreation/AlphabetManagers.
 	 */
-	private CDasherModel m_DasherModel;
+	private final CDasherModel m_DasherModel = new CDasherModel(this);
 	
 	protected CNodeCreationManager m_pNCManager;
 	
@@ -109,19 +108,13 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	/**
 	 * Current AlphIO
 	 */
-	protected CAlphIO m_AlphIO;
+	protected final CAlphIO m_AlphIO = new CAlphIO(this);
 	
 	/**
 	 * Current ColourIO
 	 */
-	protected CColourIO m_ColourIO;
+	protected final CColourIO m_ColourIO = new CColourIO(this);
 	
-	/**
-	 * Our settings repository
-	 */
-	private CSettingsStore m_SettingsStore;
-	public final CSettingsStore getSettingsStore() {return m_SettingsStore;}
-
 	/**
 	 * Our logging module
 	 */
@@ -135,7 +128,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	/**
 	 * The module manager
 	 */
-	protected CModuleManager m_oModuleManager;
+	protected final CModuleManager m_oModuleManager = new CModuleManager();;
 	
 	/**
 	 * Lock engaged when Dasher is being destroyed
@@ -176,15 +169,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	protected abstract void GetStreams(String fname, Collection<InputStream> into);
 	
 	/**
-	 * Called at realization time to make the settings store.
-	 * Subclasses should implement to return something appropriate
-	 * - i.e. to store persistent settings - or return a CSettingsStore
-	 * as a fallback. (Note that <code>this</code> is an {@link CEventHandler}) 
-	 * @return a platform-dependent persistent settings store, or a plain CSettingsStore.
-	 */
-	protected abstract CSettingsStore createSettingsStore();
-	
-	/**
 	 * Returns an iterator over all characters that have been entered - including
 	 * any after the (insertion point = node under crosshair). Initial position
 	 * should be such that the first call to previous() returns the character with
@@ -194,80 +178,68 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	public abstract ListIterator<Character> getContext(int iOffset);
 	
 	/**
-	 * Sole constructor. Creates an EventHandler, sets up an
-	 * initial context, and creates a ModuleManager. This does
-	 * only enough that we can retrieve the event handler for the
-	 * purposes of creating further components; as neither the
-	 * settings store nor any of Dasher's internal components
-	 * yet exist, it is not yet capable of any meaningful task.
-	 * <p>
-	 * Realize() must be called after construction and before
-	 * any other functions which depend upon anything other than
-	 * the event handler and module manager.
+	 * Sole constructor. Sets up the tree of DasherComponents
+	 * to read from the SettingsStore, with this as root and the
+	 * last listener. (Thus, no more than one DasherInterfaceBase
+	 * should be created per SettingsStore.)
+	 * {@link #LoadData} should be called before operations like
+	 * {@link #GetPermittedValues(Esp_parameters, Collection)} are meaningful;
+	 * {@link #DoSetup} should be called after LoadData before e.g. frames may
+	 * be rendered.
 	 */
-	public CDasherInterfaceBase() {
-		m_oModuleManager = new CModuleManager();
-				
-		// Global logging object we can use from anywhere
-		// g_logger = new CFileLogger("dasher.log", g_iLogLevel, g_iLogOptions);
-		
+	public CDasherInterfaceBase(CSettingsStore sets) {
+		super(sets);
+		sets.setLastListener(this);
 	}
 	
 	/**
-	 * Realize does the bulk of the work of setting up a working
-	 * Dasher. The sequence of actions is as follows:
-	 * <p>
+	 * Loads all required data from external sources:
 	 * <ul>
-	 * <li>Creates the settings store
-	 * <li>Sets up the system and user locations (by calling SetupPaths())
-	 * <li>Reads in the available alphabets and colour schemes
-	 * using ScanAlphabetFiles and then creating a CAlphIO based upon
-	 * the filenames returned (and the equivalent for ColourIO).
-	 * The resulting objects are stored in m_AlphIO and m_ColourIO.
-	 * <li>Calls ChangeColours() and ChangeAlphabet(), which will
-	 * create a number of internal components of their own
-	 * (see these functions' documentation for details)
-	 * <li>Calls CreateFactories(), CreateInput() and CreateInputFilter() to complete
-	 * the input setup.
-	 * </ul>
-	 * <p>
+	 * <li>available alphabets
+	 * <li>available colour schemes
+	 * <li>input filters and devices (via {@link #CreateModules()}
+	 * <ul>
+	 * Must be called after construction, and before {@link #DoSetup()}.
+	 */
+	protected void LoadData() {
+		ScanXMLFiles(m_AlphIO, "alphabet");
+		
+		ScanXMLFiles(m_ColourIO, "colour");
+		CreateModules();
+	}
+	
+	/**
+	 * Does the bulk  of the work in making Dasher ready for use, following
+	 * a call to {@link #LoadData}. This mainly consists of setting up necessary
+	 * data structures for colours, alphabet, etc., according to the user
+	 * preferences. Also trains the LanguageModel via {@link #train(CAlphabetManager)},
+	 * so may take some time: if the interface is only required for
+	 * querying/updating settings, this method need not be called.
 	 * When realize terminates, Dasher will be in a broadly usable
 	 * state, tho it will need a screen which should be created
 	 * externally and registered with ChangeScreen().
 	 */
-	protected void Realize() {
-		m_SettingsStore = createSettingsStore();
-		
-		m_AlphIO = new CAlphIO(this);
-		ScanXMLFiles(m_AlphIO, "alphabet");
-		
-		m_ColourIO = new CColourIO(this);
-		ScanXMLFiles(m_ColourIO, "colour");
-		
-		m_DasherModel = new CDasherModel(this, m_SettingsStore);
-		
+	protected void DoSetup() {
 		ChangeColours();
 		
 		// Create the user logging object if we are suppose to.
 		// (ACL) Used to be done following ChangeAlphabet, with comment:
 		// "We wait until now so we have the real value of the parameter and not just the default."
-		// - hope it's ok to do before ChangeAlphabet, don't see any reason why LP_USER_LOG_LEVEL_MASK
-		// would be changed?!?!
-		
+		// - presume this was referring to non-persistent parameters such as SP_DEFAULT_COLOUR_ID,
+		// which used to be set according to the Alphabet but have now been removed.
+		//(Of course the whole of user logging is stubbed anyway...)
 		int iUserLogLevel = (int)GetLongParameter(Elp_parameters.LP_USER_LOG_LEVEL_MASK);
 		if (iUserLogLevel > 0) 
-			m_UserLog = new CUserLog(this, m_SettingsStore, iUserLogLevel);
+			m_UserLog = new CUserLog(this, iUserLogLevel);
 		
 		ChangeAlphabet();
 		
-		CreateModules();
 		CreateInput();
 		CreateInputFilter();
 		
 		// All the setup is done by now, so let the user log object know
 		// that future parameter changes should be logged.
 		if (m_UserLog != null) m_UserLog.InitIsDone();
-			
 	}
 	
 	/**
@@ -276,66 +248,19 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * they will be available for garbage collection.
 	 */
 	public void DestroyInterface() {
-		//TODO, on what do we need to call UnregisterComponent?	
-		m_DasherModel.UnregisterComponent();
-
-		if(m_InputFilter != null) m_InputFilter.UnregisterComponent();
-		m_InputFilter = null;
-		  // FIXME Decide what needs happen to these
-		  // Do NOT delete Edit box or Screen. This class did not create them.
-
-		  // When we destruct on shutdown, we'll output any detailed log file
-		  if (m_UserLog != null)
-		  {
+		// When we destruct on shutdown, we'll output any detailed log file
+		if (m_UserLog != null)
+		{
 		    m_UserLog.OutputFile();
 		    m_UserLog.Close();
 		    // FIXME again do what's appropriate
 		    m_UserLog = null;
-		  }
-
-		  if (g_Logger != null) {
+		}
+		
+		if (g_Logger != null) {
 		    g_Logger.Destroy();
 		    g_Logger = null;
-		  }
-
-	}
-	
-	/**
-	 * Notifies the interface before a string parameter is changed.
-	 * <p>
-	 * This enables the interface to read the parameter's current value if necessary.
-	 * <p>
-	 * Presently the interface responds to:
-	 * <p><i>SP_ALPHABET_ID</i>: Stores a history of previous used alphabets
-	 * in SP_ALPHABET_1, SP_ALPHABET_2 and so on.
-	 * 
-	 * @param iParameter Parameter which is going to change.
-	 * @param sNewValue Value to which it will change.
-	 */
-	public void PreSetNotify(Esp_parameters iParameter, String sNewValue) {
-		
-		// FIXME - make this a more general 'pre-set' event in the message
-		// infrastructure
-		
-		if(iParameter == Esp_parameters.SP_ALPHABET_ID) { 
-			// Cycle the alphabet history
-			if(GetStringParameter(Esp_parameters.SP_ALPHABET_ID) != sNewValue) {
-				if(GetStringParameter(Esp_parameters.SP_ALPHABET_1) != sNewValue) {
-					if(GetStringParameter(Esp_parameters.SP_ALPHABET_2) != sNewValue) {
-						if(GetStringParameter(Esp_parameters.SP_ALPHABET_3) != sNewValue)
-							SetStringParameter(Esp_parameters.SP_ALPHABET_4, GetStringParameter(Esp_parameters.SP_ALPHABET_3));
-						
-						SetStringParameter(Esp_parameters.SP_ALPHABET_3, GetStringParameter(Esp_parameters.SP_ALPHABET_2));
-					}
-					
-					SetStringParameter(Esp_parameters.SP_ALPHABET_2, GetStringParameter(Esp_parameters.SP_ALPHABET_1));
-				}
-				
-				SetStringParameter(Esp_parameters.SP_ALPHABET_1, GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
-			}
-			
-		}	
-		
+		}
 	}
 	
 	/**
@@ -383,61 +308,65 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * 
 	 * @param Event The event the interface is to process.
 	 */
-	public void InsertEvent(CEvent Event) {
-		super.InsertEvent(Event);
+	public void HandleEvent(EParameters eParam) {
 		
-		if(Event instanceof CParameterNotificationEvent) {
-			CParameterNotificationEvent Evt = ((CParameterNotificationEvent)(Event));
-			
-			if(Evt.m_iParameter == Ebp_parameters.BP_COLOUR_MODE) {       // Forces us to redraw the display
-				// TODO) { Is this variable ever used any more?
-				Redraw(true);
-			} else if(Evt.m_iParameter ==  Ebp_parameters.BP_OUTLINE_MODE) {
-				Redraw(true);
-			} else if(Evt.m_iParameter == Ebp_parameters.BP_CONNECT_LOCK) {
-				m_bConnectLock = GetBoolParameter(Ebp_parameters.BP_CONNECT_LOCK);
-			} else if(Evt.m_iParameter ==  Esp_parameters.SP_ALPHABET_ID) {
-				ChangeAlphabet();
-				Redraw(true);
-			} else if(Evt.m_iParameter ==  Esp_parameters.SP_COLOUR_ID) {
-				//User has requested a new colour scheme
-				ChangeColours();
-				Redraw(true);
-			} else if(Evt.m_iParameter == Elp_parameters.LP_LANGUAGE_MODEL_ID
-					|| (Evt.m_iParameter == Esp_parameters.SP_LM_HOST && GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)==5)) {
-				CreateNCManager();
-				Redraw(true);
-			} else if(Evt.m_iParameter == Elp_parameters.LP_LINE_WIDTH) {
-				Redraw(false); // TODO - make this accessible everywhere
-			} else if(Evt.m_iParameter == Elp_parameters.LP_DASHER_FONTSIZE) {
-				// TODO - make screen a CDasherComponent child?
-				Redraw(true);
-			} else if (Evt.m_iParameter == Esp_parameters.SP_ORIENTATION) {
-				if (m_DasherView!=null) m_DasherView.setOrientation(computeOrientation());
-			} else if(Evt.m_iParameter == Esp_parameters.SP_INPUT_DEVICE) {
-				CreateInput();
-				Redraw(false);
-			} else if(Evt.m_iParameter == Esp_parameters.SP_INPUT_FILTER) {
-				CreateInputFilter();
-				Redraw(false);
-			} else if (Evt.m_iParameter == Ebp_parameters.BP_TRAINING) {
-				if (!GetBoolParameter(Ebp_parameters.BP_TRAINING))
-					forceRebuild();
-			}
-				
-		}
-		else if(Event instanceof CLockEvent) {
-			// TODO: 'Reference counting' for locks?
-			CLockEvent LockEvent = (CLockEvent)Event;
-			SetBoolParameter(Ebp_parameters.BP_TRAINING,LockEvent.m_bLock);
-			if (LockEvent.m_bLock) {
-				m_sLockMsg = (LockEvent.m_strMessage==null) ? "Training" : LockEvent.m_strMessage;
-				if (LockEvent.m_iPercent!=0) m_sLockMsg+=" "+LockEvent.m_iPercent;
-			} else
-				m_sLockMsg = null;
-			Redraw(false); //assume %age or m_bLock has changed... 
+		if(eParam == Ebp_parameters.BP_COLOUR_MODE) {       // Forces us to redraw the display
+			// TODO) { Is this variable ever used any more?
+			Redraw(true);
+		} else if(eParam ==  Ebp_parameters.BP_OUTLINE_MODE) {
+			Redraw(true);
+		} else if(eParam == Ebp_parameters.BP_CONNECT_LOCK) {
+			m_bConnectLock = GetBoolParameter(Ebp_parameters.BP_CONNECT_LOCK);
+		} else if(eParam ==  Esp_parameters.SP_ALPHABET_ID) {
+			ChangeAlphabet();
+			Redraw(true);
+		} else if(eParam ==  Esp_parameters.SP_COLOUR_ID) {
+			//User has requested a new colour scheme
+			ChangeColours();
+			Redraw(true);
+		} else if(eParam == Elp_parameters.LP_LANGUAGE_MODEL_ID
+				|| (eParam == Esp_parameters.SP_LM_HOST && GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)==5)) {
+			CreateNCManager();
+			Redraw(true);
+		} else if(eParam == Elp_parameters.LP_LINE_WIDTH) {
+			Redraw(false); // TODO - make this accessible everywhere
+		} else if(eParam == Elp_parameters.LP_DASHER_FONTSIZE) {
+			// TODO - make screen a CDasherComponent child?
+			Redraw(true);
+		} else if (eParam == Esp_parameters.SP_ORIENTATION) {
+			if (m_DasherView!=null) m_DasherView.setOrientation(computeOrientation());
+		} else if(eParam == Esp_parameters.SP_INPUT_DEVICE) {
+			CreateInput();
+			Redraw(false);
+		} else if(eParam == Esp_parameters.SP_INPUT_FILTER) {
+			CreateInputFilter();
+			Redraw(false);
+		} else if (eParam == Ebp_parameters.BP_TRAINING) {
+			if (!GetBoolParameter(Ebp_parameters.BP_TRAINING))
+				forceRebuild();
+		} else if (eParam == Ebp_parameters.BP_CONTROL_MODE || eParam == Elp_parameters.LP_UNIFORM) {
+			//called _after_ NCManager has updated its cached normalization values
+			forceRebuild();
 		}
 	}
+	
+	public void Lock(String msg, int iPercent) {
+		// TODO: 'Reference counting' for locks?
+		SetBoolParameter(Ebp_parameters.BP_TRAINING,iPercent>=0);
+		if (iPercent>=0) {
+			m_sLockMsg = (msg==null) ? "Training" : msg;
+			if (iPercent!=0) m_sLockMsg+=" "+iPercent;
+		} else
+			m_sLockMsg = null;
+		Redraw(false); //assume %age or m_bLock has changed... 
+	}
+	
+	/** Subclasses should implement to display a message to the user, e.g.
+	 * in a dialog box.
+	 * @param msg Message text
+	 * @param iSeverity 0 for informative, 1 for warning, 2 for error
+	 */
+	public abstract void Message(String msg, int severity);
 	
 	/**
 	 * Creates a new DasherModel, deleting any previously existing
@@ -452,22 +381,21 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	private void CreateNCManager() 
 	{
 		if(m_AlphIO == null)
-			return;
+			throw new IllegalStateException("Not yet constructed?");
 		
 		// TODO: Move training into AlphabetManager?
 		
 		//Not for now - we don't want train the LM too soon, i.e. until
 		// the old LM can first be GC'd, as that'll be using memory for both...
 
-		//So, first we remove refs to NCMgr & LM from the event handler...
+		//So, first we make the old NCMgr & LM unreachable (the event handler has only weakrefs)
 		if (m_pNCManager!=null) {
-			//and since the AlphabetManager is about to be deleted too, better do that as well...
+			//since the AlphabetManager is about to be deleted, better write out anything unsaved...
 			m_pNCManager.getAlphabetManager().WriteTrainFileFull(this);
-			m_pNCManager.UnregisterComponent();
 		}
 		
 		//Then we construct a new NCMgr and (untrained) LM...
-		m_pNCManager = new CNodeCreationManager(this, m_SettingsStore);
+		m_pNCManager = new CNodeCreationManager(this, this);
 		if (m_ColourIO.getByName(GetStringParameter(Esp_parameters.SP_COLOUR_ID))==null)
 			ChangeColours(); //we must have been using the alphabet palette, which may have changed
 		
@@ -505,10 +433,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		m_DasherModel.clearScheduledSteps();
 		// Request a full redraw at the next time step.
 		Redraw(true);
-		
-		CStopEvent oEvent = new CStopEvent();
-		InsertEvent(oEvent);
-		
+
 		if (m_UserLog != null)
 			m_UserLog.StopWriting((float) GetNats());
 	}
@@ -521,10 +446,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	public void Unpause(long Time) { // CSFS: Formerly unsigned.
 		SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, false);
-				
-		CStartEvent oEvent = new CStartEvent();
-		InsertEvent(oEvent);
-		
+
 		if (m_UserLog != null)
 			m_UserLog.StartWriting();
 	}
@@ -553,7 +475,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			m_Input.Deactivate();
 		}
 		
-		m_Input = (CDasherInput)GetModuleByName(GetStringParameter(Esp_parameters.SP_INPUT_DEVICE));
+		m_Input = GetModuleByName(CDasherInput.class, GetStringParameter(Esp_parameters.SP_INPUT_DEVICE));
 		if (m_Input==null) m_Input = m_DefaultInput;
 		
 		if(m_Input != null) {
@@ -599,7 +521,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		}
 		
 		//ok, we want to render some nodes...if there are any...
-		if (m_DasherModel == null) return;
+		if (m_DasherModel == null) throw new IllegalStateException("Not yet constructed?");
 		
 		boolean bRedrawNodes = m_bForceRedrawNodes;
 		m_bForceRedrawNodes = false;
@@ -703,7 +625,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	private void ChangeColours() {
 		if(m_ColourIO == null)
-			return;
+			throw new IllegalStateException("Not yet constructed?");
 		
 		CColourIO.ColourInfo info = m_ColourIO.getByName(GetStringParameter(Esp_parameters.SP_COLOUR_ID));
 		if (info==null) {
@@ -733,7 +655,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		if (m_Colours!=null) m_DasherScreen.SetColourScheme(m_Colours);
 		
 		if(m_DasherView == null)
-			m_DasherView = new CDasherViewSquare(this, m_SettingsStore, m_DasherScreen, computeOrientation());
+			m_DasherView = new CDasherViewSquare(this, m_DasherScreen, computeOrientation());
 		else
 			m_DasherView.ChangeScreen(m_DasherScreen);
 		
@@ -757,17 +679,14 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 */
 	protected void train(CAlphabetManager<?> mgr) {
 		// Train the new language model
-		final CLockEvent evt = new CLockEvent("Training Dasher", true, 0); 
-		InsertEvent(evt);
+		Lock("Training Dasher", 0); 
 		train(mgr,new ProgressNotifier() {
 			public boolean notifyProgress(int iPercent) {
-				evt.m_iPercent = iPercent;
-				InsertEvent(evt);
+				Lock("Training Dasher", iPercent);
 				return false; //do not allow aborts
 			}
 		});
-		evt.m_bLock = false;
-		InsertEvent(evt);
+		Lock("Training Dasher", -1);
 	}
 	
 	/** Interface by which an object may be notified of training progress (as a %age) */
@@ -801,7 +720,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			try {
 				iRead = mgr.TrainStream(in, iTotalBytes, iRead, prog);
 			} catch (IOException e) {
-				InsertEvent(new CMessageEvent("Error "+e+" in training - rest of text skipped", 0, 1)); // 0 = message ID ?!?!
+				Message("Error "+e+" in training - rest of text skipped", 1); // 1 = severity
 			}
 		}
 	}
@@ -869,7 +788,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * @param bForceStart Should we rebuild the context even if none is submitted?
 	 */
 	public void setOffset(int iOffset, boolean bForce) {
-		if (m_DasherModel==null) return; //hmmm. does this ever happen?
+		if (m_DasherModel==null) throw new IllegalStateException("Not yet constructed?");
 		/* CSFS: This used to clear m_DasherModel.strContextBuffer,
 		 * which has been removed per the notes at the top of the file.
 		 */
@@ -895,67 +814,6 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * @param prob Probability of symbol, conditioned on parent
 	 */
 	public abstract void deleteText(String ch, double prob);
-	
-	/**
-	 * Deferred to CSettingsStore
-	 * 
-	 * @see CSettingsStore
-	 * 
-	 */
-	public void SetBoolParameter(Ebp_parameters iParameter, boolean bValue) {
-		m_SettingsStore.SetBoolParameter(iParameter, bValue);
-	}
-	
-	/**
-	 * Deferred to CSettingsStore
-	 * 
-	 * @see CSettingsStore
-	 * 
-	 */
-	public void SetLongParameter(Elp_parameters iParameter, long lValue) { 
-		m_SettingsStore.SetLongParameter(iParameter, lValue);
-	};
-	
-	/**
-	 * Deferred to CSettingsStore
-	 * 
-	 * @see CSettingsStore
-	 * 
-	 */
-	public void SetStringParameter(Esp_parameters iParameter, String sValue) {
-		PreSetNotify(iParameter, sValue);
-		m_SettingsStore.SetStringParameter(iParameter, sValue);
-	};
-	
-	/**
-	 * Deferred to CSettingsStore
-	 * 
-	 * @see CSettingsStore
-	 * 
-	 */
-	public boolean GetBoolParameter(Ebp_parameters iParameter) {
-		return m_SettingsStore.GetBoolParameter(iParameter);
-	}
-	
-	/**
-	 * Deferred to CSettingsStore
-	 * 
-	 * @see CSettingsStore
-	 * 
-	 */
-	public long GetLongParameter(Elp_parameters iParameter) {
-		return m_SettingsStore.GetLongParameter(iParameter);
-	}
-	
-	/**
-	 * Deferred to CSettingsStore
-	 * 
-	 * @see CSettingsStore
-	 * 
-	 */
-	public String GetStringParameter(Esp_parameters iParameter) {
-		return m_SettingsStore.GetStringParameter(iParameter);
-	}
 	
 	/**
 	 * Gets a reference to m_UserLog.
@@ -1043,7 +901,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 			m_InputFilter.Deactivate();
 		}
 		
-		m_InputFilter = (CInputFilter)GetModuleByName(GetStringParameter(Esp_parameters.SP_INPUT_FILTER));
+		m_InputFilter = GetModuleByName(CInputFilter.class, GetStringParameter(Esp_parameters.SP_INPUT_FILTER));
 		if (m_InputFilter == null) m_InputFilter = m_DefaultInputFilter;
 		if(m_InputFilter != null) {
 			m_InputFilter.Activate();
@@ -1066,17 +924,8 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 * 
 	 * @see CModuleManager
 	 */
-	public CDasherModule GetModule(long iID) {
-		return m_oModuleManager.GetModule(iID);
-	}
-	
-	/**
-	 * Deferred to m_oModuleManager
-	 * 
-	 * @see CModuleManager
-	 */
-	public CDasherModule GetModuleByName(String strName) {
-		return m_oModuleManager.GetModuleByName(strName);
+	public <T extends CDasherModule> T GetModuleByName(Class<T> clazz, String strName) {
+		return m_oModuleManager.GetModuleByName(clazz, strName);
 	}
 	
 	/**
@@ -1097,17 +946,17 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	 *
 	 */
 	protected void CreateModules() {
-		RegisterModule(setDefaultInputFilter(new CDefaultFilter(this, m_SettingsStore, 3, "Normal Control")));
-		RegisterModule(new COneDimensionalFilter(this, m_SettingsStore, 4, "One Dimensional Mode"));
-		RegisterModule(new CStylusFilter(this, m_SettingsStore));
+		RegisterModule(setDefaultInputFilter(new CDefaultFilter(this, this, "Normal Control")));
+		RegisterModule(new COneDimensionalFilter(this, this, "One Dimensional Mode"));
+		RegisterModule(new CStylusFilter(this, this));
 		
-		RegisterModule(new CClickFilter(this, m_SettingsStore));
-		RegisterModule(new TwoButtonDynamicFilter(this, m_SettingsStore));
-		RegisterModule(new OneButtonDynamicFilter(this, m_SettingsStore));
+		RegisterModule(new CClickFilter(this, this));
+		RegisterModule(new TwoButtonDynamicFilter(this, this));
+		RegisterModule(new OneButtonDynamicFilter(this, this));
 		
-		RegisterModule(new CCompassMode(this, m_SettingsStore));
-		RegisterModule(new CMenuMode(this, m_SettingsStore, 8, "Menu Mode"));
-		RegisterModule(new CButtonMode(this, m_SettingsStore, 10, "Direct Mode"));
+		RegisterModule(new CCompassMode(this, this));
+		RegisterModule(new CMenuMode(this, this, "Menu Mode"));
+		RegisterModule(new CButtonMode(this, this, "Direct Mode"));
 
 		//Not yet implemented:
 		//RegisterModule(new CDasherButtons(this, m_SettingsStore, this, 3, 3, false,12, "Alternating Direct Mode"));
@@ -1122,12 +971,12 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 		else {
 			List<CDasherModule> mods=new ArrayList<CDasherModule>();
 			if(param == Esp_parameters.SP_INPUT_FILTER)
-				m_oModuleManager.ListModules(CDasherModule.INPUT_FILTER, mods);
+				m_oModuleManager.ListModules(CInputFilter.class, mods);
 			else if (param==Esp_parameters.SP_INPUT_DEVICE)
-				m_oModuleManager.ListModules(CDasherModule.INPUT_DEVICE, mods);
+				m_oModuleManager.ListModules(CDasherInput.class, mods);
 			else
 				return;
-			for (CDasherModule m : mods) vList.add(m.GetName());
+			for (CDasherModule m : mods) vList.add(m.getName());
 		}
 	}
 	
@@ -1204,5 +1053,7 @@ abstract public class CDasherInterfaceBase extends CEventHandler {
 	private final Runnable REBUILD_TASK = new Runnable() {
 		public void run() {forceRebuild();}
 	};
+	
+	public CInputFilter GetActiveInputFilter() {return m_InputFilter;}
 
 }

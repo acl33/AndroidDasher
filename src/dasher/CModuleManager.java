@@ -37,76 +37,46 @@ import java.util.Collection;
  * A list of all available modules can also be supplied.
  */
 public class CModuleManager {
-	
 	/**
-	 * Map from modules' IDs to the modules themselves
+	 * Map from modules' Strings to the modules themselves
 	 */
-	protected HashMap<Long, CDasherModule> m_mapModules = new HashMap<Long, CDasherModule>();
+	protected final Map<String, CDasherModule> m_mapModules = new HashMap<String, CDasherModule>();
 	
 	/**
-	 * Enumerates all modules provided by a given factory and stores
-	 * them in our internal map.
-	 * <p>
-	 * These modules can henceforth be retrieved using GetModuleByName
-	 * or GetModule.
+	 * Store the module in our internal map so it can be retrieved
+	 * using GetModuleByName <!--or GetModule-->
 	 * 
-	 * @param Factory Factory to search for new modules
+	 * @param mod the new module; must have a unique name
 	 */
 	public void RegisterModule(CDasherModule mod) {
-		long l = mod.GetID();
-		if (m_mapModules.containsKey(l))
-			throw new IllegalArgumentException("Module "+l+" already exists!");
-		m_mapModules.put(l, mod);
+		String s = mod.getName();
+		if (m_mapModules.containsKey(s))
+			throw new IllegalArgumentException("Module "+s+" already exists!");
+		m_mapModules.put(s, mod);
 	}
 	
 	/**
-	 * Gets a module with the given identifier
+	 * Gets a module with the given name and supertype (typically {@link CDasherInput} or {@link CInputFilter})
 	 * 
 	 * @param iID ID of the required module
 	 * @return Matching Module, or null if none was found.
 	 */
-	public CDasherModule GetModule(long iID) {
-		
-		return m_mapModules.get(iID);
+	public <T extends CDasherModule> T GetModuleByName(Class<T> clazz, String strName) {
+		CDasherModule m = m_mapModules.get(strName);
+		return (clazz.isInstance(m)) ? clazz.cast(m) : null;
 	}
 	
 	/**
-	 * Retrieves a module by name. The module must previously
-	 * have been registered using RegisterFactory.
-	 * 
-	 * @param strName Name of the requested module
-	 * @return Module with this name, or null if there is none.
-	 */
-	public CDasherModule GetModuleByName(String strName) {
-		
-		for(Map.Entry<Long, CDasherModule> s : m_mapModules.entrySet()) {
-			if (s.getValue().GetName().equals(strName)) {
-				return s.getValue();
-			}
-		}
-		
-		return null;
-	}
-	
-	/**
-	 * Retrieves a list of all modules with a given type.
-	 * <p>
-	 * Available types:
-	 * <p>
-	 * 0 - Input device
-	 * <p>
-	 * 1 - Input filter
+	 * Retrieves a list of all modules of a given type.
 	 *  
-	 * @param iType Type of modules to enumerate
+	 * @param clazz Type of modules to enumerate - typically {@link CDasherInput} or {@link CInputFilter}
 	 * @param vList Collection to be filled with the names of available
 	 * modules
 	 */
-	public void ListModules(int iType, Collection<CDasherModule> vList) {
-		for(Map.Entry<Long, CDasherModule> s : m_mapModules.entrySet()) {
-			if(s.getValue().GetType() == iType) {
-				vList.add(s.getValue());
-			}
-		}
+	public <T> void ListModules(Class<T> clazz, Collection<? super T> vList) {
+		for(CDasherModule m : m_mapModules.values())
+			if(clazz.isInstance(m))
+				vList.add(clazz.cast(m));
 	}
 
 }

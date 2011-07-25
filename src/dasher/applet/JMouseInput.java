@@ -50,8 +50,8 @@ public class JMouseInput extends dasher.CDasherInput implements MouseMotionListe
 	 */
 	private int mouseY;
 	
-	public JMouseInput(dasher.CEventHandler EventHandler, dasher.CSettingsStore SettingsStore) {
-		super(EventHandler, SettingsStore, 0, "Mouse Input"); 
+	public JMouseInput() {
+		super("Mouse Input"); 
 	}
 
 	/**

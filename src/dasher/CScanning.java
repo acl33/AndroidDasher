@@ -5,8 +5,8 @@ import dasher.Opts.ScreenOrientations;
 public abstract class CScanning extends CDasherButtons {
 	private long m_iScanTime;
 	
-	public CScanning(CDasherInterfaceBase iface, CSettingsStore sets, int iID, String szName) {
-		super(iface, sets, iID, szName);
+	public CScanning(CDasherComponent creator, CDasherInterfaceBase iface, String szName) {
+		super(creator, iface, szName);
 	}
 	
 	@Override public void Activate() {

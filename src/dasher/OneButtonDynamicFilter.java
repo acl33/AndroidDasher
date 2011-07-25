@@ -20,9 +20,8 @@ public class OneButtonDynamicFilter extends CDynamicFilter {
 	private double m_dMulBoundary;
 	private boolean m_bUseUpGuide;
 	
-	public OneButtonDynamicFilter(CDasherInterfaceBase iface,
-			CSettingsStore SettingsStore) {
-		super(iface, SettingsStore, 17, "One-button Dynamic Mode");
+	public OneButtonDynamicFilter(CDasherComponent creator, CDasherInterfaceBase iface) {
+		super(creator, iface, "One-button Dynamic Mode");
 		createMarkers();
 	}
 	
@@ -71,12 +70,12 @@ public class OneButtonDynamicFilter extends CDynamicFilter {
 	}
 	
 	@Override
-	public void HandleEvent(CEvent evt) {
-		if (!(evt instanceof CParameterNotificationEvent)) return;
-		EParameters p = ((CParameterNotificationEvent)evt).m_iParameter;
-		if (p==Elp_parameters.LP_ONE_BUTTON_OUTER || p==Elp_parameters.LP_ONE_BUTTON_LONG_GAP || p==Elp_parameters.LP_ONE_BUTTON_SHORT_GAP)
+	public void HandleEvent(EParameters eParam) {
+		if (eParam==Elp_parameters.LP_ONE_BUTTON_OUTER 
+			|| eParam==Elp_parameters.LP_ONE_BUTTON_LONG_GAP
+			|| eParam==Elp_parameters.LP_ONE_BUTTON_SHORT_GAP)
 			createMarkers();
-		super.HandleEvent(evt);
+		super.HandleEvent(eParam);
 	}
 	
 	private void createMarkers() {

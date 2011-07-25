@@ -155,13 +155,13 @@ public abstract class CDasherView extends CDasherComponent {
 	 * @param SettingsStore Settings repository to use 
 	 * @param DasherScreen Screen object to wrap.
 	 */
-	public CDasherView(CEventHandler EventHandler, CSettingsStore SettingsStore, CDasherScreen DasherScreen, ScreenOrientations orient) {
-		super(EventHandler, SettingsStore);
+	public CDasherView(CDasherComponent creator, CDasherScreen DasherScreen, ScreenOrientations orient) {
+		super(creator);
 		m_Screen = DasherScreen;
 		realOrientation = orient;
 		
 		// Value caching
-		lpFontSize = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_DASHER_FONTSIZE);
+		lpFontSize = (int)GetLongParameter(Elp_parameters.LP_DASHER_FONTSIZE);
 	}
 	
 	/** Tells the view which orientation to use. The view does not watch for
@@ -187,12 +187,9 @@ public abstract class CDasherView extends CDasherComponent {
 	 * 
 	 * @param event Event to handle
 	 */
-	public void HandleEvent(CEvent event) {
-		if(event instanceof CParameterNotificationEvent) {
-			CParameterNotificationEvent evt = (CParameterNotificationEvent)event;
-			if (evt.m_iParameter == Elp_parameters.LP_DASHER_FONTSIZE) {
-				lpFontSize = (int)GetLongParameter(Elp_parameters.LP_DASHER_FONTSIZE);
-			}
+	public void HandleEvent(EParameters eParam) {
+		if (eParam == Elp_parameters.LP_DASHER_FONTSIZE) {
+			lpFontSize = (int)GetLongParameter(Elp_parameters.LP_DASHER_FONTSIZE);
 		}
 	}
 	

@@ -94,9 +94,9 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 		}
 	}
 
-	public CPPMLanguageModel(CEventHandler EventHandler, CSettingsStore SettingsStore, CAlphIO.AlphInfo alph) {
+	public CPPMLanguageModel(CDasherComponent creator, CAlphIO.AlphInfo alph) {
 
-		super(EventHandler, SettingsStore, alph); // Constructor of CLanguageModel
+		super(creator, alph); // Constructor of CLanguageModel
 
 		m_Root = new CPPMnode(-1,null); // m_NodeAlloc.Alloc();
 		
@@ -108,17 +108,13 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 		m_iMaxOrder = (int)GetLongParameter(Elp_parameters.LP_LM_MAX_ORDER);
 	}
 
-	public void HandleEvent(CEvent Event) {
-		super.HandleEvent(Event);
+	public void HandleEvent(EParameters eParam) {
+		super.HandleEvent(eParam);
 
-		if(Event instanceof CParameterNotificationEvent) {
-			CParameterNotificationEvent evt = (CParameterNotificationEvent)Event;
-			if(evt.m_iParameter == Elp_parameters.LP_LM_ALPHA) {
-				lpAlpha = GetLongParameter(Elp_parameters.LP_LM_ALPHA);
-			}
-			else if(evt.m_iParameter == Elp_parameters.LP_LM_BETA) {
-				lpBeta = GetLongParameter(Elp_parameters.LP_LM_BETA);
-			}
+		if(eParam == Elp_parameters.LP_LM_ALPHA) {
+			lpAlpha = GetLongParameter(Elp_parameters.LP_LM_ALPHA);
+		} else if(eParam == Elp_parameters.LP_LM_BETA) {
+			lpBeta = GetLongParameter(Elp_parameters.LP_LM_BETA);
 		}
 	}
 

@@ -8,9 +8,8 @@ public class TwoButtonDynamicFilter extends CDynamicPresses {
 	private boolean m_bDecorationChanged;
 	private double m_dNatsAtLastApply;
 	
-	public TwoButtonDynamicFilter(CDasherInterfaceBase iface,
-			CSettingsStore SettingsStore) {
-		super(iface, SettingsStore, 19, "Two-button Dynamic Mode");
+	public TwoButtonDynamicFilter(CDasherComponent creator, CDasherInterfaceBase iface) {
+		super(creator, iface, "Two-button Dynamic Mode");
 		createMarkers();
 	}
 
@@ -33,11 +32,10 @@ public class TwoButtonDynamicFilter extends CDynamicPresses {
 	}
 
 	@Override
-	public void HandleEvent(CEvent evt) {
-		if (evt instanceof CParameterNotificationEvent
-				&& ((CParameterNotificationEvent)evt).m_iParameter==Elp_parameters.LP_TWO_BUTTON_OFFSET) 
+	public void HandleEvent(EParameters eParam) {
+		if (eParam==Elp_parameters.LP_TWO_BUTTON_OFFSET) 
 			createMarkers();
-		super.HandleEvent(evt);
+		super.HandleEvent(eParam);
 	}
 	
 	private void createMarkers() {

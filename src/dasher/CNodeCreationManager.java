@@ -62,8 +62,8 @@ public class CNodeCreationManager extends CDasherComponent {
 	 * @param EventHandler Interface for e.g. Event handling
 	 * @param SettingsStore Settings repository
 	 */
-	public CNodeCreationManager(CDasherInterfaceBase intf, CSettingsStore SettingsStore) {
-		super(intf, SettingsStore);
+	public CNodeCreationManager(CDasherComponent creator, CDasherInterfaceBase intf) {
+		super(creator);
 		this.m_DasherInterface=intf;
 		//Convert the full alphabet to a symbolic representation for use in the language model
 		
@@ -87,7 +87,7 @@ public class CNodeCreationManager extends CDasherComponent {
 			
 			m_AlphabetManager = /*ACL (langMod.isRemote())
 		        ? new CRemoteAlphabetManager( this, langMod)
-		        :*/ new CAlphabetManager<CPPMLanguageModel.CPPMnode>( this, new CPPMLanguageModel(m_EventHandler, m_SettingsStore, m_cAlphabet));
+		        :*/ new CAlphabetManager<CPPMLanguageModel.CPPMnode>( this, new CPPMLanguageModel(this, m_cAlphabet));
 		
 			SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, false);
 			break;
@@ -212,7 +212,7 @@ public class CNodeCreationManager extends CDasherComponent {
 						freeArrayList.remove(i);
 			}
 				freeArrayList.clear(); //elements without space for a control-node probability.
-			m_ControlManager = new CControlManager(m_DasherInterface, m_DasherInterface.getSettingsStore(), this, c);
+			m_ControlManager = new CControlManager(this, m_DasherInterface, this, c);
 			// TODO - sort out size of control node - for the timebeing I'll fix the control node at 5%
 			return NORMALIZATION/20;
 		}
@@ -221,23 +221,16 @@ public class CNodeCreationManager extends CDasherComponent {
 		return 0;
 	}
 	
-	@Override public void HandleEvent(CEvent event) {
-		if (event instanceof CParameterNotificationEvent) {
-			CParameterNotificationEvent Evt = (CParameterNotificationEvent)event;
-			if (Evt.m_iParameter == Ebp_parameters.BP_CONTROL_MODE
-				|| Evt.m_iParameter == Elp_parameters.LP_UNIFORM) {
-				computeNormFactor();
-				m_DasherInterface.Redraw(true);
-			}
+	@Override public void HandleEvent(EParameters eParam) {
+		if (eParam == Ebp_parameters.BP_CONTROL_MODE
+			|| eParam == Elp_parameters.LP_UNIFORM) {
+			//note this will only affect nodes _populated_ after this;
+			// it won't change those which have created their children already.
+			computeNormFactor();
 		}
 	}
 
 	public CAlphabetManager<?> getAlphabetManager() {
 		return m_AlphabetManager;
-	}
-
-	@Override public void UnregisterComponent() {
-		m_AlphabetManager.m_LanguageModel.UnregisterComponent();
-		super.UnregisterComponent();
 	}
 }

@@ -40,20 +40,15 @@ package dasher;
  * 
  * @see CDasherModule
  */
-abstract public class CDasherInput extends CDasherModule {
+abstract public class CDasherInput implements CDasherModule {
 	
-	/**
-	 * Sole constructor. Simply recalls CDasherModule's constructor.
-	 * 
-	 * @param EventHandler Event handler with which we wish to register ourselves
-	 * @param SettingsStore Settings store for parameter getting/setting
-	 * @param iID This device's ID
-	 * @param iType This device's type number
-	 * @param szName Friendly name for this device, to be used with GetModuleByName
-	 */
-	public CDasherInput(CEventHandler EventHandler, CSettingsStore SettingsStore, long iID, String szName) { 
-		super(EventHandler, SettingsStore, iID, CDasherModule.INPUT_DEVICE, szName);
+	private final String m_szName;
+	
+	public CDasherInput(String szName) {
+		this.m_szName = szName;
 	}
+	
+	public String getName() {return m_szName;}
 	
 	/**
 	 * Gets the current position of the input in Dasher coordinates.

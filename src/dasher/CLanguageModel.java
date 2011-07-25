@@ -65,16 +65,9 @@ public abstract class CLanguageModel<C> extends CDasherComponent {
 	 * @param Alphabet Alphabet to work in
 	 */
 	
-	public CLanguageModel(CEventHandler EventHandler, CSettingsStore SettingsStore, CAlphIO.AlphInfo Alphabet) {
-	  super(EventHandler, SettingsStore);
+	public CLanguageModel(CDasherComponent creator, CAlphIO.AlphInfo Alphabet) {
+	  super(creator);
 	  m_Alphabet = Alphabet;
-	}
-
-	/**
-	 * Ignores all events
-	 */
-	public void HandleEvent(CEvent Event) {
-		/* Ignores all events */
 	}
 
 	/**

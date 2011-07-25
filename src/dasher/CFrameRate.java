@@ -112,9 +112,9 @@ private double logFrames;*/
 	 * <p>
 	 * We start with a frame rate of 32FPS. 
 	 */
-	public CFrameRate(CDasherInterfaceBase iface, CSettingsStore sets) {
-		super(iface,sets);
-		HandleEvent(new CParameterNotificationEvent(Elp_parameters.LP_MAX_BITRATE));
+	public CFrameRate(CDasherComponent creator) {
+		super(creator);
+		HandleEvent(Elp_parameters.LP_MAX_BITRATE);
 		m_iFrames = -1;
 		m_iSamples = 1;
 		
@@ -177,14 +177,10 @@ private double logFrames;*/
 		m_iFrames = -1;
 	}
 	
-	@Override public void HandleEvent(CEvent pEvent) {
-		if (pEvent instanceof CParameterNotificationEvent) {
-			CParameterNotificationEvent evt = (CParameterNotificationEvent)pEvent;
-			if(evt.m_iParameter == Elp_parameters.LP_MAX_BITRATE
-					|| evt.m_iParameter == Elp_parameters.LP_BOOSTFACTOR) {
-				//both bitrate _and_ boostfactor are stored as %ages...
-				m_dMaxbitrate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) * GetLongParameter(Elp_parameters.LP_BOOSTFACTOR) / 10000.0;
-			}
+	@Override public void HandleEvent(EParameters eParam) {
+		if(eParam == Elp_parameters.LP_MAX_BITRATE || eParam == Elp_parameters.LP_BOOSTFACTOR) {
+			//both bitrate _and_ boostfactor are stored as %ages...
+			m_dMaxbitrate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) * GetLongParameter(Elp_parameters.LP_BOOSTFACTOR) / 10000.0;
 		}
 	}
 }

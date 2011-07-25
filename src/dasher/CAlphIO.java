@@ -359,11 +359,11 @@ public class CAlphIO extends XMLFileParser {
 					
 				    currentAlph = new AlphInfo(name);
 				    if (name==null) {
-						m_Interface.InsertEvent(new CMessageEvent("Alphabet does not have a name, ignoring", 0, 1));
+						m_Interface.Message("Alphabet does not have a name, ignoring", 1);
 						//subtags etc. will be recorded in the AlphInfo object with null name anyway;
 						// but this will not be added to the list of available alphabets.
 					} else if (ctxEscape.length()!=1) {
-						m_Interface.InsertEvent(new CMessageEvent("Alphabet "+name+" has invalid escape character, will not use context commands.", 0, 1));
+						m_Interface.Message("Alphabet "+name+" has invalid escape character, will not use context commands.", 1);
 						currentAlph.ctxChar = null;
 					} else {
 						currentAlph.ctxChar = ctxEscape.charAt(0);
@@ -538,11 +538,11 @@ public class CAlphIO extends XMLFileParser {
 						if (text==null) {
 							text = tagAttributes.getValue(i);
 							if (text.codePointCount(0, text.length())!=1) {
-								m_Interface.InsertEvent(new CMessageEvent("Illegal character \""+text+"\" - should be exactly one unicode char. Skipping...", 2, 1));
+								m_Interface.Message("Illegal character \""+text+"\" - should be exactly one unicode char. Skipping...", 1);
 								return;
 							}
 						}
-						else m_Interface.InsertEvent(new CMessageEvent("Unnecessary or duplicate text for character '"+text+"'", 1, 1));
+						else m_Interface.Message("Unnecessary or duplicate text for character '"+text+"'", 1);
 						break;
 					case 'b':
 						bgcol = Integer.parseInt(tagAttributes.getValue(i));

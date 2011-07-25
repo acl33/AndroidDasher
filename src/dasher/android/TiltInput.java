@@ -3,19 +3,16 @@ package dasher.android;
 import java.util.List;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.os.PowerManager;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.WindowManager;
 import dasher.CDasherInput;
-import dasher.CDasherInterfaceBase;
 import dasher.CDasherView;
-import dasher.CParameterNotificationEvent;
-import dasher.CSettingsStore;
-import dasher.Ebp_parameters;
 
 public class TiltInput extends CDasherInput implements SensorEventListener {
 	private final SensorManager sm;
@@ -34,16 +31,18 @@ public class TiltInput extends CDasherInput implements SensorEventListener {
 	private boolean bActive;
 	private final Sensor s;
 	
-	public static TiltInput MAKE(Context androidCtx, CDasherInterfaceBase iface, CSettingsStore sets) {
+	public static TiltInput MAKE(Context androidCtx) {
 		SensorManager sm=(SensorManager)androidCtx.getSystemService(Context.SENSOR_SERVICE);
 		WindowManager wm = (WindowManager)androidCtx.getSystemService(Context.WINDOW_SERVICE);
 		List<Sensor> ss = sm.getSensorList(Sensor.TYPE_ACCELEROMETER);
 		if (ss.isEmpty()) return null;
-		return new TiltInput(iface, sets, sm, ss.get(0),wm);
+		TiltInput ti = new TiltInput(sm, ss.get(0),wm);
+		CalibPreference.addTiltDevice(ti);
+		return ti;
 	}
 	
-	private TiltInput(CDasherInterfaceBase iface, CSettingsStore sets, SensorManager sm, Sensor s, WindowManager wm) {
-		super(iface, sets, 1, "Tilt Input");
+	private TiltInput(SensorManager sm, Sensor s, WindowManager wm) {
+		super("Tilt Input");
 		this.sm=sm;
 		this.s=s;
 		this.wm=wm;
@@ -83,7 +82,7 @@ public class TiltInput extends CDasherInput implements SensorEventListener {
 		fx = Math.max(0.0f, Math.min(1.0f, fx));
 		fy = Math.max(0.0f, Math.min(1.0f, fy));
 	}
-
+	
 	@Override
 	public boolean GetScreenCoords(CDasherView pView,long[] Coordinates) {
 		if (!bActive) return false;

@@ -145,7 +145,7 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 			@Override
 			protected void CreateModules() {
 				super.CreateModules();
-				JMouseInput m_MouseInput = new JMouseInput(this, getSettingsStore());
+				JMouseInput m_MouseInput = new JMouseInput();
 				RegisterModule(m_MouseInput);
 				JDasherApplet.this.panel.addMouseMotionListener(m_MouseInput);
 			}
@@ -157,26 +157,41 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 			 * @param Event Event to handle
 			 */
 			@Override
-			public void InsertEvent(CEvent event) {
-				JDasherApplet.this.handleEvent(event);
-				super.InsertEvent(event);
+			public void HandleEvent(EParameters eParam) {
+				JDasherApplet.this.paramChanged(eParam);
+				super.HandleEvent(eParam);
 			}
 
-			/**
-			 * Attempts to create a JSettings object; if a StoreUnavailableException
-			 * is produced in the course of this, we fall back and produce a 
-			 * standard CSettingsStore.
-			 */
-			@Override
-			protected CSettingsStore createSettingsStore() {
-				try {
-					return new JSettings(this);
-				} catch (StoreUnavailableException e) {
-					// We can't use the registry/config file due to security problems.
-					return new CSettingsStore(this);
+			@Override public void Message(String msg, int iSeverity) { // Requested message display
+				// Convert internal message types to those used by JOptionPane.
+				int iType = (iSeverity==0) ? JOptionPane.INFORMATION_MESSAGE
+							: (iSeverity == 1) ? JOptionPane.WARNING_MESSAGE
+							: (iSeverity == 2) ? JOptionPane.ERROR_MESSAGE : -1;
+				JOptionPane.showMessageDialog(JDasherApplet.this, msg, "JDasher", iType);
+			}
+			
+			@Override public void Lock(String msg, int iPercent) {
+				if(iPercent>=0) {
+					ProgressMeter.setVisible(true);
+					ProgressMeter.setProgressBarVisible(true);
+					
+					try { 
+						java.awt.Point myloc = JDasherApplet.this.getLocationOnScreen();
+						ProgressMeter.setLocation(((myloc.x + getWidth()) / 2) - 100, ((myloc.y + getHeight()) / 2) - 50);
+					}
+					catch(Exception e) {
+						// ignore; this means we're not visible.
+					}
+								
+					ProgressMeter.setText(msg);
+					
+					ProgressMeter.setProgress(iPercent, 100);
+				}
+				else {
+					ProgressMeter.setVisible(false);
 				}
 			}
-
+			
 			/**
 			 * Orders our host to redraw.
 			 * 
@@ -429,94 +444,28 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	 * this occurs in response to an alphabet specifying its own
 	 * colour scheme.
 	 * <p>
-	 * The Applet also responds to LockEvents by showing our ScreenOverlay
-	 * when locked and updating its progress bar, and MessageEvents
-	 * by showing a message dialog.
-	 * <p>
-	 * Finally we pass the event on to the EditBox, in case some
-	 * handling is required there as well. 
 	 */
-	/*private*/ void handleEvent(dasher.CEvent event) {
-		
-		if(event instanceof CParameterNotificationEvent) { // Parameter change notification
-			
-			CParameterNotificationEvent evt = (dasher.CParameterNotificationEvent)event;
-			
-			if(evt.m_iParameter == dasher.Ebp_parameters.BP_DASHER_PAUSED) {
-				if(Dasher.GetBoolParameter(dasher.Ebp_parameters.BP_DASHER_PAUSED)) {
-					taskScheduler.cancel();
-					taskScheduler = null;
-				}
-				else {
-					taskScheduler = new Timer();
-					taskScheduler.scheduleAtFixedRate(new TimerTask() {
-						public void run() {
-							JDasherApplet.this.repaint();
-						}
-					}, 0, 20);
-				}
-			}
-			else if(evt.m_iParameter == dasher.Esp_parameters.SP_COLOUR_ID) {
-				if(MenuBar != null) MenuBar.setColour(Dasher.GetStringParameter(dasher.Esp_parameters.SP_COLOUR_ID));
-			}
-			else if (evt.m_iParameter == dasher.Esp_parameters.SP_ALPHABET_ID) {
-				if (MenuBar!=null) MenuBar.setAlphabet(Dasher.GetStringParameter(dasher.Esp_parameters.SP_ALPHABET_ID));
-			}
-			
-		}
-		else if(event instanceof CLockEvent) { // Lock event (training progress report) 
-			CLockEvent evt = (dasher.CLockEvent)event;
-			
-			if(evt.m_bLock) {
-				ProgressMeter.setVisible(true);
-				ProgressMeter.setProgressBarVisible(true);
-				
-				try { 
-					java.awt.Point myloc = this.getLocationOnScreen();
-					ProgressMeter.setLocation(((myloc.x + this.getWidth()) / 2) - 100, ((myloc.y + this.getHeight()) / 2) - 50);
-				}
-				catch(Exception e) {
-					// ignore; this means we're not visible.
-				}
-							
-				ProgressMeter.setText(evt.m_strMessage);
-				
-				ProgressMeter.setProgress(evt.m_iPercent, 100);
+	/*private*/ void paramChanged(EParameters eParam) {
+		if(eParam == dasher.Ebp_parameters.BP_DASHER_PAUSED) {
+			if(Dasher.GetBoolParameter(dasher.Ebp_parameters.BP_DASHER_PAUSED)) {
+				taskScheduler.cancel();
+				taskScheduler = null;
 			}
 			else {
-				ProgressMeter.setVisible(false);
+				taskScheduler = new Timer();
+				taskScheduler.scheduleAtFixedRate(new TimerTask() {
+					public void run() {
+						JDasherApplet.this.repaint();
+					}
+				}, 0, 20);
 			}
-			
-			
 		}
-		else if(event instanceof CMessageEvent) { // Requested message display
-			
-			dasher.CMessageEvent evt = (dasher.CMessageEvent)event;
-			
-			JOptionPane.showMessageDialog(this, evt.m_strMessage, "JDasher", getMessageType(evt.m_iType));
-			
+		else if(eParam == dasher.Esp_parameters.SP_COLOUR_ID) {
+			if(MenuBar != null) MenuBar.setColour(Dasher.GetStringParameter(dasher.Esp_parameters.SP_COLOUR_ID));
 		}
-	}
-	
-	/**
-	 * Converts Dasher's message dialog types into JOptionPane's
-	 * constants with the same meaning. For example, type 0 becomes
-	 * JOptionPane.INFORMATION_MESSAGE.
-	 * <p>
-	 * If asked to convert an invalid message type, -1 is returned. 
-	 * 
-	 * @param type Type to convert.
-	 * @return JOptionPane equivalent constant
-	 */
-	private int getMessageType(int type) {
-		
-		// Convert internal message types to those used by JOptionPane.
-		
-		if(type == 0) return JOptionPane.INFORMATION_MESSAGE;
-		if(type == 1) return JOptionPane.WARNING_MESSAGE;
-		if(type == 2) return JOptionPane.ERROR_MESSAGE;
-		
-		return -1;
+		else if (eParam == dasher.Esp_parameters.SP_ALPHABET_ID) {
+			if (MenuBar!=null) MenuBar.setAlphabet(Dasher.GetStringParameter(dasher.Esp_parameters.SP_ALPHABET_ID));
+		}
 	}
 	
 	/**

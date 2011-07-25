@@ -8,8 +8,8 @@ import static dasher.CDasherModel.*;
  */
 public class COneDimensionalFilter extends CDefaultFilter {
 
-	public COneDimensionalFilter(CDasherInterfaceBase iface, CSettingsStore SettingsStore, long iID, String szName) {
-		super(iface, SettingsStore, iID, szName);
+	public COneDimensionalFilter(CDasherComponent creator, CDasherInterfaceBase iface, String szName) {
+		super(creator, iface, szName);
 	}
 
 	/**
@@ -69,7 +69,7 @@ public class COneDimensionalFilter extends CDefaultFilter {
 	
 	@Override protected void CreateStartHandler() {
 		if (GetBoolParameter(Ebp_parameters.BP_CIRCLE_START)) {
-			m_StartHandler= new CCircleStartHandler(m_Interface, m_SettingsStore) {
+			m_StartHandler= new CCircleStartHandler(this) {
 				private CDasherView.Point fwdCircle;
 				@Override protected CDasherView.Point getScreenCenter(CDasherView pView) {
 					if (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)

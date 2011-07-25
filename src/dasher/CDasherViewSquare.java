@@ -149,17 +149,17 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param SettingsStore Settings repository to use
 	 * @param DasherScreen Screen to wrap and use for primitive drawing
 	 */
-	public CDasherViewSquare(CEventHandler EventHandler, CSettingsStore SettingsStore, CDasherScreen DasherScreen, Opts.ScreenOrientations orient)  {
+	public CDasherViewSquare(CDasherComponent creator, CDasherScreen DasherScreen, Opts.ScreenOrientations orient)  {
 		
-		super(EventHandler, SettingsStore, DasherScreen, orient);
+		super(creator, DasherScreen, orient);
 		m_Y1 = 4;
 		m_Y2 = (long)(0.95 * MAX_Y);
 		m_Y3 = (long)(0.05 * MAX_Y);
 		
 		m_DelayDraw = new CDelayedDraw();
 		
-		minNodeSizeText = (int)SettingsStore.GetLongParameter(Elp_parameters.LP_MIN_NODE_SIZE_TEXT);
-		bOutline = SettingsStore.GetBoolParameter(Ebp_parameters.BP_OUTLINE_MODE);
+		minNodeSizeText = (int)GetLongParameter(Elp_parameters.LP_MIN_NODE_SIZE_TEXT);
+		bOutline = GetBoolParameter(Ebp_parameters.BP_OUTLINE_MODE);
 		
 		SetScaleFactor();
 		
@@ -186,20 +186,15 @@ public class CDasherViewSquare extends CDasherView {
 	 * <i>LP_TRUNCATION, LP_TRUNCATION_TYPE, LP_NORMALIZATION</i>:
 	 * Updates internally cached values of these parameters.
 	 */
-	public void HandleEvent(CEvent Event) {
+	public void HandleEvent(EParameters eParam) {
 		// Let the parent class do its stuff
-		super.HandleEvent(Event);
+		super.HandleEvent(eParam);
 		
 		// And then interpret events for ourself
-		if(Event instanceof CParameterNotificationEvent) {
-			CParameterNotificationEvent Evt = (CParameterNotificationEvent)Event;
-			
-			if (Evt.m_iParameter == Elp_parameters.LP_MIN_NODE_SIZE_TEXT) {
-				minNodeSizeText = (int)GetLongParameter(Elp_parameters.LP_MIN_NODE_SIZE_TEXT);
-			}
-			else if (Evt.m_iParameter == Ebp_parameters.BP_OUTLINE_MODE) {
-				bOutline = GetBoolParameter(Ebp_parameters.BP_OUTLINE_MODE);
-			}
+		if (eParam == Elp_parameters.LP_MIN_NODE_SIZE_TEXT) {
+			minNodeSizeText = (int)GetLongParameter(Elp_parameters.LP_MIN_NODE_SIZE_TEXT);
+		} else if (eParam == Ebp_parameters.BP_OUTLINE_MODE) {
+			bOutline = GetBoolParameter(Ebp_parameters.BP_OUTLINE_MODE);
 		}
 	}
 	

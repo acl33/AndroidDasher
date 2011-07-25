@@ -28,7 +28,6 @@ package dasher.applet;
 import java.security.AccessControlException;
 import java.util.prefs.Preferences;
 
-import dasher.CEventHandler;
 import dasher.CParameterNotFoundException;
 import dasher.CSettingsStore;
 
@@ -59,19 +58,14 @@ public class JSettings extends CSettingsStore {
 
 	private Preferences appSettings;
 	
-	public JSettings(CEventHandler handler) throws StoreUnavailableException {
-		
-		super(handler, false);
-		
+	public JSettings() throws StoreUnavailableException {
 		try {
 			appSettings = Preferences.userRoot();
 		}
 		catch(AccessControlException e) {
 			throw new StoreUnavailableException();
 		}
-		
 		LoadPersistent();
-			
 	}
 	
 	
@@ -98,7 +92,8 @@ public class JSettings extends CSettingsStore {
 		
 		try {
 			long retval = appSettings.getLong("JDasher/L_" + Key, -999);
-			if (retval == -999) throw new CParameterNotFoundException(Key);
+			if (retval == -999 && appSettings.getLong("JDasher/L_"+Key,-998)==-998)
+				throw new CParameterNotFoundException(Key);
 			else return retval;
 		}
 		catch (AccessControlException e) {
@@ -121,13 +116,7 @@ public class JSettings extends CSettingsStore {
 
 
 	protected void SaveSetting(String Key, boolean Value) {
-		int val;
-		if (Value == false) {
-			val = 0;
-		}
-		else {
-			val = 1;
-		}
+		int val = Value ? 1 : 0;
 		try {
 			appSettings.putInt("JDasher/B_" + Key, val);
 		}
@@ -141,7 +130,6 @@ public class JSettings extends CSettingsStore {
 		try {
 			appSettings.putLong("JDasher/L_" + Key, Value);
 		}
-	
 		catch (AccessControlException e) {
 			return; // Fail silently; we will use the default next time
 		}	

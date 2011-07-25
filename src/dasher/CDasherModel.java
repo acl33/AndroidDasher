@@ -132,10 +132,10 @@ public class CDasherModel extends CFrameRate {
 	 * Initialise a new DasherModel. Note that you'll still have to call
 	 * {@link #SetOffset(int, CAlphabetManager, boolean)} before you can use it...
 	 */
-	public CDasherModel(CDasherInterfaceBase iface, CSettingsStore SettingsStore) {
-		super(iface, SettingsStore); 
+	public CDasherModel(CDasherComponent creator) {
+		super(creator); 
 		
-		HandleEvent(new CParameterNotificationEvent(Elp_parameters.LP_NODE_BUDGET));
+		HandleEvent(Elp_parameters.LP_NODE_BUDGET);
 	}
 	
 	/**
@@ -149,23 +149,17 @@ public class CDasherModel extends CFrameRate {
 	 * <i>LP_UNIFORM</i>: Updates our internally cached value (uniformAdd)
 	 * to reflect the new value. 
 	 */	
-	public void HandleEvent(CEvent Event) {
-		super.HandleEvent(Event); //framerate watches LP_MAX_BITRATE
-		if(Event instanceof CParameterNotificationEvent) {
-			CParameterNotificationEvent Evt = (CParameterNotificationEvent)(Event);
-			if (Evt.m_iParameter == Ebp_parameters.BP_DASHER_PAUSED) {
-				if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
-					//just unpaused
-					ResetFramecount();
-					total_nats = 0.0;
-				}
-			} else if (Evt.m_iParameter == Elp_parameters.LP_NODE_BUDGET) {
-				pol = new AmortizedPolicy((int)GetLongParameter(Elp_parameters.LP_NODE_BUDGET));
+	public void HandleEvent(EParameters eParam) {
+		super.HandleEvent(eParam); //framerate watches LP_MAX_BITRATE
+		if (eParam == Ebp_parameters.BP_DASHER_PAUSED) {
+			if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
+				//just unpaused
+				ResetFramecount();
+				total_nats = 0.0;
 			}
-			
-			
+		} else if (eParam == Elp_parameters.LP_NODE_BUDGET) {
+			pol = new AmortizedPolicy((int)GetLongParameter(Elp_parameters.LP_NODE_BUDGET));
 		}
-		
 	}
 	
 	/**

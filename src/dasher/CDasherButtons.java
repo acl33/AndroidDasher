@@ -7,8 +7,8 @@ public abstract class CDasherButtons extends CInputFilter {
 	
 	//protected void ChangeBoxes() {m_pBoxes = SetupBoxes(); m_bDecorationChanged=true;}
 	
-	public CDasherButtons(CDasherInterfaceBase iface, CSettingsStore sets, int iID, String szName) {
-		super(iface, sets, iID, szName);
+	public CDasherButtons(CDasherComponent creator, CDasherInterfaceBase iface, String szName) {
+		super(creator, iface, szName);
 		m_pBoxes = SetupBoxes();
 	}
 	

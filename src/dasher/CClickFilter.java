@@ -53,9 +53,9 @@ public class CClickFilter extends CInputFilter {
 	 * @param SettingsStore Settings repository.
 	 * @param Interface Interface with which the filter should be registered.
 	 */
-	public CClickFilter(CDasherInterfaceBase iface, CSettingsStore SettingsStore) {
-	  super(iface, SettingsStore, 7, "Click Mode");
-	  HandleEvent(new CParameterNotificationEvent(Elp_parameters.LP_MAX_ZOOM));
+	public CClickFilter(CDasherComponent creator, CDasherInterfaceBase iface) {
+	  super(creator, iface, "Click Mode");
+	  HandleEvent(Elp_parameters.LP_MAX_ZOOM);
 	}
 
 	/**
@@ -102,9 +102,8 @@ public class CClickFilter extends CInputFilter {
 	}
 	private final long[] inputCoords = new long[2];  
 
-	@Override public void HandleEvent(CEvent evt) {
-		if (evt instanceof CParameterNotificationEvent
-				&& ((CParameterNotificationEvent)evt).m_iParameter==Elp_parameters.LP_MAX_ZOOM)
+	@Override public void HandleEvent(EParameters eParam) {
+		if (eParam==Elp_parameters.LP_MAX_ZOOM)
 			minX = Math.max(2, CROSS_X/GetLongParameter(Elp_parameters.LP_MAX_ZOOM));
 	}
 }

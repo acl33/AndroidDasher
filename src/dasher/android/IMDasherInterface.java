@@ -21,8 +21,8 @@ import dasher.CDasherNode;
 
 class IMDasherInterface extends ADasherInterface
 {
-	static final IMDasherInterface INSTANCE = new IMDasherInterface();
-	private IMDasherInterface() {}
+	//static IMDasherInterface INSTANCE;// = new IMDasherInterface();
+	
 	private InputConnection ic;
 	/** Android cursor pos - so the index of the character immediately right of the cursor */
 	private int lastCursorPos;
@@ -35,14 +35,8 @@ class IMDasherInterface extends ADasherInterface
 	
 	private final IntQueue expectedOffsets = new IntQueue();
 		
-	@Override
-	protected CSettingsStore createSettingsStore() {
-		Log.d("DasherIME",androidCtx+" creating settings...");
-		return new AndroidSettings(this, PreferenceManager.getDefaultSharedPreferences(androidCtx));
-	}
-	
-	@Override public void Realize(Context ctx) {
-		super.Realize(ctx);
+	IMDasherInterface(Context androidCtx,boolean train) {
+		super(androidCtx,train);
 	}
 	
 	@Override

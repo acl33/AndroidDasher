@@ -56,12 +56,14 @@ package dasher;
  * Input filters may also interact with the main Dasher interface,
  * typically to start and stop Dasher in response to key presses.
  */
-public abstract class CInputFilter extends CDasherModule {
+public abstract class CInputFilter extends CDasherComponent implements CDasherModule {
 	
 	/**
 	 * Interface which this InputFilter may control
 	 */	
 	protected final CDasherInterfaceBase m_Interface;
+	
+	private final String m_szName;
 	
 	/**
 	 * Creates a new filter. See DasherModule for information
@@ -75,11 +77,13 @@ public abstract class CInputFilter extends CDasherModule {
 	 * @param szName Friendly name (ideally unique)
 	 * @see CDasherModule
 	 */
-	public CInputFilter(CDasherInterfaceBase iface, CSettingsStore SettingsStore, long iID, String szName)
-    { 
-      	super(iface, SettingsStore, iID, CDasherModule.INPUT_FILTER, szName);
+	public CInputFilter(CDasherComponent creator, CDasherInterfaceBase iface, String szName) { 
+      	super(creator);
+      	this.m_szName = szName;
       	m_Interface = iface;
     }
+	
+	public String getName() {return m_szName;}
 	
 	/**
 	 * Should draw any decorations applicable to this filter.

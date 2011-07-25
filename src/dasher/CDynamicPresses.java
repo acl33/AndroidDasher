@@ -8,10 +8,8 @@ public abstract class CDynamicPresses extends CDynamicFilter {
     private int m_iKeyId;
     private long m_iKeyDownTime;
     
-	public CDynamicPresses(CDasherInterfaceBase iface,
-			CSettingsStore SettingsStore, long iID, String szName) {
-		super(iface, SettingsStore, iID, szName);
-		// TODO Auto-generated constructor stub
+	public CDynamicPresses(CDasherComponent creator, CDasherInterfaceBase iface, String szName) {
+		super(creator, iface, szName);
 	}
 
 	@Override
@@ -51,15 +49,13 @@ public abstract class CDynamicPresses extends CDynamicFilter {
 		if (iId==m_iKeyId) m_bKeyDown=false;
 	}
 	
-	@Override public void HandleEvent(CEvent evt) {
-		if (evt instanceof CParameterNotificationEvent
-				&& ((CParameterNotificationEvent)evt).m_iParameter==Ebp_parameters.BP_DASHER_PAUSED
-				&& GetStringParameter(Esp_parameters.SP_INPUT_FILTER).equals(this.GetName())) {
+	@Override public void HandleEvent(EParameters eParam) {
+		if (eParam==Ebp_parameters.BP_DASHER_PAUSED && m_Interface.GetActiveInputFilter()==this) {
 			m_iKeyDownTime = Long.MAX_VALUE; //prevents both long-presses and double-presses
 			//Can argue we should do this in pause() / run() / reverse(), I'm being cautious...
 			// (e.g. if paused externally)
 		}
-		super.HandleEvent(evt);
+		super.HandleEvent(eParam);
 	}
 	
 }

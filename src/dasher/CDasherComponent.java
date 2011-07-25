@@ -49,66 +49,58 @@ package dasher;
  * as the SettingsStore raises an Event to notify whenever a parameter
  * is changed, a behaviour which components may depend upon.
  */
-public class CDasherComponent {
+public class CDasherComponent implements Observer<EParameters> {
 
-	/**
-	 * This Component's EventHandler
-	 */
-	protected CEventHandler m_EventHandler;
-	
 	/**
 	 * This Component's SettingsStore
 	 */
-	protected CSettingsStore m_SettingsStore;
+	protected final CSettingsStore m_SettingsStore;
 	
-	/**
-	 * Sole constructor. Registers this component as an event listener,
-	 * such that HandleEvent will be called whenever any other componenet
-	 * raises an event.
-	 * 
-	 * @param EventHandler Event handler with which to register. Must not be null.
-	 * @param SettingsStore Settings store to be used to get and set parameters. Must not be null.
+	/** Creates a new CDasherComponent which is the root of a tree of
+	 * CDasherComponents listening to a particular settings store.
+	 * Although we do not prevent construction of multiple
+	 * CDasherComponents from a single CSettingsStore in this way, such
+	 * use is discouraged, and generally this constructor should only be
+	 * used by {@link CDasherInterfaceBase}; components should generally
+	 * use the {@link #CDasherComponent(CDasherComponent)} constructor.
+	 * (Note, this constructor does <em>not</em> register the component
+	 * as a listener.)
 	 */
-	public CDasherComponent(CEventHandler EventHandler, CSettingsStore SettingsStore) {
-	  m_EventHandler = EventHandler;
-	  m_SettingsStore = SettingsStore;
-
-	  if (m_EventHandler != null)
-	    m_EventHandler.RegisterListener(this);
-
+	protected CDasherComponent(CSettingsStore sets) {
+		m_SettingsStore = sets;
 	}
 	
 	/**
-	 * Unregisters this component with the EventHandler, preventing
-	 * the receipt of any further events, though new ones can still
-	 * be dispatched. Typically this is called on destruction of the object.
-	 *
+	 * <p>Main constructor. Creates a new component from the specified/creator
+	 * component, i.e. part of the same tree under the same SettingsStore.
+	 * This exists for future-proofing: subclasses are abstracted from the
+	 * details of precisely what fields/members need to be copied between
+	 * components.</p>
+	 * <p>Also registers this component as listening to the specified SettingsStore
+	 * for parameter changes, <em>if</em> the component <em>overrides</em> the
+	 * {@link #HandleEvent(EParameters)} method.
+	 * 
+	 * @param other Parent CDasherComponent in the tree, i.e. whose SettingsStore
+	 * we will use.
 	 */
-	public void UnregisterComponent() {
-		if (m_EventHandler != null)
-		    m_EventHandler.UnregisterListener(this);
+	public CDasherComponent(CDasherComponent other) {
+		m_SettingsStore = other.m_SettingsStore;
+	  try {
+		  if (getClass().getMethod("HandleEvent", EParameters.class)!=CDasherComponent.class.getMethod("HandleEvent",EParameters.class))
+			  m_SettingsStore.RegisterListener(this);
+	  } catch (NoSuchMethodException e) {
+		  //should never happen at runtime - if it does, code needs statically updating
+		  throw new AssertionError(e);
+	  }
 	}
 	
 	/**
-	 * Dispatches a new event, which will be passed to the HandleEvent of all
-	 * other components registered with the EventHandler.
-	 * 
-	 * @param Event Event we wish to pass to other components.
+	 * Called when a settings value changes. The default asserts false:
+	 * the DasherComponent will have registered itself for callbacks in
+	 * its constructor if and only if it overrides this method.
+	 * @param eParamChange Parameter whose value has just changed.
 	 */
-	public void InsertEvent(CEvent Event) {
-		  m_EventHandler.InsertEvent(Event);
-	}
-
-	/**
-	 * Called by the EventHandler to notify this component of an
-	 * event raised by another. Modifications of the Event object
-	 * will be seen by subsequent listeners and by the originator.
-	 * No garuntees are made as to the order in which components
-	 * will receive events.
-	 * 
-	 * @param pEvent Event received.
-	 */
-	public void HandleEvent(CEvent pEvent) {}
+	public void HandleEvent(EParameters eParamChange) {assert false;}
 	
 	/**
 	 * Retreives the value of a given global boolean parameter.

@@ -3,6 +3,7 @@ package dasher.android;
 import android.view.KeyEvent;
 import dasher.CButtonMode;
 import dasher.CCompassMode;
+import dasher.CDasherComponent;
 import dasher.CDasherInterfaceBase;
 import dasher.CMenuMode;
 import dasher.CSettingsStore;
@@ -37,9 +38,8 @@ interface AndroidKeyMap {
 
 class Android2BDynamic extends TwoButtonDynamicFilter implements AndroidKeyMap {
 
-	public Android2BDynamic(CDasherInterfaceBase iface,
-			CSettingsStore SettingsStore) {
-		super(iface, SettingsStore);
+	public Android2BDynamic(CDasherComponent creator, CDasherInterfaceBase iface) {
+		super(creator, iface);
 	}
 
 	public int ConvertAndroidKeycode(int iId) {
@@ -51,8 +51,8 @@ class Android2BDynamic extends TwoButtonDynamicFilter implements AndroidKeyMap {
 
 class AndroidCompass extends CCompassMode implements AndroidKeyMap {
 
-	public AndroidCompass(CDasherInterfaceBase iface, CSettingsStore sets) {
-		super(iface, sets);
+	public AndroidCompass(CDasherComponent creator, CDasherInterfaceBase iface) {
+		super(creator, iface);
 	}
 
 	public int ConvertAndroidKeycode(int keyCode) {
@@ -68,8 +68,8 @@ class AndroidCompass extends CCompassMode implements AndroidKeyMap {
 
 class Android1BDynamic extends OneButtonDynamicFilter implements AndroidKeyMap {
 	
-	public Android1BDynamic(CDasherInterfaceBase iface, CSettingsStore sets) {
-		super(iface,sets);
+	public Android1BDynamic(CDasherComponent creator, CDasherInterfaceBase iface) {
+		super(creator, iface);
 	}
 	
 	public int ConvertAndroidKeycode(int keyCode) {
@@ -82,8 +82,8 @@ class Android1BDynamic extends OneButtonDynamicFilter implements AndroidKeyMap {
 
 class AndroidMenuMode extends CMenuMode implements AndroidKeyMap {
 
-	public AndroidMenuMode(CDasherInterfaceBase iface, CSettingsStore sets, int iID, String szName) {
-		super(iface, sets, iID, szName);
+	public AndroidMenuMode(CDasherComponent creator, CDasherInterfaceBase iface, String szName) {
+		super(creator, iface, szName);
 	}
 
 	/** TODO need some preferences here for user to specify what keys to use...*/
@@ -105,8 +105,8 @@ class AndroidMenuMode extends CMenuMode implements AndroidKeyMap {
 
 class AndroidDirectMode extends CButtonMode implements AndroidKeyMap {
 
-	public AndroidDirectMode(CDasherInterfaceBase iface, CSettingsStore sets, int iID, String szName) {
-		super(iface, sets, iID, szName);
+	public AndroidDirectMode(CDasherComponent creator, CDasherInterfaceBase iface, String szName) {
+		super(creator, iface, szName);
 	}
 
 	public int ConvertAndroidKeycode(int keyCode) {

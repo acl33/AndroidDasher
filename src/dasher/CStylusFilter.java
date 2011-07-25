@@ -10,13 +10,13 @@ public class CStylusFilter extends CDefaultFilter {
     private long m_iKeyDownTime;
     private long minX;
     
-    public CStylusFilter(CDasherInterfaceBase iface, CSettingsStore store) {
-        this(iface,store,15,"Stylus Control");
+    public CStylusFilter(CDasherComponent creator, CDasherInterfaceBase iface) {
+        this(creator, iface, "Stylus Control");
     }
 
-    protected CStylusFilter(CDasherInterfaceBase iface, CSettingsStore store, long iID, String sName) {
-        super(iface, store, iID, sName);
-        HandleEvent(new CParameterNotificationEvent(Elp_parameters.LP_MAX_ZOOM));
+    protected CStylusFilter(CDasherComponent creator, CDasherInterfaceBase iface, String sName) {
+        super(creator, iface, sName);
+        HandleEvent(Elp_parameters.LP_MAX_ZOOM);
     }
     
     @Override
@@ -68,11 +68,10 @@ public class CStylusFilter extends CDefaultFilter {
     	dasherCoords[0] = (dasherCoords[0]*(1024+GetLongParameter(Elp_parameters.LP_S))/1024);
     }
     
-    @Override public void HandleEvent(CEvent evt) {
-		if (evt instanceof CParameterNotificationEvent
-				&& ((CParameterNotificationEvent)evt).m_iParameter==Elp_parameters.LP_MAX_ZOOM)
+    @Override public void HandleEvent(EParameters eParam) {
+		if (eParam==Elp_parameters.LP_MAX_ZOOM)
 			minX = Math.max(2, CROSS_X/GetLongParameter(Elp_parameters.LP_MAX_ZOOM));
-		super.HandleEvent(evt);
+		super.HandleEvent(eParam);
 	}
     
     /** Make sure no start handler is created - even tho we ignore changes 

@@ -32,9 +32,9 @@ import android.util.Log;
 import dasher.*;
 
 public abstract class ADasherInterface extends CDasherInterfaceBase {
-	protected Context androidCtx;
+	protected final Context androidCtx;
 	private final BlockingQueue<Runnable> tasks = supportsLinkedBlockingQueue ? new LinkedBlockingQueue<Runnable>() : new ArrayBlockingQueue<Runnable>(5);
-	private Thread taskThread;
+	private final Thread taskThread;
 	private boolean m_bRedrawRequested;
 	private static final boolean supportsLinkedBlockingQueue;
 	private TiltInput tilt;
@@ -62,16 +62,9 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		supportsLinkedBlockingQueue = ok;
 	}
 	
-	public void enqueue(Runnable r) {tasks.add(r);}
-	
-	@Override
-	protected final void Realize() {
-		throw new RuntimeException("Should not call no-args Realize directly, rather call Realize(Context).");
-	}
-	
-	public synchronized void Realize(Context androidCtx) {
+	public ADasherInterface(Context androidCtx, boolean train) {
+		super(new AndroidSettings(PreferenceManager.getDefaultSharedPreferences(androidCtx)));
 		this.androidCtx = androidCtx;
-		if (taskThread!=null) return;
 		taskThread = new Thread() {
 			public void run() {
 				Queue<Runnable> frameTasks = new LinkedList<Runnable>();
@@ -94,10 +87,14 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 				}
 			}
 		};
-		Log.d("DasherIME","Realize()ing...");
-		super.Realize();
-		taskThread.start();
+		LoadData();
+		if (train) {
+			DoSetup();
+			taskThread.start();
+		}
 	}
+
+	public void enqueue(Runnable r) {tasks.add(r);}
 	
 	@Override
 	public void Redraw(final boolean bChanged) {
@@ -113,45 +110,50 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	}
 	
 	@Override
-	public void InsertEvent(CEvent evt) {
-		super.InsertEvent(evt);
-		if (evt instanceof CParameterNotificationEvent
-				&& ((CParameterNotificationEvent)evt).m_iParameter == Ebp_parameters.BP_DASHER_PAUSED
+	public void HandleEvent(EParameters eParam) {
+		super.HandleEvent(eParam);
+		if (eParam == Ebp_parameters.BP_DASHER_PAUSED
 				&& !GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
 			taskThread.interrupt();
-		else if (evt instanceof CMessageEvent) {
-			CMessageEvent msg = (CMessageEvent)evt;
-			switch (msg.m_iType) {
-			case 0:
-				Log.i("DasherIME",msg.m_strMessage);
-				break;
-			case 1:
-				Log.w("DasherIME",msg.m_strMessage);
-				break;
-			case 2:
-				Log.e("DasherIME",msg.m_strMessage);
-				break;
-			}
+	}
+	
+	@Override public void Message(String msg, int iSeverity) {
+		switch (iSeverity) {
+		case 0:
+			Log.i("DasherIME",msg);
+			break;
+		case 1:
+			Log.w("DasherIME",msg);
+			break;
+		case 2:
+			Log.e("DasherIME",msg);
+			break;
 		}
 	}
 	
 	private class Progress implements Runnable, ProgressNotifier {
-		private final CLockEvent evt;
-		Progress(CLockEvent evt) {
-			InsertEvent(this.evt=evt);
+		private final String desc;
+		private int percent;
+		Progress(String desc) {
+			Lock(this.desc=desc, this.percent=0);
 		}
 		private boolean bAbortRequested;
 		//called from main Dasher thread
 		public void run() {
+			//synchronize on this??
 			if (p!=this) return; //a new training request has already superceded us...
-			InsertEvent(evt);
-			if (!evt.m_bLock) p=null; //finished.
+			Lock(desc,percent);
+			if (percent<0) p=null; //finished.
 		}
 		//called from Training thread
 		public boolean notifyProgress(int iPercent) {
-			evt.m_iPercent=iPercent;
+			boolean bRes;
+			synchronized (this) {
+				percent=iPercent;
+				bRes=bAbortRequested;
+			}
 			enqueue(this);
-			synchronized(this) {return bAbortRequested;}
+			return bRes;
 		}
 	}
 	private Progress p;
@@ -162,13 +164,13 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			synchronized(p) {
 				p.bAbortRequested=true;
 				//wait for training thread to abort...
-				while (p.evt.m_bLock)
+				while (p.percent>=0)
 					try {p.wait();}
 					catch (InterruptedException e) {}
 			}
 		}
 		//make new lock...
-		final Progress myProg = p = new Progress(new CLockEvent("Training Dasher",true,0));
+		final Progress myProg = p = new Progress("Training Dasher");
 		//now we've got lock, train asynchronously...
 		new Thread() {
 			public void run() {
@@ -179,7 +181,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 				}
 				//completed, or aborted. Signal this...
 				synchronized(myProg) {
-					myProg.evt.m_bLock=false;
+					myProg.percent=-1;
 					myProg.notifyAll(); //in case someone was waiting for us to abort
 				}
 				//broadcast the unlock message (unless aborted)
@@ -199,7 +201,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	@Override
 	public void CreateModules() {
 		final SharedPreferences prefs=PreferenceManager.getDefaultSharedPreferences(androidCtx);
-		final CDasherInput touch =new CDasherInput(this, getSettingsStore(), 0, "Touch Input") {
+		final CDasherInput touch =new CDasherInput("Touch Input") {
 			@Override
 			public boolean GetScreenCoords(CDasherView pView,long[] Coordinates) {
 				DasherCanvas surf = (DasherCanvas)m_DasherScreen;
@@ -226,11 +228,13 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			}
 		};
 		RegisterModule(setDefaultInput(touch));
-		tilt=TiltInput.MAKE(androidCtx, this, getSettingsStore());
+		tilt=TiltInput.MAKE(androidCtx);
 		if (tilt!=null) {
-			SetTiltAxes();
+			//load initial values
+			new CalibPreference(androidCtx, null).loadParams(prefs);
+			//the assumption is the tilt prefs will now not be changed EXCEPT by a CalibPreference...
 			RegisterModule(tilt);
-			RegisterModule(new CDasherInput(this, getSettingsStore(), 2, "Touch with tilt X") {
+			RegisterModule(new CDasherInput("Touch with tilt X") {
 				long lastTouch;
 				@Override public boolean GetScreenCoords(CDasherView pView, long[] coords) {
 					if (!tilt.GetScreenCoords(pView, coords)) return false;
@@ -247,12 +251,12 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			});
 		}
 		
-		RegisterModule(setDefaultInputFilter(new CStylusFilter(this, getSettingsStore(), 16, "Android Touch Control") {
+		RegisterModule(setDefaultInputFilter(new CStylusFilter(this, this, "Android Touch Control") {
 			/** A special CDasherInput that reads touch coordinates from the screen/DasherCanvas,
 			 * but does <em>not</em> double the x coordinate even if the AndroidDoubleX preference
 			 * is true, nor get its X coordinate from tilting. (Used for clicks, as opposed to drags)
 			 */
-			private final CDasherInput undoubledTouch = new CDasherInput(ADasherInterface.this,getSettingsStore(), -1, "Unregistered Input Device") {
+			private final CDasherInput undoubledTouch = new CDasherInput("Unregistered Input Device") {
 				@Override public boolean GetScreenCoords(CDasherView pView, long[] coords) {
 					return ((DasherCanvas)pView.Screen()).GetCoordinates(coords);
 				}
@@ -262,10 +266,10 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 				super.KeyUp(iTime, iID, pView, undoubledTouch, pModel);
 			}
 		}));
-		RegisterModule(new COneDimensionalFilter(this, getSettingsStore(), 14, "Android Tilt Control") {
+		RegisterModule(new COneDimensionalFilter(this, this, "Android Tilt Control") {
 			private final PowerManager mgr = (PowerManager)androidCtx.getSystemService(Context.POWER_SERVICE);
 			private final PowerManager.WakeLock wl = mgr.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ON_AFTER_RELEASE,"tilting");
-			private boolean bActive;
+
 			@Override public boolean supportsPause() {
 				return !prefs.getBoolean("AndroidTiltHoldToGo",false);
 			}
@@ -289,14 +293,10 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 				} else
 					super.KeyDown(iTime, iID, pView, pInput, pModel);
 			}
-			@Override public void Activate() {bActive=true;}
-			@Override public void Deactivate() {bActive=false;}
 			
-			@Override public void HandleEvent(CEvent evt) {
-				super.HandleEvent(evt);
-				if (bActive &&
-						evt instanceof CParameterNotificationEvent &&
-						((CParameterNotificationEvent)evt).m_iParameter == Ebp_parameters.BP_DASHER_PAUSED &&
+			@Override public void HandleEvent(EParameters eParam) {
+				super.HandleEvent(eParam);
+				if (m_Interface.GetActiveInputFilter()==this && eParam == Ebp_parameters.BP_DASHER_PAUSED &&
 						!prefs.getBoolean("AndroidTiltHoldToGo", false)) {
 					if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
 						if (!wl.isHeld()) wl.acquire();
@@ -313,22 +313,11 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 					super.KeyUp(iTime, iID, pView, pInput, pModel);
 			}
 		});
-		RegisterModule(new AndroidDirectMode(this, getSettingsStore(), 12, "Direct Mode"));
-		RegisterModule(new AndroidMenuMode(this, getSettingsStore(), 11, "Scanning Menu Mode"));
-		RegisterModule(new AndroidCompass(this,getSettingsStore()));
-		RegisterModule(new Android1BDynamic(this, getSettingsStore()));
-		RegisterModule(new Android2BDynamic(this, getSettingsStore()));
-	}
-	
-	public void SetTiltAxes() {
-		//Should never actually be called if tilt sensor isn't present, but checking anyway
-		if (tilt==null) return;
-		SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(androidCtx);
-		//TODO these defaults copied from CalibPreference; remove duplication!
-		tilt.setAxes(sp.getFloat(CalibPreference.ANDROID_TILT_MIN_X, -1.0f),
-					 sp.getFloat(CalibPreference.ANDROID_TILT_MAX_X, 1.0f),
-					 sp.getFloat(CalibPreference.ANDROID_TILT_MIN_Y, 1.0f),
-					 sp.getFloat(CalibPreference.ANDROID_TILT_MAX_Y, 9.0f));
+		RegisterModule(new AndroidDirectMode(this, this, "Direct Mode"));
+		RegisterModule(new AndroidMenuMode(this, this, "Scanning Menu Mode"));
+		RegisterModule(new AndroidCompass(this,this));
+		RegisterModule(new Android1BDynamic(this, this));
+		RegisterModule(new Android2BDynamic(this, this));
 	}
 	
 	@Override public void ChangeScreen(CDasherScreen surf) {

@@ -2,6 +2,7 @@ package dasher.android;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.WeakHashMap;
 
 import android.content.Context;
 import android.content.DialogInterface;
@@ -22,10 +23,13 @@ import android.widget.TextView;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 
 public class CalibPreference extends DialogPreference implements SensorEventListener, OnClickListener {
-	static final String ANDROID_TILT_MAX_Y = "AndroidTiltMaxY";
-	static final String ANDROID_TILT_MIN_Y = "AndroidTiltMinY";
-	static final String ANDROID_TILT_MAX_X = "AndroidTiltMaxX";
-	static final String ANDROID_TILT_MIN_X = "AndroidTiltMinX";
+	private static final String ANDROID_TILT_MAX_Y = "AndroidTiltMaxY";
+	private static final String ANDROID_TILT_MIN_Y = "AndroidTiltMinY";
+	private static final String ANDROID_TILT_MAX_X = "AndroidTiltMaxX";
+	private static final String ANDROID_TILT_MIN_X = "AndroidTiltMinX";
+	
+	private static final WeakHashMap<TiltInput,Object> TILT_DEVICES = new WeakHashMap<TiltInput, Object>();
+	public static void addTiltDevice(TiltInput ti) {TILT_DEVICES.put(ti,TILT_DEVICES);}
 	
 	private final SensorManager sm;
 	private final WindowManager wm;
@@ -53,7 +57,8 @@ public class CalibPreference extends DialogPreference implements SensorEventList
 		btnChange.setOnClickListener(this);
 		calibX = (TextView)v.findViewById(R.id.calibX);
 		calibY = (TextView)v.findViewById(R.id.calibY);
-		loadParams();
+		loadParams(getSharedPreferences());
+		setLabels();
 	}
 	
 	@Override public void onClick(DialogInterface dialog, int which) {
@@ -65,27 +70,33 @@ public class CalibPreference extends DialogPreference implements SensorEventList
 			e.putFloat(ANDROID_TILT_MIN_Y, chkInvert.isChecked() ? maxY : minY);
 			e.putFloat(ANDROID_TILT_MAX_Y, chkInvert.isChecked() ? minY : maxY);
 			e.commit();
-			IMDasherInterface.INSTANCE.SetTiltAxes();
+			//labels already set
 		}
 		if (!btnChange.isEnabled()) {
-			//we started listening to calib preferences...
+			//we started listening to sensor values...
 			sm.unregisterListener(CalibPreference.this);
 			if (which == DialogInterface.BUTTON2) {
 				btnChange.setEnabled(true);
-				loadParams();
+				loadParams(getSharedPreferences());
+				setLabels();
 				return; //don't dismiss
 			}
 		}
 		super.onClick(dialog, which);
 	}
 					
-	/** Update/reset labels to reflect currently-stored preferences. */
-	private void loadParams() {
-		SharedPreferences sp = getSharedPreferences();
+	/** Update/reset cached minX/maxX/minY/maxY to reflect currently-stored preferences. */
+	public void loadParams(SharedPreferences sp) {
 		minX = sp.getFloat(ANDROID_TILT_MIN_X, -1.0f);
 		maxX = sp.getFloat(ANDROID_TILT_MAX_X, 1.0f);
 		minY = sp.getFloat(ANDROID_TILT_MIN_Y, 1.0f);
 		maxY = sp.getFloat(ANDROID_TILT_MAX_Y, 9.0f);
+		for (TiltInput ti : TILT_DEVICES.keySet())
+			ti.setAxes(minX,maxX,minY,maxY);
+	}
+	
+	/** Set captions of labels to reflect cached minX/maxX/minY/maxY */
+	private void setLabels() {
 		boolean invert;
 		if (minY > maxY) {
 			float temp = minY;

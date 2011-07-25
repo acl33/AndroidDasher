@@ -48,6 +48,49 @@ import static dasher.CDasherModel.*;
  */
 public class CDefaultFilter extends CInputFilter {
 
+	public abstract class CStartHandler extends CDasherComponent {
+		public CStartHandler() {
+			super(CDefaultFilter.this);
+			// TODO Auto-generated constructor stub
+		}
+
+		/** Subclasses should call this to start */
+		protected void start(long iTime) {
+			//ignore request if we're no longer the active StartHandler
+			if (CDefaultFilter.this.m_StartHandler==this)
+				CDefaultFilter.this.m_Interface.Unpause(iTime);
+		}
+		
+		/** Subclasses should call this to stop */
+		protected void stop(long iTime) {
+			//ignore request if we're no longer the active StartHandler
+			if (CDefaultFilter.this.m_StartHandler==this)
+				CDefaultFilter.this.m_Interface.PauseAt(0, 0);
+		}
+		/**
+		 * Similar to its companion method in CInputFilter, this gives
+		 * the start handler an opportunity to draw itself and other
+		 * relevant decorations during the production of a new frame.
+		 * <p>
+		 * Start handlers should ensure that this method can reliably
+		 * terminate quickly, or performance will be greatly degraded.
+		 * 
+		 * @param View View to which we should draw decorations
+		 * @return True if any decorating was done, false otherwise
+		 */
+		public abstract boolean DecorateView(CDasherView View, CDasherInput pInput);
+		
+		/**
+		 * Fired during the start handler's parent input filter's
+		 * Timer event. 
+		 * 
+		 * @param iTime Current system time as a unix timestamp
+		 * @param inputCoords (Transformed) user input coordinates (Dasher coords)
+		 * @param pView For converting coordinates into screen-space, if necessary.
+		 */
+		public abstract void Timer(long iTime, long[] inputCoords, CDasherView pView);
+	}
+	
 	/**
 	 * Our Automatic Speed Control helper class
 	 */
@@ -72,11 +115,11 @@ public class CDefaultFilter extends CInputFilter {
 	 * @param iID Unique ID for this module
 	 * @param szName Friendly name for this module
 	 */
-	public CDefaultFilter(CDasherInterfaceBase iface, CSettingsStore SettingsStore, long iID, String szName)
+	public CDefaultFilter(CDasherComponent creator, CDasherInterfaceBase iface, String szName)
 	{ 
-		super(iface, SettingsStore, iID, szName);
+		super(creator, iface, szName);
 		m_StartHandler = null;
-		m_AutoSpeedControl = new CAutoSpeedControl(m_EventHandler, m_SettingsStore, iface.GetCurFPS());
+		m_AutoSpeedControl = new CAutoSpeedControl(this, iface.GetCurFPS());
 		
 		CreateStartHandler();
 	}
@@ -301,18 +344,12 @@ public class CDefaultFilter extends CInputFilter {
 	 * 
 	 * @param Event Event to handle
 	 */
-	public void HandleEvent(CEvent Event) {
-		if(Event instanceof CParameterNotificationEvent) {
-			CParameterNotificationEvent Evt = (CParameterNotificationEvent)Event;
-			
-			if(Evt.m_iParameter == Ebp_parameters.BP_CIRCLE_START || 
-					Evt.m_iParameter == Ebp_parameters.BP_MOUSEPOS_MODE) {
-				CreateStartHandler();
-			} else if (Evt.m_iParameter == Ebp_parameters.BP_DASHER_PAUSED) {
-				if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
-					m_iStartTime=-1;
-			}
-				
+	public void HandleEvent(EParameters eParam) {
+		if(eParam == Ebp_parameters.BP_CIRCLE_START || eParam == Ebp_parameters.BP_MOUSEPOS_MODE) {
+			CreateStartHandler();
+		} else if (eParam == Ebp_parameters.BP_DASHER_PAUSED) {
+			if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
+				m_iStartTime=-1;
 		}
 	}
 	
@@ -326,15 +363,13 @@ public class CDefaultFilter extends CInputFilter {
 	protected void CreateStartHandler() {
 				
 		if(GetBoolParameter(Ebp_parameters.BP_CIRCLE_START)) {
-			m_StartHandler = new CCircleStartHandler(m_Interface, m_SettingsStore);
+			m_StartHandler = new CCircleStartHandler(this);
 		}
 		/*else if(GetBoolParameter(Ebp_parameters.BP_MOUSEPOS_MODE))
 			 m_StartHandler = new CTwoBoxStartHandler(m_EventHandler, m_SettingsStore, m_Interface); */
 			// CSFS: Disabled for now, one is enough for testing purposes, if even that is necessary.
-		else {
-			if (m_StartHandler!=null) m_StartHandler.UnregisterComponent();
-			m_StartHandler = null;
-		}
+		else
+			m_StartHandler = null; //will allow to be GC'd. Ignore if it's still around...
 	}
 	
 	private final long[] temp=new long[2];

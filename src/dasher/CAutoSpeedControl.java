@@ -91,9 +91,9 @@ public class CAutoSpeedControl extends CDasherComponent {
 	 * @param dFrameRate Initial frame rate, in FPS.
 	 */
 	
-	public CAutoSpeedControl(CEventHandler EventHandler, CSettingsStore SettingsStore, double dFrameRate)	  {
+	public CAutoSpeedControl(CDasherComponent creator, double dFrameRate)	  {
 	
-	super(EventHandler, SettingsStore);
+	super(creator);
 	  
 		//scale #samples by #samples = m_dSamplesScale / (current bitrate) + m_dSampleOffset
 	m_dSampleScale = 1.5;
