@@ -71,7 +71,7 @@ public interface CDasherScreen {
 	 * @param y1 Top-left hand corner y co-ordinate
 	 * @param Size Font size in points
 	 */
-	public abstract void DrawString(String string, int x1, int y1, long Size);
+	public abstract void DrawString(String string, int x1, int y1, int Size);
 	
   /** Draw a filled rectangle
 	* 

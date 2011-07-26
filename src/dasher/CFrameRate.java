@@ -156,7 +156,7 @@ private double logFrames;*/
 			}
 			/*logFrames+=m_dFr;
 			if (++logCount==20) {
-				android.util.Log.d("DasherCore","Framerate: "+logFrames/logCount);
+				System.out.println("Framerate: "+logFrames/logCount);
 				logFrames = logCount=0;
 			}*/
 			m_dRXmax = Math.exp(m_dMaxbitrate * LN2 / m_dFr);

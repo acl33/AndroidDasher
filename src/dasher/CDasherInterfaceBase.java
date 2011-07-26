@@ -495,9 +495,10 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	 * new frame of the Dasher world.
 	 * <p>
 	 * We invoke our input filter's Timer method, which determines
-	 * in what way the Model should be updated, if at all, allow the
-	 * Model to check its consistency after being changed, and then
-	 * finally ask our View to draw the newly updated world.
+	 * in what way the Model should be updated, if at all; render the
+	 * model to the View (if necessary), potentially expanding/collapsing
+	 * nodes; and decorate the view according to the input filter. Then
+	 * (if necessary) we tell the Screen to display the newly updated world.
 	 * <p>
 	 * Method will return without any action if any of the three
 	 * lock variables are true.
@@ -523,12 +524,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		//ok, we want to render some nodes...if there are any...
 		if (m_DasherModel == null) throw new IllegalStateException("Not yet constructed?");
 		
-		boolean bRedrawNodes = m_bForceRedrawNodes;
-		m_bForceRedrawNodes = false;
-		
-		if(m_InputFilter != null) {
-			bRedrawNodes = m_InputFilter.Timer(iTime, m_DasherView, m_Input, m_DasherModel); // FIXME - need logging stuff here
-		}
+		boolean bMoved = (m_InputFilter!=null) && m_InputFilter.Timer(iTime, m_DasherView, m_Input, m_DasherModel); 
 					
 		/*Logging code. TODO: capture int iNumDeleted / Vector<CSymbolProb>
 		 * from information passed to outputText/deleteText, then:
@@ -539,38 +535,44 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		 */
 		
 	
-		boolean bChanged = false; //do we need another frame after this?
-		if (m_MarkerScreen!=null) {
-			if (bRedrawNodes) {
-				m_MarkerScreen.SendMarker(0);
-				bChanged = bRedrawNodes = m_DasherModel.RenderToView(m_DasherView);
+		boolean bRedraw = false; //do we need another frame after this?
+		renderModel: {
+			if (m_MarkerScreen!=null) {
+				if (bMoved || m_bForceRedrawNodes)
+					m_MarkerScreen.SendMarker(0);
+				else break renderModel;
 			}
-			m_MarkerScreen.SendMarker(1);
-			boolean bDecorationsChanged = (m_InputFilter != null) &&
-				m_InputFilter.DecorateView(m_DasherView, m_Input);
-			bChanged |= bDecorationsChanged;
-			if (bRedrawNodes || bDecorationsChanged)
-				m_MarkerScreen.Display();
-		} else {
-			//simple screen, no markers / caching, render whole frame every time
-			bChanged = m_DasherModel.RenderToView(m_DasherView);
-			if (m_InputFilter!=null) bChanged |= m_InputFilter.DecorateView(m_DasherView,m_Input);
+			bRedraw = m_DasherModel.RenderToView(m_DasherView) || bMoved;
 		}
-		if (bChanged) Redraw(bRedrawNodes);
+		if (m_MarkerScreen!=null)
+			m_MarkerScreen.SendMarker(1);
+		
+		//if we moved, expanded/collapsed anything, or decorations changed...
+		if ((m_InputFilter!=null && m_InputFilter.DecorateView(m_DasherView, m_Input))
+				|| bRedraw) {
+			//then need to blit to screen!
+			if (m_MarkerScreen!=null) m_MarkerScreen.Display();
+			// and also make sure we render another frame after this (necessary
+			// if we expanded/collapsed; policy otherwise). That will include
+			// rerendering the nodes, iff we expanded/collapsed (necessary)
+			// or moved (policy).
+			Redraw(bRedraw);
+		}
+		
 		for (int i=0; i<endOfFrameTasks.size(); i++)
 			endOfFrameTasks.get(i).run();
 		endOfFrameTasks.clear();
 	}
 	
 	/**
-	 * Called whenever we need to redraw the screen. Architectures in which
+	 * <p>Called to schedule a redraw of the screen. Architectures in which
 	 * drawing must be initiated from the outside (e.g. Swing/AWT: app calls
 	 * repaint(), and eventually Swings calls back to paint), should override
 	 * to additionally request a repaint from the external framework.
 	 * Architectures with e.g. a regular 20ms repaint, need do nothing (the
 	 * existing method will cause NewFrame to repaint the nodes, or not, as
-	 * needed.)
-	 * 
+	 * needed.)</p>
+	 * <p>Any overriding method, should make sure to call through to <code>super</code>.</p>
 	 * @param bChanged True if the nodes must be repainted in the next call to NewFrame.
 	 */
 	public void Redraw(boolean bChanged) {

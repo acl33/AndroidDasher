@@ -49,7 +49,7 @@ public class CDelayedDraw {
 	 * @param y1 y co-ordinate of top-left corner of the string's bounding box
 	 * @param Size Font size to use
 	 */
-	public void DelayDrawText(String str, int x1, int y1, long Size) {
+	public void DelayDrawText(String str, int x1, int y1, int Size) {
 		CTextString obj;
 		if (nextFree<allTextStrings.size())
 			obj = allTextStrings.get(nextFree);
@@ -98,7 +98,7 @@ public class CDelayedDraw {
 		 */
 		CTextString() {
 		}
-		void init(String str, int x, int y, long iSize) {
+		void init(String str, int x, int y, int iSize) {
 			m_String = str;
 			m_x = x;
 			m_y = y;
@@ -120,7 +120,7 @@ public class CDelayedDraw {
 		/**
 		 * Font size
 		 */
-		long m_iSize;
+		int m_iSize;
 	}
 		
 }

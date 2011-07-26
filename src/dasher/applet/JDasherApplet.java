@@ -68,6 +68,9 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	 */
 	private JDasherPanel panel;
 	
+	/** The one-and-only thread that we use to manipulate {@link #Dasher},
+	 * including repainting.
+	 */
 	private JDasherThread worker;
 	
 	/**
@@ -91,9 +94,12 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	public Clipboard m_Clipboard;
 	
 	/**
-	 * Scheduling agent used to cue new frames
+	 * Scheduling agent used to cue new frames. At present,
+	 * this is only used to enqueue a render-new-frame
+	 * task onto {@link #worker}, as it can do so repeatedly and periodically.
+	 * TODO, replace {@link #worker} (entirely) with this? 
 	 */
-	private Timer taskScheduler;
+	private final Timer taskScheduler = new Timer();
 	
 	/**
 	 * Date of last build; appears in About box
@@ -191,17 +197,7 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 					ProgressMeter.setVisible(false);
 				}
 			}
-			
-			/**
-			 * Orders our host to redraw.
-			 * 
-			 * @param bChanged ignored
-			 */
-			@Override public void Redraw(boolean bChanged) {
-				super.Redraw(bChanged);
-				JDasherApplet.this.repaint();
-			}
-			
+
 			/** First looks for a file over http in the same location as our codebase;
 			 * <em>if</em> that fails, we fall back to looking for a packaged resource
 			 * of the specified name, i.e. baked into the .jar file. Note if we find
@@ -305,18 +301,11 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 		//Don't call ChangeScreen here - it'll get called automatically
 		// by the renderer when it first sees the size of the panel.
 				
-		//TimerTask doFrame = new DoFrameTask(this);
-		//taskScheduler = new Timer();
-		//taskScheduler.scheduleAtFixedRate(doFrame, 0, 20);
-		
-		/* Simple threaded scheduling. The C++ version calls NewFrame directly
-		 * every 20 ms as part of a message-processing loop. This is not entirely
-		 * suitable for Java as we need the Applet to be idle on some occasions
-		 * so that we can process the MouseEvents detailing where the pointer
-		 * is at present. This is actually much less efficient, but I don't think
-		 * we can ask "where is the pointer now?" in Java, as in C++; 
-		 * we must use a MouseMotionListener.
-		 */
+		taskScheduler.schedule(new TimerTask() {
+			public void run() {
+				worker.addTasklet(panel);
+			}
+		}, 0, 20);
 		
 		panel.addMouseListener(this);
 		this.addKeyListener(this);
@@ -359,8 +348,8 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 
 		java.awt.Dimension EditSize = new java.awt.Dimension(GUIPanel.getWidth() - 20, GUIPanel.getHeight() / 10);
 
-		worker = new JDasherThread(Dasher);
-		panel = new JDasherPanel(worker);
+		worker = new JDasherThread();
+		panel = new JDasherPanel(Dasher);
 
 		GUIPanel.add(panel);
 
@@ -446,21 +435,7 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	 * <p>
 	 */
 	/*private*/ void paramChanged(EParameters eParam) {
-		if(eParam == dasher.Ebp_parameters.BP_DASHER_PAUSED) {
-			if(Dasher.GetBoolParameter(dasher.Ebp_parameters.BP_DASHER_PAUSED)) {
-				taskScheduler.cancel();
-				taskScheduler = null;
-			}
-			else {
-				taskScheduler = new Timer();
-				taskScheduler.scheduleAtFixedRate(new TimerTask() {
-					public void run() {
-						JDasherApplet.this.repaint();
-					}
-				}, 0, 20);
-			}
-		}
-		else if(eParam == dasher.Esp_parameters.SP_COLOUR_ID) {
+		if(eParam == dasher.Esp_parameters.SP_COLOUR_ID) {
 			if(MenuBar != null) MenuBar.setColour(Dasher.GetStringParameter(dasher.Esp_parameters.SP_COLOUR_ID));
 		}
 		else if (eParam == dasher.Esp_parameters.SP_ALPHABET_ID) {
@@ -597,7 +572,7 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	 * cause a problem, as we are about to stop the application.
 	 */
 	public void stop() {
-		if(taskScheduler != null) taskScheduler.cancel();
+		taskScheduler.cancel();
 		Dasher.DestroyInterface();
 	}
 	
@@ -686,6 +661,8 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 		new dasher.applet.font.JFontDialog(this, EditBox.getFont());
 	}
 	
+	/** Called by menubar to set a string parameter - we do so
+	 * the {@link #worker} thread. */
 	public void menuSetString(final Esp_parameters param, final String val) {
 		worker.addTasklet(new Runnable() {
 			public void run() {
@@ -694,6 +671,8 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 		});
 	}
 	
+	/** Called by menubar to set a long parameter - we do so
+	 * the {@link #worker} thread. */
 	public void menuSetLong(final Elp_parameters param, final long val) {
 		worker.addTasklet(new Runnable() {
 			public void run() {
@@ -702,6 +681,8 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 		});
 	}
 	
+	/** Called by menubar to set a bool parameter - we do so
+	 * the {@link #worker} thread. */
 	public void menuSetBool(final Ebp_parameters param, final boolean val) {
 		worker.addTasklet(new Runnable() {
 			public void run() {

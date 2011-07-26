@@ -208,7 +208,7 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 			canvas.drawRect(r,p);
 		}
 	}
-	public void DrawString(String string, int x1, int y1, long Size) {
+	public void DrawString(String string, int x1, int y1, int Size) {
 		p.setTextSize(Size);
 		p.setARGB(255, 0, 0, 0);
 		p.setStyle(Style.FILL_AND_STROKE);
