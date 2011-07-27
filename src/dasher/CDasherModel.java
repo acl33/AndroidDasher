@@ -426,7 +426,7 @@ public class CDasherModel extends CFrameRate {
 
 		// Calculate the minimum size of the viewport corresponding to the
 		// maximum zoom.
-		long iMinSize = (long)(MAX_Y/(dSpeedMul*maxZoom()+(1.0f-dSpeedMul)));
+		long iMinSize = (long)(MAX_Y/(dSpeedMul==1.0 ? maxZoom() : Math.pow(maxZoom(), dSpeedMul)));
 
 		if((iTargetMax - iTargetMin) < iMinSize) {
 			iNewTargetMin = iTargetMin * (MAX_Y - iMinSize) / (MAX_Y - (iTargetMax - iTargetMin));
