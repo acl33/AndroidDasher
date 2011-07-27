@@ -25,22 +25,34 @@
 
 package dasher.applet;
 
+import java.awt.BorderLayout;
 import java.awt.datatransfer.FlavorEvent;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.List;
 
 import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
+import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JDialog;
+import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JPanel;
 import javax.swing.JRadioButtonMenuItem;
+import javax.swing.JScrollPane;
+import javax.swing.ListSelectionModel;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 
 import dasher.CDasherInterfaceBase;
 import dasher.EParameters;
@@ -84,7 +96,7 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 	
 	private JMenuItem help_about;
 	
-	private ButtonGroup options_colours_group, options_alphabet_group;
+	private ButtonGroup options_colours_group;
 	
 	private final JDasherMenuBarListener m_Host;
 	/* Pointer to dasher interface. We use this for <strong>reading</strong>
@@ -108,16 +120,13 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 	 * @param listener Listener whose methods are to be
 	 * invoked upon user commands
 	 */
-	public JDasherMenuBar(CDasherInterfaceBase iface, JDasherMenuBarListener host) {
+	public JDasherMenuBar(CDasherInterfaceBase _iface, JDasherMenuBarListener host) {
 		m_Host = host;
-		this.iface=iface;
+		iface=_iface;
 		lstnr = new dasher.CDasherComponent(iface) {
 			@Override public void HandleEvent(EParameters eParam) {
 				if(eParam == dasher.Esp_parameters.SP_COLOUR_ID) {
 					setColour(GetStringParameter(dasher.Esp_parameters.SP_COLOUR_ID));
-				}
-				else if (eParam == dasher.Esp_parameters.SP_ALPHABET_ID) {
-					setAlphabet(GetStringParameter(dasher.Esp_parameters.SP_ALPHABET_ID));
 				}
 			}
 		};
@@ -148,13 +157,46 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 		
 		options_mouseline = new JCheckBoxMenuItem("Display Mouse Line"); options.add(options_mouseline); options_mouseline.addItemListener(this);
 		
-		JMenu options_alphabet = new JMenu("Alphabet"); options.add(options_alphabet); 
+		JMenuItem options_alphabet = new JMenuItem("Alphabet..."); options.add(options_alphabet); 
 
-		options_alphabet_group = new ButtonGroup();
-		populateGroup(options_alphabet, options_alphabet_group, Esp_parameters.SP_ALPHABET_ID, new ActionListener() {
+		options_alphabet.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				m_Host.menuSetString(Esp_parameters.SP_ALPHABET_ID,e.getActionCommand());
+				List<String> alphs = new ArrayList<String>();
+				iface.GetPermittedValues(Esp_parameters.SP_ALPHABET_ID, alphs);
+				Collections.sort(alphs);
+				final JList list = new JList(alphs.toArray(new String[alphs.size()]));
+				list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+				list.setSelectedValue(iface.GetStringParameter(Esp_parameters.SP_ALPHABET_ID), true);
+				list.addListSelectionListener(new ListSelectionListener() {
+					public void valueChanged(ListSelectionEvent e) {
+						String alph = (String)list.getModel().getElementAt(list.getSelectedIndex());
+						m_Host.menuSetString(Esp_parameters.SP_ALPHABET_ID, alph);
+					}
+				});
+				final JDialog dia = new JDialog((java.awt.Frame)null,"Select Alphabet",true);
+				dia.setSize(300, 400);
+				dia.getContentPane().add(new JScrollPane(list));
+				JPanel panel = new JPanel();
+				JButton b=new JButton("OK");
+				b.addActionListener(new ActionListener() {
+					public void actionPerformed(ActionEvent e) {
+						dia.setVisible(false);
+					}
+				});
+				panel.add(b);
+				final String origAlph = iface.GetStringParameter(Esp_parameters.SP_ALPHABET_ID);
+				b=new JButton("Cancel");
+				b.addActionListener(new ActionListener() {
+					public void actionPerformed(ActionEvent e) {
+						m_Host.menuSetString(Esp_parameters.SP_ALPHABET_ID, origAlph);
+						dia.setVisible(false);
+					}
+				});
+				panel.add(b);
+				dia.getContentPane().add(panel,BorderLayout.SOUTH);
+				dia.setVisible(true);
 			}
+			
 		});
 		
 		JMenu options_colours = new JMenu("Colour Scheme"); options.add(options_colours);
@@ -192,9 +234,8 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 		help_about = new JMenuItem("About..."); help.add(help_about); help_about.addActionListener(this);
 
 		//We set up the GUI according to the interface here; we could watch for changes
-		// (and for colour and alphabet, we do), but assume nothing else will change the others. 
+		// (and for colour, we do), but assume nothing else will change the others. 
 		setColour(iface.GetStringParameter(Esp_parameters.SP_COLOUR_ID));
-		setAlphabet(iface.GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
 		setSelectedFontSize((int)iface.GetLongParameter(Elp_parameters.LP_DASHER_FONTSIZE));
 		setInputFilter(iface.GetStringParameter(Esp_parameters.SP_INPUT_FILTER));
 		setMouseLine(iface.GetBoolParameter(Ebp_parameters.BP_DRAW_MOUSE_LINE));
@@ -290,8 +331,6 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 		}
 	}
 	
-	private void setAlphabet(String current) {selectInGroup(options_alphabet_group, current);}
-		
 	private void setColour(String current) {
 		selectInGroup(options_colours_group, current);
 	}
