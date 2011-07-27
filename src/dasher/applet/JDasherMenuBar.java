@@ -42,9 +42,12 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JRadioButtonMenuItem;
 
+import dasher.CDasherInterfaceBase;
+import dasher.EParameters;
 import dasher.Ebp_parameters;
 import dasher.Elp_parameters;
 import dasher.Esp_parameters;
+import dasher.Observer;
 
 /** 
  * The menu bar is entirely dumb. Its purpose is to do the donkey work of setting
@@ -83,7 +86,20 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 	
 	private ButtonGroup options_colours_group, options_alphabet_group;
 	
-	private JDasherMenuBarListener m_Host;
+	private final JDasherMenuBarListener m_Host;
+	/* Pointer to dasher interface. We use this for <strong>reading</strong>
+	 * parameters only, not writing, as we are on the Swing GUI thread,
+	 * not the JDasherThread (worker). Technically, we should synchronize
+	 * reads as well (i.e. by scheduling tasklets to call Get...Param), but
+	 * not bothering yet. Writing parameters is done via {@link #m_Host},
+	 * as that schedules tasks on the worker thread.
+	 */
+	private final CDasherInterfaceBase iface;
+	/** Listens to settings changes to keep menus updated. We need
+	 * a strong ref as the SettingsStore keeps only a weak ref.
+	 */
+	@SuppressWarnings("unused")
+	private final Observer<EParameters> lstnr;
 	
 	/**
 	 * Creates a JDasherMenuBar which signals a given listener
@@ -92,9 +108,19 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 	 * @param listener Listener whose methods are to be
 	 * invoked upon user commands
 	 */
-	public JDasherMenuBar(JDasherMenuBarListener listener) {
-		
-		m_Host = listener;
+	public JDasherMenuBar(CDasherInterfaceBase iface, JDasherMenuBarListener host) {
+		m_Host = host;
+		this.iface=iface;
+		lstnr = new dasher.CDasherComponent(iface) {
+			@Override public void HandleEvent(EParameters eParam) {
+				if(eParam == dasher.Esp_parameters.SP_COLOUR_ID) {
+					setColour(GetStringParameter(dasher.Esp_parameters.SP_COLOUR_ID));
+				}
+				else if (eParam == dasher.Esp_parameters.SP_ALPHABET_ID) {
+					setAlphabet(GetStringParameter(dasher.Esp_parameters.SP_ALPHABET_ID));
+				}
+			}
+		};
 			
 		file = new JMenu("File"); this.add(file);
 		edit = new JMenu("Edit"); this.add(edit);
@@ -165,6 +191,17 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 	
 		help_about = new JMenuItem("About..."); help.add(help_about); help_about.addActionListener(this);
 
+		//We set up the GUI according to the interface here; we could watch for changes
+		// (and for colour and alphabet, we do), but assume nothing else will change the others. 
+		setColour(iface.GetStringParameter(Esp_parameters.SP_COLOUR_ID));
+		setAlphabet(iface.GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
+		setSelectedFontSize((int)iface.GetLongParameter(Elp_parameters.LP_DASHER_FONTSIZE));
+		setInputFilter(iface.GetStringParameter(Esp_parameters.SP_INPUT_FILTER));
+		setMouseLine(iface.GetBoolParameter(Ebp_parameters.BP_DRAW_MOUSE_LINE));
+		setStartMouse(iface.GetBoolParameter(Ebp_parameters.BP_START_MOUSE));
+		setStartSpace(iface.GetBoolParameter(Ebp_parameters.BP_START_SPACE));
+		setSpeedAuto(iface.GetBoolParameter(Ebp_parameters.BP_AUTO_SPEEDCONTROL));
+		setLangModelLearns(iface.GetBoolParameter(Ebp_parameters.BP_LM_ADAPTIVE));
 	}
 	
 	public void actionPerformed(ActionEvent e) {
@@ -239,7 +276,7 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 		}
 	}
 	
-	public void setSelectedFontSize(int size) {
+	private void setSelectedFontSize(int size) {
 		switch(size) {
 		case 1:
 			options_fontsize_small.setSelected(true);
@@ -253,19 +290,19 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 		}
 	}
 	
-	public void setAlphabet(String current) {selectInGroup(options_alphabet_group, current);}
+	private void setAlphabet(String current) {selectInGroup(options_alphabet_group, current);}
 		
-	public void setColour(String current) {
+	private void setColour(String current) {
 		selectInGroup(options_colours_group, current);
 	}
 	
-	public void setInputFilter(String filter) {
+	private void setInputFilter(String filter) {
 		selectInGroup(control_style_group, filter);
 	}
 	
 	private void populateGroup(JMenu menu, ButtonGroup group, Esp_parameters param, ActionListener lstnr) {
 		Collection<String> options = new ArrayList<String>();
-		m_Host.GetPermittedValues(param, options);
+		iface.GetPermittedValues(param, options);
 		for(String ColourName : options) {
 			JMenuItem newColour = new JRadioButtonMenuItem(ColourName);
 			newColour.addActionListener(lstnr);
@@ -282,15 +319,15 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 		}
 	}
 	
-	public void setMouseLine(boolean enabled) {
+	private void setMouseLine(boolean enabled) {
 		options_mouseline.setSelected(enabled);
 	}
 	
-	public void setStartMouse(boolean enabled) {
+	private void setStartMouse(boolean enabled) {
 		control_mousestart.setSelected(enabled);
 	}
 	
-	public void setStartSpace(boolean enabled) {
+	private void setStartSpace(boolean enabled) {
 		control_spacestart.setSelected(enabled);
 	}
 
@@ -298,11 +335,11 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 		edit_paste.setEnabled(enabled);
 	}
 	
-	public void setSpeedAbs() {
+	private void setSpeedAbs() {
 		control_speed_auto.setSelected(false);
 	}
 	
-	public void setSpeedAuto(boolean enabled) {
+	private void setSpeedAuto(boolean enabled) {
 		control_speed_slow.setSelected(false);
 		control_speed_medium.setSelected(false);
 		control_speed_fast.setSelected(false);
@@ -310,21 +347,11 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 		control_speed_auto.setSelected(enabled);
 	}
 	
-	public void setLangModelLearns(boolean enabled) {
+	private void setLangModelLearns(boolean enabled) {
 		prediction_langmodel_learn.setSelected(enabled);
 	}
 	
-		public void flavorsChanged(FlavorEvent arg0) {
-		
-		if(m_Host.isDataFlavorAvailable(java.awt.datatransfer.DataFlavor.stringFlavor)) {
-			setPasteEnabled(true);
-		}
-		else {
-			setPasteEnabled(false);
-		}
-		
+	public void flavorsChanged(FlavorEvent arg0) {
+		setPasteEnabled(m_Host.isDataFlavorAvailable(java.awt.datatransfer.DataFlavor.stringFlavor));
 	}
-	
-	
-	
 }

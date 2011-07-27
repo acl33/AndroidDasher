@@ -54,10 +54,8 @@ public interface JDasherMenuBarListener {
 	
 	public void menuHelpAbout();
 	
-	public boolean isDataFlavorAvailable(java.awt.datatransfer.DataFlavor flavour);
 	// For clipboard control
-	
-	public void GetPermittedValues(Esp_parameters param, Collection<String> into);
+	public boolean isDataFlavorAvailable(java.awt.datatransfer.DataFlavor flavour);
 	
 	public void menuSetString(Esp_parameters param, String val);
 	public void menuSetLong(Elp_parameters param, long val);

@@ -74,11 +74,6 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	private JDasherThread worker;
 	
 	/**
-	 * Our menu bar
-	 */
-	private JDasherMenuBar MenuBar;
-	
-	/**
 	 * Overlay to display when Dasher is locked
 	 */
 	private ScreenOverlay ProgressMeter;
@@ -156,18 +151,6 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 				JDasherApplet.this.panel.addMouseMotionListener(m_MouseInput);
 			}
 			
-			/**
-			 * External event handler; simply passes the event to our
-			 * host, typically a JDasherApplet.
-			 * 
-			 * @param Event Event to handle
-			 */
-			@Override
-			public void HandleEvent(EParameters eParam) {
-				JDasherApplet.this.paramChanged(eParam);
-				super.HandleEvent(eParam);
-			}
-
 			@Override public void Message(String msg, int iSeverity) { // Requested message display
 				// Convert internal message types to those used by JOptionPane.
 				int iType = (iSeverity==0) ? JOptionPane.INFORMATION_MESSAGE
@@ -318,10 +301,10 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 		 */
 		
 		/* Next, make our menus */
+
+		JDasherMenuBar MenuBar = new JDasherMenuBar(Dasher, this);
 		
-		// (Parameter-holding object, some action-listener, some item-listener)
-		
-		MenuBar = constructMenus();
+		m_Clipboard.addFlavorListener(MenuBar);
 		
 		this.setJMenuBar(MenuBar);
 	}
@@ -385,63 +368,6 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	 * We use these as a fallback if http retrieval fails.
 	 */
 	private final String[] resourceFiles;
-	
-	/**
-	 * Produces our menu bar (a JDasherMenuBar) and returns it.
-	 * <p>
-	 * After instantiating, its options are set from Dasher's
-	 * current settings. For example, we cause the current Alphabet
-	 * to be set as 'selected' in the menu bar.
-	 * 
-	 * @return MenuBar to be added to our Applet
-	 */
-	private JDasherMenuBar constructMenus() {
-		
-		JDasherMenuBar MenuBar = new JDasherMenuBar(this);
-		
-		MenuBar.setColour(Dasher.GetStringParameter(Esp_parameters.SP_COLOUR_ID));
-		
-		MenuBar.setAlphabet(Dasher.GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
-		
-		MenuBar.setSelectedFontSize((int)Dasher.GetLongParameter(Elp_parameters.LP_DASHER_FONTSIZE));
-		MenuBar.setInputFilter(Dasher.GetStringParameter(Esp_parameters.SP_INPUT_FILTER));
-		MenuBar.setMouseLine(Dasher.GetBoolParameter(Ebp_parameters.BP_DRAW_MOUSE_LINE));
-		MenuBar.setStartMouse(Dasher.GetBoolParameter(Ebp_parameters.BP_START_MOUSE));
-		MenuBar.setStartSpace(Dasher.GetBoolParameter(Ebp_parameters.BP_START_SPACE));
-		MenuBar.setSpeedAuto(Dasher.GetBoolParameter(Ebp_parameters.BP_AUTO_SPEEDCONTROL));
-		MenuBar.setLangModelLearns(Dasher.GetBoolParameter(Ebp_parameters.BP_LM_ADAPTIVE));
-		
-		m_Clipboard.addFlavorListener(MenuBar);
-		
-		return MenuBar;
-		
-	}
-
-	/**
-	 * The Applet responds to the following parameter events:
-	 * <p>
-	 * <i>BP_DASHER_PAUSED</i>: We start/stop requesting frames
-	 * at a regular interval depending on whether Dasher is
-	 * currently paused.
-	 * <p>
-	 * <i>LP_LANGUAGE_MODEL_ID</i>: Updates our MenuBar's currently
-	 * selected language model to reflect that which has been
-	 * chosen.
-	 * <p>
-	 * <i>SP_COLOUR_ID</i>: Updates our MenuBar's currently selected
-	 * colour scheme to reflect that which has been chosen. Usually
-	 * this occurs in response to an alphabet specifying its own
-	 * colour scheme.
-	 * <p>
-	 */
-	/*private*/ void paramChanged(EParameters eParam) {
-		if(eParam == dasher.Esp_parameters.SP_COLOUR_ID) {
-			if(MenuBar != null) MenuBar.setColour(Dasher.GetStringParameter(dasher.Esp_parameters.SP_COLOUR_ID));
-		}
-		else if (eParam == dasher.Esp_parameters.SP_ALPHABET_ID) {
-			if (MenuBar!=null) MenuBar.setAlphabet(Dasher.GetStringParameter(dasher.Esp_parameters.SP_ALPHABET_ID));
-		}
-	}
 	
 	/**
 	 * Ignored. MousePressed and Released are handled separately.
@@ -703,10 +629,6 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	 */
 	public boolean isDataFlavorAvailable(java.awt.datatransfer.DataFlavor flavour) {
 		return m_Clipboard.isDataFlavorAvailable(flavour);
-	}
-	
-	public void GetPermittedValues(Esp_parameters param,Collection<String> into) {
-		Dasher.GetPermittedValues(param, into);
 	}
 	
 	/**
