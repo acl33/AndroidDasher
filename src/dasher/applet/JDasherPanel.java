@@ -30,7 +30,7 @@ import java.util.HashMap;
  * @author acl33
  *
  */
-public class JDasherPanel extends JPanel implements CDasherScreen, Runnable {
+public class JDasherPanel extends JPanel implements CDasherScreen {
 	/**Image to which we are currently rendering a new frame; or if we are not
 	 * in the middle of rendering, contains the <em>previous</em> frame to that
 	 * currently displayed 
@@ -55,7 +55,7 @@ public class JDasherPanel extends JPanel implements CDasherScreen, Runnable {
 	 * dasher); then renders to {@link #backbuffer}, and then exchanges
 	 * that with {@link #frontbuffer}.
 	 */
-	public void run() {
+	public void swapBuffers() {
 		if (scrWidth!=getWidth() || scrHeight!=getHeight()) {
 			if (getWidth()<=0 || getHeight()<=0) return; //can't do anything yet
 			scrWidth = getWidth();
@@ -74,7 +74,7 @@ public class JDasherPanel extends JPanel implements CDasherScreen, Runnable {
 			frontbuffer = backbuffer;
 			backbuffer = temp;
 		}
-		repaint(); //or is that done in display?
+		repaint();
 	}
 	
 	/** Render {@link #frontbuffer} to the drawing surface */

@@ -58,6 +58,8 @@ import dasher.*;
  */
 public class JDasherApplet extends JApplet implements MouseListener, KeyListener, JDasherMenuBarListener, dasher.applet.font.FontListener {
 
+	/** We try to render a new frame every <this number> of milliseconds*/
+	private static final int TIME_BETWEEN_FRAMES=20;
 	/**
 	 * Instance of Dasher which does the work
 	 */
@@ -67,11 +69,6 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	 * Panel object which will reflect those drawings on the GUI
 	 */
 	private JDasherPanel panel;
-	
-	/** The one-and-only thread that we use to manipulate {@link #Dasher},
-	 * including repainting.
-	 */
-	private JDasherThread worker;
 	
 	/**
 	 * Overlay to display when Dasher is locked
@@ -89,10 +86,8 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	public Clipboard m_Clipboard;
 	
 	/**
-	 * Scheduling agent used to cue new frames. At present,
-	 * this is only used to enqueue a render-new-frame
-	 * task onto {@link #worker}, as it can do so repeatedly and periodically.
-	 * TODO, replace {@link #worker} (entirely) with this? 
+	 * Scheduling agent for all operations that manipulate {@link #Dasher},
+	 * including repainting. 
 	 */
 	private final Timer taskScheduler = new Timer();
 	
@@ -149,6 +144,37 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 				JMouseInput m_MouseInput = new JMouseInput();
 				RegisterModule(m_MouseInput);
 				JDasherApplet.this.panel.addMouseMotionListener(m_MouseInput);
+			}
+			//task which will perform at least one more repaint, or null if no such will.
+			private TimerTask repaintTask;
+			//request to any repaintTask, to perform another repaint;
+			// must ensure there _is_ a repaintTask before setting to true.
+			private boolean m_bRepaintScheduled;
+			@Override public void HandleEvent(EParameters eParam) {
+				super.HandleEvent(eParam);
+				if (eParam == Ebp_parameters.BP_DASHER_PAUSED) {
+					if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
+						Redraw(true);
+				}
+			}
+			
+			/** Called once on the Swing GUI Thread, at startup, when the JDasherPanel
+			 * first becomes paintable. After that, only called from taskScheduler thread.
+			 */
+			@Override public void Redraw(boolean bRedrawNodes) {
+				super.Redraw(bRedrawNodes);
+				if (repaintTask==null)
+					taskScheduler.schedule(repaintTask = new TimerTask() {
+						@Override public void run() {
+							m_bRepaintScheduled=false;
+							panel.swapBuffers();
+							if (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) && !m_bRepaintScheduled) {
+								repaintTask=null;
+								cancel();
+							}
+						}
+					}, 0, TIME_BETWEEN_FRAMES);
+				m_bRepaintScheduled=true;
 			}
 			
 			@Override public void Message(String msg, int iSeverity) { // Requested message display
@@ -277,19 +303,21 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 		//construct the GUI...
 		getContentPane().add(constructGUIPanel(this.getSize()));
 		
-		//Start training...
-		Dasher.Realize();
-		worker.start();
+		//Start training...of course we do this on the Dasher-manipulating
+		// background thread (taskqueue)
+		final Object realized = new Object();
+		taskScheduler.schedule(new TimerTask() {
+			@Override public void run() {
+				Dasher.Realize();
+				synchronized(realized) {
+					realized.notifyAll();
+				}
+			}
+		}, 0);
 		
 		//Don't call ChangeScreen here - it'll get called automatically
 		// by the renderer when it first sees the size of the panel.
 				
-		taskScheduler.schedule(new TimerTask() {
-			public void run() {
-				worker.addTasklet(panel);
-			}
-		}, 0, 20);
-		
 		panel.addMouseListener(this);
 		this.addKeyListener(this);
 				
@@ -299,6 +327,14 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 		 * out to some dedicated event-handler code in the future, but there is no
 		 * particular reason to do so other than for tidiness' sake.
 		 */
+		//wait for Dasher to finish realizing, before we can make the menu bar
+		// (this needs the DasherInterface's module list)
+		while (true) {
+			synchronized(realized) {
+				try {realized.wait(); break;}
+				catch (InterruptedException e) {}
+			}
+		}
 		
 		/* Next, make our menus */
 
@@ -331,7 +367,6 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 
 		java.awt.Dimension EditSize = new java.awt.Dimension(GUIPanel.getWidth() - 20, GUIPanel.getHeight() / 10);
 
-		worker = new JDasherThread();
 		panel = new JDasherPanel(Dasher);
 
 		GUIPanel.add(panel);
@@ -403,28 +438,15 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	 * </p>
 	 */	
 	public void keyPressed(KeyEvent e) {
-		
-		if(e.getKeyCode() == KeyEvent.VK_CONTROL) {
-			worker.addTasklet(new Runnable() {
-				public void run() {
-					Dasher.SetLongParameter(Elp_parameters.LP_BOOSTFACTOR,175);
-				}
-			});
-			
+		boost: {
+			final int newBoostFactor;
+			if(e.getKeyCode() == KeyEvent.VK_CONTROL) 
+				newBoostFactor = 175; // Speed boost for pressing CTRL. Should this be in the interface?
+			else if(e.getKeyCode() == KeyEvent.VK_SHIFT)
+				newBoostFactor = 25; // Speed reduced when SHIFT pressed. As above?
+			else break boost;
+			menuSetLong(Elp_parameters.LP_BOOSTFACTOR, newBoostFactor);
 		}
-		
-		// Speed boost for pressing CTRL. Should this be in the interface?
-		
-		if(e.getKeyCode() == KeyEvent.VK_SHIFT) {
-			worker.addTasklet(new Runnable() {
-				public void run() {
-					Dasher.SetLongParameter(Elp_parameters.LP_BOOSTFACTOR,25);
-				}
-			});
-		}
-		
-		// Speed reduced when SHIFT pressed. As above?
-		
 	}
 	
 	/**
@@ -448,38 +470,14 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 		 * whether the other boost key is currently pressed when one
 		 * is released.
 		 */
-		
-		if(e.getKeyCode() == KeyEvent.VK_CONTROL) {
-			if(e.isShiftDown()) {
-				worker.addTasklet(new Runnable() {
-					public void run() {
-						Dasher.SetLongParameter(Elp_parameters.LP_BOOSTFACTOR,25);
-					}
-				});
-			}
-			else {
-				worker.addTasklet(new Runnable() {
-					public void run() {
-						Dasher.SetLongParameter(Elp_parameters.LP_BOOSTFACTOR,100);
-					}
-				});
-			}
-		}
-		if(e.getKeyCode() == KeyEvent.VK_SHIFT) {
-			if(e.isControlDown()) {
-				worker.addTasklet(new Runnable() {
-					public void run() {
-						Dasher.SetLongParameter(Elp_parameters.LP_BOOSTFACTOR,175);
-					}
-				});
-			}
-			else {
-				worker.addTasklet(new Runnable() {
-					public void run() {
-						Dasher.SetLongParameter(Elp_parameters.LP_BOOSTFACTOR,100);
-					}
-				});
-			}
+		boost: {
+			final int newBoostFactor;
+			if(e.getKeyCode() == KeyEvent.VK_CONTROL) {
+				newBoostFactor = (e.isShiftDown()) ? 25 : 100;
+			} else if(e.getKeyCode() == KeyEvent.VK_SHIFT) {
+				newBoostFactor = (e.isControlDown()) ? 175 : 100;
+			} else break boost;
+			menuSetLong(Elp_parameters.LP_BOOSTFACTOR, newBoostFactor);
 		}
 	}
 
@@ -590,31 +588,31 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	/** Called by menubar to set a string parameter - we do so
 	 * the {@link #worker} thread. */
 	public void menuSetString(final Esp_parameters param, final String val) {
-		worker.addTasklet(new Runnable() {
+		taskScheduler.schedule(new TimerTask() {
 			public void run() {
 				Dasher.SetStringParameter(param, val);
 			}
-		});
+		},0);
 	}
 	
 	/** Called by menubar to set a long parameter - we do so
 	 * the {@link #worker} thread. */
 	public void menuSetLong(final Elp_parameters param, final long val) {
-		worker.addTasklet(new Runnable() {
+		taskScheduler.schedule(new TimerTask() {
 			public void run() {
 				Dasher.SetLongParameter(param, val);
 			}
-		});
+		},0);
 	}
 	
 	/** Called by menubar to set a bool parameter - we do so
 	 * the {@link #worker} thread. */
 	public void menuSetBool(final Ebp_parameters param, final boolean val) {
-		worker.addTasklet(new Runnable() {
+		taskScheduler.schedule(new TimerTask() {
 			public void run() {
 				Dasher.SetBoolParameter(param, val);
 			}
-		});
+		},0);
 	}
 	
 	/**
