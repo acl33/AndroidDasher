@@ -345,8 +345,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 			if (!GetBoolParameter(Ebp_parameters.BP_TRAINING))
 				forceRebuild();
 		} else if (eParam == Ebp_parameters.BP_CONTROL_MODE || eParam == Elp_parameters.LP_UNIFORM) {
-			//called _after_ NCManager has updated its cached normalization values
-			forceRebuild();
+			UpdateNCManager();
 		}
 	}
 	
@@ -411,6 +410,15 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		forceRebuild();
 	}
 	
+	/** Creates a new NCManager, but using the previous' (existing) NCManager's AlphabetManager
+	 * (preserving training). That is, (re)creates the ControlManager, and updates cached values
+	 * for normalization, uniformity, etc.  
+	 */
+	protected void UpdateNCManager() {
+		m_pNCManager = new CNodeCreationManager(this, this, m_pNCManager.getAlphabetManager());
+		forceRebuild(); //perhaps overkill, but makes sure control nodes appear, pronto
+	
+	}
 	/**
 	 *  Forces the tree of nodes to be rebuild (in the same location, from the same nc manager),
 	 *  to ensure probabilities are refreshed.
@@ -889,27 +897,28 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	 * in SP_INPUT_FILTER.
 	 * <p>
 	 * If this is successful and an input filter is created,
-	 * it will be Ref'd and Activated immediately.
+	 * it will be Activated immediately.
 	 * <p>
 	 * If unsuccessful, m_InputFilter will be set to null.
 	 * <p>
-	 * If there is an existing filter, it is Deactivated and
-	 * Unref'd first.
-	 *
+	 * If there is an existing filter, it is Deactivated first.
 	 */
 	private void CreateInputFilter()
 	{
+		boolean bSupportedPause;
 		if(m_InputFilter != null) {
+			bSupportedPause = m_InputFilter.supportsPause();
 			m_InputFilter.Deactivate();
-		}
+		} else bSupportedPause = false;
 		
 		m_InputFilter = GetModuleByName(CInputFilter.class, GetStringParameter(Esp_parameters.SP_INPUT_FILTER));
 		if (m_InputFilter == null) m_InputFilter = m_DefaultInputFilter;
 		if(m_InputFilter != null) {
 			m_InputFilter.Activate();
+			if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE)
+					&& (m_InputFilter.supportsPause() ^ bSupportedPause))
+				UpdateNCManager();
 		}
-		if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE))
-			if (m_pNCManager!=null) m_pNCManager.computeNormFactor();
 	}
 	
 	/**
@@ -1038,6 +1047,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	}
 
 	public List<CControlManager.ControlAction> getControlActions() {
+		if (!GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE)) return Collections.emptyList();
 		List<ControlAction> acts = new ArrayList<ControlAction>();
 		if (m_InputFilter!=null && m_InputFilter.supportsPause()) acts.add(PAUSE_ACTION);
 		return acts;

@@ -188,7 +188,7 @@ class IMDasherInterface extends ADasherInterface
 					IMDasherInterface.this.actionHard = ((attribute.imeOptions & EditorInfo.IME_FLAG_NO_ENTER_ACTION)!=0);
 				}
 				if (hadAction || IMDasherInterface.this.actionLabel!=null)
-					m_pNCManager.computeNormFactor();
+					UpdateNCManager();
 			}
 		});
 	}

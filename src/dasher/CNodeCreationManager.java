@@ -24,47 +24,82 @@ public class CNodeCreationManager extends CDasherComponent {
 	 * of an Alphabet.
 	 */
 	protected final CAlphabetManager<?> m_AlphabetManager;
-	protected CControlManager m_ControlManager;
+	protected final CControlManager m_ControlManager;
 	
 /**
 	 * Amount to add to all symbols' probabilities, EXCEPT control mode symbol,
 	 * in order to avoid a zero probability.
 	 */
-	protected int uniformAdd;
+	protected final int uniformAdd;
 	
 	/**
 	 * Probability assigned to the Control Node
 	 */
-	protected long controlSpace;
+	protected final long controlSpace;
 	
 	/**
 	 * Normalization factor as a fraction of which the Language Model should compute
 	 * symbol probabilities, prior to adjusting them with adjustProbs.
 	 */
-	protected long nonUniformNorm;
+	protected final long nonUniformNorm;
 	
 	// Both of these are to save repeated calculations of the same answers. Their
 	// values are calculated when the model is created and are recalculated
 	// in response to any dependent parameter changes.
 
 	/**
-	 * Create a new NCManager. This is where the user's chosen alphabet is identified.
-	 * Includes:
-	 * <ul>
-	 * <li>Setting global parameters which reflect information about this alphabet
-	 * (eg. SP_DEFAULT_COLOUR_ID)
-	 * <li> Creating the LanguageModel described by LP_LANGUAGE_MODEL_ID
-	 * <li> Constructing an {@link AlphabetManager} using the previous
-	 * </ul>
+	 * Create a new NCManager, including a new AlphabetManager, Language Model
+	 * and ControlManager, according to standard settings (BP_CONTROL_MODE,
+	 * LP_LANGUAGE_MODEL_ID, SP_ALPHABET_ID).
 	 * 
 	 * <p> Note this does not train the newly created language model;
 -    * this must be performed from outside, typically by the Interface.
-	 * @param EventHandler Interface for e.g. Event handling
-	 * @param SettingsStore Settings repository
 	 */
 	public CNodeCreationManager(CDasherComponent creator, CDasherInterfaceBase intf) {
+		this(creator,intf,makeAlphMgr(intf));
+	}
+	
+	/** Creates a new NCManager, (re)using the specified Alphabet and Control Managers
+	 * (perhaps from the previous NCManager). Again, does not perform any training.
+	 */
+	public CNodeCreationManager(CDasherComponent creator, CDasherInterfaceBase intf, CAlphabetManager<?> mgr) {
 		super(creator);
 		this.m_DasherInterface=intf;
+		this.m_cAlphabet = mgr.m_Alphabet;
+		this.m_AlphabetManager = mgr;
+		mgr.ChangeNCManager(this);
+		//System.out.print("make Control Manager...");
+		mk: {
+			final List<ControlAction> actions = intf.getControlActions();
+			ControlAction c;
+			if (actions.size()==1) c=actions.get(0);
+			else if (actions.size()>1) {
+				c=new ControlAction() {
+					public String desc() {return "Control";} //TODO internationalize
+					public void happen(CDasherNode node) {} //do nothing
+					public List<ControlAction> successors() {return actions;}
+				};
+			} else {
+				//System.out.println("No control manager");
+				m_ControlManager = null;
+				controlSpace = 0;
+				break mk;
+			}
+			//System.out.println("Have control manager");
+			m_ControlManager = new CControlManager(this, intf, this, c);
+			//TODO fix size of control manager at 5%
+			controlSpace = NORMALIZATION/20;
+			break mk;
+		}
+		//break mk arrives here
+		int iSymbols = m_cAlphabet.GetNumberSymbols();
+
+		final long iNorm = NORMALIZATION-controlSpace;
+		uniformAdd = (int)((iNorm * GetLongParameter(Elp_parameters.LP_UNIFORM)) / 1000) / iSymbols; 
+		nonUniformNorm = iNorm - iSymbols * uniformAdd;
+	}
+	
+	private static CAlphabetManager<?> makeAlphMgr(CDasherInterfaceBase intf) {
 		//Convert the full alphabet to a symbolic representation for use in the language model
 		
 		// -- put all this in a separate method
@@ -75,22 +110,19 @@ public class CNodeCreationManager extends CDasherComponent {
 		// if this is the case then the parameter value should be updated,
 		// but not in such a way that it causes everything to be rebuilt.
 		
-		m_cAlphabet = intf.GetInfo(GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
+		CAlphIO.AlphInfo cAlphabet = intf.GetInfo(intf.GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
 		
 		// Create an appropriate language model;
 		
-		switch ((int)GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)) {
+		switch ((int)intf.GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)) {
 		default:
 			// If there is a bogus value for the language model ID, we'll default
 			// to our trusty old PPM language model.
 		case 0:
-			
-			m_AlphabetManager = /*ACL (langMod.isRemote())
+			intf.SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, false);
+			return /*ACL (langMod.isRemote())
 		        ? new CRemoteAlphabetManager( this, langMod)
-		        :*/ new CAlphabetManager<CPPMLanguageModel.CPPMnode>( this, new CPPMLanguageModel(this, m_cAlphabet));
-		
-			SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, false);
-			break;
+		        :*/ new CAlphabetManager<CPPMLanguageModel.CPPMnode>( new CPPMLanguageModel(intf, cAlphabet));
 		/* case 2:
 			m_pLanguageModel = new CWordLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
 			break;
@@ -113,8 +145,6 @@ public class CNodeCreationManager extends CDasherComponent {
 		 * implemented yet.
 		 */
 		}
-		
-		computeNormFactorNoCheck();
 	}
 	
 	public String getDefaultColourScheme() {return m_cAlphabet.GetPalette();}
@@ -175,61 +205,6 @@ public class CNodeCreationManager extends CDasherComponent {
 		m_ControlManager.GetRoot(pParent, pParent.getOffset(), probInfo[probInfo.length-2], probInfo[probInfo.length-1]);
 	}
 	
-	public void computeNormFactor() {
-		long oldSpace = controlSpace, oldNorm = nonUniformNorm;
-		computeNormFactorNoCheck();
-		if (nonUniformNorm!=oldNorm || controlSpace!=oldSpace)
-			m_DasherInterface.forceRebuild();
-	}
-	
-	private void computeNormFactorNoCheck() {
-//		 Total number of symbols in alphabet (i.e. to which we add uniformity)
-		int iSymbols = m_cAlphabet.GetNumberSymbols();
-		
-		final long iNorm = NORMALIZATION - (controlSpace = initControlManager());
-		
-		uniformAdd = (int)((iNorm * GetLongParameter(Elp_parameters.LP_UNIFORM)) / 1000) / iSymbols; 
-		nonUniformNorm = iNorm - iSymbols * uniformAdd;
-		
-	}
-	
-	protected long initControlManager() {
-		mk: if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE)) {
-			final List<ControlAction> actions = m_DasherInterface.getControlActions();
-			ControlAction c;
-			if (actions.size()==1) c=actions.get(0);
-			else if (actions.size()>1) c=new ControlAction() {
-				public String desc() {return "Control";} //TODO internationalize
-				public void happen(CDasherNode node) {} //do nothing
-				public List<ControlAction> successors() {return actions;}
-			};
-			else break mk;
-			if (m_ControlManager==null) {
-				//control mode has just been turned on...
-				//delete any long[]s not big enough for a control-node probability.
-				for (int i=freeArrayList.size(); i-->0; )
-					if (freeArrayList.get(i).length<m_cAlphabet.GetNumberSymbols()+2)
-						freeArrayList.remove(i);
-			}
-				freeArrayList.clear(); //elements without space for a control-node probability.
-			m_ControlManager = new CControlManager(this, m_DasherInterface, this, c);
-			// TODO - sort out size of control node - for the timebeing I'll fix the control node at 5%
-			return NORMALIZATION/20;
-		}
-		//no need to clear list - the existing elements can be used by GetProbs, but will not be recycled 
-		m_ControlManager=null;
-		return 0;
-	}
-	
-	@Override public void HandleEvent(EParameters eParam) {
-		if (eParam == Ebp_parameters.BP_CONTROL_MODE
-			|| eParam == Elp_parameters.LP_UNIFORM) {
-			//note this will only affect nodes _populated_ after this;
-			// it won't change those which have created their children already.
-			computeNormFactor();
-		}
-	}
-
 	public CAlphabetManager<?> getAlphabetManager() {
 		return m_AlphabetManager;
 	}

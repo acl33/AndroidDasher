@@ -52,13 +52,14 @@ public class CAlphabetManager<C> {
 	 * Pointer to the LanguageModel used in determining the
 	 * relative probability assigned to new Nodes. 
 	 */
-	public final CLanguageModel<C> m_LanguageModel;
+	private final CLanguageModel<C> m_LanguageModel;
 	
 	/**
 	 * Pointer to the NCManager, which modifies the probabilities for uniformity and control mode
 	 */
-    protected final CNodeCreationManager m_Model;
+    private CNodeCreationManager m_pNCManager;
     
+    void ChangeNCManager(CNodeCreationManager newMgr) {this.m_pNCManager = newMgr;}
     /**
      * Pointer to the current Alphabet, used to find out what a
      * given character looks like typed (for the purposes
@@ -84,10 +85,9 @@ public class CAlphabetManager<C> {
      * to modify probabilities for control mode, etc.
      * @param LanguageModel LanguageModel to use to determine relative sizes of child nodes
      */
-    public CAlphabetManager( CNodeCreationManager pNCManager, CLanguageModel<C> LanguageModel) {
+    public CAlphabetManager( CLanguageModel<C> LanguageModel) {
     	
     	this.m_LanguageModel = LanguageModel;
-    	this.m_Model = pNCManager;
     	
     	m_Alphabet = LanguageModel.getAlphabet();
     	m_AlphabetMap = m_Alphabet.makeMap();
@@ -111,7 +111,7 @@ public class CAlphabetManager<C> {
      */
     public CAlphNode GetRoot(CDasherNode Parent, long iLower, long iUpper, int iOffset, boolean bEnteredLast) {
     	if (iOffset < -1) throw new IllegalArgumentException("offset "+iOffset+" must be at least -1");
-    	ListIterator<Character> previousChars = m_Model.m_DasherInterface.getContext(iOffset);
+    	ListIterator<Character> previousChars = m_pNCManager.m_DasherInterface.getContext(iOffset);
     	if (iOffset<0 && previousChars.hasPrevious()) {
     		StringBuilder sb=new StringBuilder();
     		do {
@@ -152,7 +152,7 @@ public class CAlphabetManager<C> {
     	C parCtx = (parent==null) ? m_AlphabetMap.defaultContext(m_LanguageModel) : parent.context;
         if (bufCtx==null || !bufCtx.equals(parCtx)) {
 	    	//changing context. First write the old to the training file...
-			if (strTrainfileBuffer.length()>0) WriteTrainFileFull(m_Model.m_DasherInterface);
+			if (strTrainfileBuffer.length()>0) WriteTrainFileFull(m_pNCManager.m_DasherInterface);
 			
 			//Now encode a context-switch command (if possible)
 			if (m_Alphabet.ctxChar!=null) {
@@ -258,7 +258,7 @@ public class CAlphabetManager<C> {
         @Override
         public void DeleteNode() {
         	if (probInfo!=null) {
-        		m_Model.recycleProbArray(probInfo);
+        		m_pNCManager.recycleProbArray(probInfo);
         		probInfo=null;
         	}
         	super.DeleteNode();
@@ -286,7 +286,7 @@ public class CAlphabetManager<C> {
         
         protected long[] GetProbInfo() {
         	if (probInfo == null) {
-	        	probInfo = m_Model.GetProbs(m_LanguageModel,context);
+	        	probInfo = m_pNCManager.GetProbs(m_LanguageModel,context);
 	        	for (int i=1; i<probInfo.length; i++)
 	        		probInfo[i]+=probInfo[i-1];
         	}
@@ -346,12 +346,12 @@ public class CAlphabetManager<C> {
 		public void Output() {
 			super.Output();
 			//probability 0 will break user trials, but user trials shouldn't involve unknown symbols anyway...?
-			m_Model.m_DasherInterface.outputText(m_strDisplayText, 0.0);
+			m_pNCManager.m_DasherInterface.outputText(m_strDisplayText, 0.0);
 		}
 		
 		@Override public void Undo() {
 			super.Undo();
-			m_Model.m_DasherInterface.deleteText(m_strDisplayText, 0.0);
+			m_pNCManager.m_DasherInterface.deleteText(m_strDisplayText, 0.0);
 		}
 
 		@Override
@@ -390,7 +390,7 @@ public class CAlphabetManager<C> {
 		public void Enter() {
 			//Make damn sure the user notices something funny is going on by
 			// stopping him in his tracks. He can continue by unpausing...
-			m_Model.m_DasherInterface.PauseAt(0, 0);
+			m_pNCManager.m_DasherInterface.PauseAt(0, 0);
 		}
 	}
 
@@ -441,7 +441,7 @@ public class CAlphabetManager<C> {
          */
     	@Override
         public void Output() {
-    		m_Model.m_DasherInterface.outputText(m_Alphabet.GetText(m_Symbol), GetProb());
+    		m_pNCManager.m_DasherInterface.outputText(m_Alphabet.GetText(m_Symbol), GetProb());
     		super.Output();
         }
 
@@ -463,7 +463,7 @@ public class CAlphabetManager<C> {
          */    
         public void Undo() {
         	super.Undo();
-        	m_Model.m_DasherInterface.deleteText(m_Alphabet.GetText(m_Symbol), GetProb());
+        	m_pNCManager.m_DasherInterface.deleteText(m_Alphabet.GetText(m_Symbol), GetProb());
         }
         
         @Override
@@ -474,7 +474,7 @@ public class CAlphabetManager<C> {
 			//...before performing the following. But I can't see why it should ever fail?!
 			
 			super.commit(bNv);
-			if (m_Model.GetBoolParameter(Ebp_parameters.BP_LM_ADAPTIVE)) {
+			if (m_pNCManager.GetBoolParameter(Ebp_parameters.BP_LM_ADAPTIVE)) {
 				Learn(this);
 			}
 		}
@@ -642,7 +642,7 @@ public class CAlphabetManager<C> {
     	    }
     	    assert Node.Children().get(Node.ChildCount()-1)==pNewChild;
     	  }
-    	  if (parentGroup==null) m_Model.addExtraNodes(Node, probInfo);
+    	  if (parentGroup==null) m_pNCManager.addExtraNodes(Node, probInfo);
     }
     
     CDasherNode mkSymbol(CAlphNode parent, int sym, long iLbnd, long iHbnd) {
