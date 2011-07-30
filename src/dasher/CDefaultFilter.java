@@ -220,6 +220,8 @@ public class CDefaultFilter extends CInputFilter {
 		return bDidSomething;
 	}
 	
+	@Override public boolean supportsPause() {return true;}
+	
 	private long m_iStartTime;
 	
 	/** Computes multiplier to apply to speed, for this frame.

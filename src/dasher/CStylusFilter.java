@@ -55,6 +55,14 @@ public class CStylusFilter extends CDefaultFilter {
         //no zoom was scheduled.
         return super.Timer(iTime, view, pInput, model);
     }
+    
+    /** Whilst we do kinda support pause, if you can start the filter, you can also
+     * stop it (Users who cannot remove finger from screen/mouse-pointer, can use
+     * {@link CDefaultFilter} with a Start Handler).
+     * @return false
+     */
+    @Override public boolean supportsPause() {return false;}
+    
     /**
      * Called to apply any coordinate transform required for
      * <em>click</em> coords (i.e. for a scheduled zoom, rather
