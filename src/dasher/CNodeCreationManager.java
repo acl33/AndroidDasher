@@ -69,29 +69,18 @@ public class CNodeCreationManager extends CDasherComponent {
 		this.m_AlphabetManager = mgr;
 		mgr.ChangeNCManager(this);
 		//System.out.print("make Control Manager...");
-		mk: {
-			final List<ControlAction> actions = intf.getControlActions();
-			ControlAction c;
-			if (actions.size()==1) c=actions.get(0);
-			else if (actions.size()>1) {
-				c=new ControlAction() {
-					public String desc() {return "Control";} //TODO internationalize
-					public void happen(CDasherNode node) {} //do nothing
-					public List<ControlAction> successors() {return actions;}
-				};
-			} else {
-				//System.out.println("No control manager");
-				m_ControlManager = null;
-				controlSpace = 0;
-				break mk;
-			}
+		final List<ControlAction> actions = intf.getControlActions();
+		ControlAction c;
+		if (actions.isEmpty()) {
+			//System.out.println("No control manager");
+			m_ControlManager = null;
+			controlSpace = 0;
+		} else {
 			//System.out.println("Have control manager");
-			m_ControlManager = new CControlManager(this, intf, this, c);
+			m_ControlManager = new CControlManager(this, intf, this, actions);
 			//TODO fix size of control manager at 5%
 			controlSpace = NORMALIZATION/20;
-			break mk;
 		}
-		//break mk arrives here
 		int iSymbols = m_cAlphabet.GetNumberSymbols();
 
 		final long iNorm = NORMALIZATION-controlSpace;

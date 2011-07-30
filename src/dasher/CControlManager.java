@@ -1,6 +1,8 @@
 package dasher;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static dasher.CDasherModel.NORMALIZATION;
@@ -8,10 +10,15 @@ import static dasher.CDasherModel.NORMALIZATION;
 public class CControlManager extends CDasherComponent {
 	private final CNodeCreationManager m_pNCMgr;
 	private final ControlAction root;
-	CControlManager(CDasherComponent creator, CDasherInterfaceBase intf, CNodeCreationManager pNCMgr, ControlAction root) {
+	CControlManager(CDasherComponent creator, CDasherInterfaceBase intf, CNodeCreationManager pNCMgr, final List<ControlAction> actions) {
 		super(creator);
 		this.m_pNCMgr=pNCMgr;
-		this.root=root;
+		this.root=(actions.size()==1) ? actions.get(0) :
+			new ControlAction() {
+				public String desc() {return "Control";} //TODO internationalize
+				public void happen(CDasherNode node) {} //do nothing
+				public List<ControlAction> successors() {return actions;}
+			};
 	}
 
 	static int getColour(CDasherNode parent) {return parent==null ? 7 : (parent.ChildCount()%99)+11;}
