@@ -340,10 +340,11 @@ public class CDasherModel extends CFrameRate {
 		 * is likely not to be there anymore.
 		 */
 		m_deGotoQueue.clear();
+		AbortOffset();
 		
 		DeleteRoot();
-		
-		m_Root = alphMgr.GetRoot(null, 0, NORMALIZATION, iOffset, true);
+
+		m_Root = alphMgr.GetRoot(iOffset, true);
 		//we've already entered the node, as it was reconstructed from previously-written context
 		m_Root.Enter();
 		m_Root.Seen(true);
@@ -353,8 +354,6 @@ public class CDasherModel extends CFrameRate {
 		double dFraction = 1 - (1 - m_Root.MostProbableChild() / (double)NORMALIZATION)/2.0;
 		
 		int iWidth = ( (int)( (MAX_Y / (2.0*dFraction)) ) );
-		
-		AbortOffset();
 		
 		m_Rootmin = MAX_Y / 2 - iWidth / 2;
 		m_Rootmax = MAX_Y / 2 + iWidth / 2;

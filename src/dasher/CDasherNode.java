@@ -112,8 +112,10 @@ public abstract class CDasherNode {
     }
     /**
 	 * Initializes a Node and sets its describing variables.
+	 * Note, the node expects a call to {@link #Reparent(CDasherNode, long, long)}
+	 *  if it is to be the child of another node; this method initializes
+	 *  Parent to null, and low &amp; high bounds to 0 &amp; max respectively 
 	 * 
-	 * @param Parent Parent Node
 	 * @param Symbol Symbol number
 	 * @param iphase Colour-cycling phase
 	 * @param ColorScheme Colour scheme
@@ -122,16 +124,15 @@ public abstract class CDasherNode {
 	 * @param lm LanguageModel
 	 * @param Colour Colour number
 	 */
-    protected void initNode(CDasherNode Parent, int iOffset, long ilbnd, long ihbnd, int Colour, String strDisplayText) {
-    	if (ihbnd < ilbnd || strDisplayText==null) throw new IllegalArgumentException();
+    protected void initNode(int iOffset, int Colour, String strDisplayText) {
+    	if (strDisplayText==null) throw new IllegalArgumentException();
     	m_iOffset = iOffset;
-		m_iLbnd = ilbnd;
-		m_iHbnd = ihbnd;
+		m_iLbnd = 0;
+		m_iHbnd = CDasherModel.NORMALIZATION;
 		//m_bHasAllChildren = false; //default at construction time, and cleared by DeleteNode()
 		m_bSeen = false; //default
 		m_iColour = Colour;
-		m_Parent = Parent;
-		if (Parent!=null) Parent.m_mChildren.add(this);
+		m_Parent = null; //until Reparent called
 		this.m_strDisplayText = strDisplayText;
 		numNodes++;
 	}
@@ -286,19 +287,11 @@ public abstract class CDasherNode {
 	 * 
 	 * @param NewParent Our new parent
 	 */
-	public void SetParent(CDasherNode NewParent) {
+	public void Reparent(CDasherNode NewParent, long iLower, long iUpper) {
 		assert m_Parent==null;
 	    m_Parent = NewParent;
+	    assert m_Parent.m_mChildren.get(m_Parent.m_mChildren.size()-1).m_iHbnd==iLower;
 	    m_Parent.m_mChildren.add(this);
-	}
-	
-	/**
-	 * Sets this node's probabilities.
-	 * 
-	 * @param iLower New Lbnd
-	 * @param iUpper New Hbnd
-	 */
-	public void SetRange(long iLower, long iUpper) {
 	    m_iLbnd = iLower;
 	    m_iHbnd = iUpper;
 	}
