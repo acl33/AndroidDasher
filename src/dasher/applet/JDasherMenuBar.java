@@ -31,12 +31,13 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
@@ -81,18 +82,10 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 	
 	private JMenuItem edit_cut, edit_copy, edit_paste;
 	
-	//private JMenu control_speed; 
-	private JRadioButtonMenuItem control_speed_slow, control_speed_medium, control_speed_fast, control_speed_fastest;
-	private JCheckBoxMenuItem control_speed_auto;
-	
 	private ButtonGroup control_style_group;
-	private JCheckBoxMenuItem control_mousestart, control_spacestart;
 		
 	private JMenuItem options_editfont;
 	private JRadioButtonMenuItem options_fontsize_small, options_fontsize_medium, options_fontsize_large;
-	private JCheckBoxMenuItem options_mouseline;
-	
-	private JCheckBoxMenuItem prediction_langmodel_learn;
 	
 	private JMenuItem help_about;
 	
@@ -155,7 +148,7 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 		options_fontsize_medium = new JRadioButtonMenuItem("Medium"); options_fontsize_group.add(options_fontsize_medium); options_fontsize.add(options_fontsize_medium); options_fontsize_medium.addActionListener(this);
 		options_fontsize_small = new JRadioButtonMenuItem("Small"); options_fontsize_group.add(options_fontsize_small); options_fontsize.add(options_fontsize_small); options_fontsize_small.addActionListener(this);
 		
-		options_mouseline = new JCheckBoxMenuItem("Display Mouse Line"); options.add(options_mouseline); options_mouseline.addItemListener(this);
+		options.add(makeCheckboxItem("Display Mouse Line", Ebp_parameters.BP_DRAW_MOUSE_LINE));
 		
 		JMenuItem options_alphabet = new JMenuItem("Alphabet..."); options.add(options_alphabet); 
 
@@ -213,23 +206,32 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 			public void actionPerformed(ActionEvent e) {
 				m_Host.menuSetString(Esp_parameters.SP_INPUT_FILTER,e.getActionCommand());
 			}
-			
 		});
 		
-		control_mousestart = new JCheckBoxMenuItem("Start on Mouse"); control.add(control_mousestart); control_mousestart.addItemListener(this);
+		options.add(makeCheckboxItem("Control Mode",Ebp_parameters.BP_CONTROL_MODE));
+		
+		control.add(makeCheckboxItem("Start on Mouse", Ebp_parameters.BP_START_MOUSE));
 						
-		control_spacestart = new JCheckBoxMenuItem("Start on Space"); control.add(control_spacestart); control_spacestart.addItemListener(this);
+		control.add(makeCheckboxItem("Start on Space", Ebp_parameters.BP_START_SPACE));
 				
 		JMenu control_speed = new JMenu("Dasher Speed"); control.add(control_speed);
 		ButtonGroup control_speed_group = new ButtonGroup();
-		control_speed_slow = new JRadioButtonMenuItem("Slow"); control_speed_group.add(control_speed_slow); control_speed.add(control_speed_slow); control_speed_slow.addActionListener(this);
-		control_speed_medium = new JRadioButtonMenuItem("Normal"); control_speed_group.add(control_speed_medium); control_speed.add(control_speed_medium); control_speed_medium.addActionListener(this);
-		control_speed_fast = new JRadioButtonMenuItem("Fast"); control_speed_group.add(control_speed_fast); control_speed.add(control_speed_fast); control_speed_fast.addActionListener(this);
-		control_speed_fastest = new JRadioButtonMenuItem("Fastest"); control_speed_group.add(control_speed_fastest); control_speed.add(control_speed_fastest); control_speed_fastest.addActionListener(this);
+		control_speed.add(makeSpeedItem(control_speed_group, "Slow",100));
+		control_speed.add(makeSpeedItem(control_speed_group, "Normal", 200));
+		control_speed.add(makeSpeedItem(control_speed_group, "Fast", 400));
+		control_speed.add(makeSpeedItem(control_speed_group, "Fastest",800));
 		control_speed.addSeparator();
-		control_speed_auto = new JCheckBoxMenuItem("Auto-adjust"); control_speed.add(control_speed_auto); control_speed_auto.addItemListener(this);
+		//auto-speed control: we make this a radiobutton in the speed group, so that
+		// selecting it clears all the other speed items - and selecting any other
+		// speed, clears auto-speed-control by exclusion in the same group.
+		//We listen to auto-speed in the same manner as the other (checkbox) items,
+		// so that when it is cleared - by user selection or selection of a different
+		// speed - we get a callback to itemStateChanged, which will then clear
+		// BP_AUTO_SPEEDCONTROL for us.
+		JRadioButtonMenuItem auto = listenToItemState(new JRadioButtonMenuItem("Auto-adjust"), Ebp_parameters.BP_AUTO_SPEEDCONTROL);
+		control_speed_group.add(auto); control_speed.add(auto);
 		
-		prediction_langmodel_learn = new JCheckBoxMenuItem("Language Model Learns"); options.add(prediction_langmodel_learn); prediction_langmodel_learn.addItemListener(this);
+		options.add(makeCheckboxItem("Language Model Learns", Ebp_parameters.BP_LM_ADAPTIVE));
 	
 		help_about = new JMenuItem("About..."); help.add(help_about); help_about.addActionListener(this);
 
@@ -238,16 +240,26 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 		setColour(iface.GetStringParameter(Esp_parameters.SP_COLOUR_ID));
 		setSelectedFontSize((int)iface.GetLongParameter(Elp_parameters.LP_DASHER_FONTSIZE));
 		setInputFilter(iface.GetStringParameter(Esp_parameters.SP_INPUT_FILTER));
-		setMouseLine(iface.GetBoolParameter(Ebp_parameters.BP_DRAW_MOUSE_LINE));
-		setStartMouse(iface.GetBoolParameter(Ebp_parameters.BP_START_MOUSE));
-		setStartSpace(iface.GetBoolParameter(Ebp_parameters.BP_START_SPACE));
-		setSpeedAuto(iface.GetBoolParameter(Ebp_parameters.BP_AUTO_SPEEDCONTROL));
-		setLangModelLearns(iface.GetBoolParameter(Ebp_parameters.BP_LM_ADAPTIVE));
 	}
+	
+	private JRadioButtonMenuItem makeSpeedItem(ButtonGroup controlSpeedGroup,
+			String string, long maxBitrate) {
+		JRadioButtonMenuItem item = new JRadioButtonMenuItem(string);
+		controlSpeedGroup.add(item);
+		speeds.put(item,maxBitrate);
+		item.addActionListener(this);
+		return item;
+	}
+
+	private final Map<JRadioButtonMenuItem,Long> speeds = new HashMap<JRadioButtonMenuItem,Long>();
 	
 	public void actionPerformed(ActionEvent e) {
 		// Handles all ordinary and radio-button menus.
-		
+		if (speeds.containsKey(e.getSource())) {
+			JRadioButtonMenuItem rad = (JRadioButtonMenuItem)e.getSource();
+			m_Host.menuSetLong(Elp_parameters.LP_MAX_BITRATE, speeds.get(rad));
+			rad.setSelected(true);
+		}
 		if(e.getActionCommand().equals("New")) {
 			m_Host.menuNew();
 		}
@@ -275,46 +287,27 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 		else if(e.getActionCommand().equals("Small")) {
 			m_Host.menuSetLong(Elp_parameters.LP_DASHER_FONTSIZE, 1);
 		}
-		else if(e.getActionCommand().equals("Slow")) {
-			m_Host.menuSetLong(Elp_parameters.LP_MAX_BITRATE, 100);
-			setSpeedAbs();
-		}
-		else if(e.getActionCommand().equals("Normal")) {
-			m_Host.menuSetLong(Elp_parameters.LP_MAX_BITRATE, 200);
-			setSpeedAbs();
-		}
-		else if(e.getActionCommand().equals("Fast")) {
-			m_Host.menuSetLong(Elp_parameters.LP_MAX_BITRATE, 400);
-			setSpeedAbs();
-		}
-		else if(e.getActionCommand().equals("Fastest")) {
-			m_Host.menuSetLong(Elp_parameters.LP_MAX_BITRATE, 800);
-			setSpeedAbs();
-		}
 		else if(e.getActionCommand().equals("About...")) {
 			m_Host.menuHelpAbout();			
 		}
 	}
 	
+	private final Map<JMenuItem,Ebp_parameters> menuToParam = new HashMap<JMenuItem, Ebp_parameters>();
+	
+	private JCheckBoxMenuItem makeCheckboxItem(String caption, Ebp_parameters param) {
+		return listenToItemState(new JCheckBoxMenuItem(caption), param);
+	}
+	
+	private <T extends JMenuItem> T listenToItemState(T item, Ebp_parameters param) {
+	    item.addItemListener(this);
+	    menuToParam.put(item,param);
+	    item.setSelected(iface.GetBoolParameter(param));
+	    return item;
+	}
+	
 	public void itemStateChanged(ItemEvent e) {
-		JCheckBoxMenuItem tickbox = ((JCheckBoxMenuItem)e.getItem());
-		
-		if(tickbox.getText().equals("Display Mouse Line")) {
-			m_Host.menuSetBool(Ebp_parameters.BP_DRAW_MOUSE_LINE,tickbox.isSelected());
-		}
-		else if(tickbox.getText().equals("Start on Mouse")) {
-			m_Host.menuSetBool(Ebp_parameters.BP_START_MOUSE,tickbox.isSelected());
-		}
-		else if(tickbox.getText().equals("Start on Space")) {
-			m_Host.menuSetBool(Ebp_parameters.BP_START_SPACE, tickbox.isSelected());
-		}
-		else if(tickbox.getText().equals("Auto-adjust")) {
-			m_Host.menuSetBool(Ebp_parameters.BP_AUTO_SPEEDCONTROL, tickbox.isSelected());
-			setSpeedAuto(tickbox.isSelected());
-		}
-		else if(tickbox.getText().equals("Language Model Learns")) {
-			m_Host.menuSetBool(Ebp_parameters.BP_LM_ADAPTIVE, tickbox.isSelected());
-		}
+		JMenuItem item = (JMenuItem)e.getItem();
+		m_Host.menuSetBool(menuToParam.get(item),item.isSelected());
 	}
 	
 	private void setSelectedFontSize(int size) {
@@ -358,36 +351,8 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 		}
 	}
 	
-	private void setMouseLine(boolean enabled) {
-		options_mouseline.setSelected(enabled);
-	}
-	
-	private void setStartMouse(boolean enabled) {
-		control_mousestart.setSelected(enabled);
-	}
-	
-	private void setStartSpace(boolean enabled) {
-		control_spacestart.setSelected(enabled);
-	}
-
 	public void setPasteEnabled(boolean enabled) {
 		edit_paste.setEnabled(enabled);
-	}
-	
-	private void setSpeedAbs() {
-		control_speed_auto.setSelected(false);
-	}
-	
-	private void setSpeedAuto(boolean enabled) {
-		control_speed_slow.setSelected(false);
-		control_speed_medium.setSelected(false);
-		control_speed_fast.setSelected(false);
-		control_speed_fastest.setSelected(false);
-		control_speed_auto.setSelected(enabled);
-	}
-	
-	private void setLangModelLearns(boolean enabled) {
-		prediction_langmodel_learn.setSelected(enabled);
 	}
 	
 	public void flavorsChanged(FlavorEvent arg0) {
