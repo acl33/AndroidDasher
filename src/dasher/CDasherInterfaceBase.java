@@ -788,21 +788,15 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	}
 	
 	/**
-	 * Wraps setOffset() on the Model, which retrieves a fresh context and
-	 * rebuilds the Dashernode tree, unless the model is already at the right offset.
-	 * This CDasherInterfaceBase methods serves only to additionally pause Dasher,
-	 * write out the new context to the training file, and redraw the screen. (Note,
-	 * these actions will be performed anyway even if the model is already at the
-	 * right offset - subclasses may wish to override and prevent this.)
+	 * Positions the model at the specified offset, retrieving fresh context at that
+	 * offset and rebuilding the Dashernode tree if necessary. Includes pausing Dasher.
 	 * 
-	 * @param bForceStart Should we rebuild the context even if none is submitted?
+	 * @param bForce If true, model is rebuilt even if it was already at the right position.
+	 * (appropriate if the text being edited may have changed regardless of cursor position -
+	 * e.g. if moving from one editbox to another.)
 	 */
 	public void setOffset(int iOffset, boolean bForce) {
 		if (m_DasherModel==null) throw new IllegalStateException("Not yet constructed?");
-		/* CSFS: This used to clear m_DasherModel.strContextBuffer,
-		 * which has been removed per the notes at the top of the file.
-		 */
-		//ACL couldn't find said notes! But changing context system anyway.
 		PauseAt(0,0);
 		
 		m_DasherModel.SetOffset(iOffset,m_pNCManager.getAlphabetManager(), bForce);

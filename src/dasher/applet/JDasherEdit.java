@@ -33,12 +33,12 @@ import javax.swing.event.CaretListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.JTextArea;
 
+import dasher.CDasherInterfaceBase;
+
 /**
- * JDasherEdit is essentially an ordinary JTextArea with an added
- * event handler to respond to Dasher's Edit Events. It responds
- * to EditEvents to update the contents of the text box, and to
- * EditContextEvents to supply a context if it knows of one.
- * 
+ * JDasherEdit is essentially an ordinary JTextArea with methods to deal with
+ * outputting/deleting text for Dasher and which listens to caret updates
+ * from Swing to rebuild the Dasher tree accordingly.
  */
 public class JDasherEdit extends JTextArea implements CaretListener {
 	
@@ -50,40 +50,17 @@ public class JDasherEdit extends JTextArea implements CaretListener {
 	private dasher.CDasherInterfaceBase m_Interface;
 	
 	/**
-	 * Where the TextArea's Dot was last event; useful in determining
-	 * what kind of edit the user has made. 
-	 */
-	private int iPrevDot;
-	
-	/**
-	 * Where the TextArea's Mark was last event; useful in determining
-	 * what kind of edit the user has made. 
-	 */
-	private int iPrevMark;
-	
-	/**
-	 * Flag to supress events which we have caused by acting on
-	 * commands from the Dasher core.
-	 * We listen to both Dasher's internal event system and also
-	 * Java's EditEvents to spot when the user makes changes
-	 * to the TextArea's contents.
-	 */
-	private boolean supressNextEvent;
-	
-	/**
-	 * Creates a new EditBox with a given width and height in characters
-	 * and with the ability to control a given interface.
-	 * <p>
-	 * The interface can be null; in this case user changes to the
-	 * edit box will not be reflected in Dasher's behaviour.
+	 * Creates a new EditBox with a given width and height in characters,
+	 * which will inform the given interface if the cursor is moved.
 	 * 
 	 * @param rows EditBox width in characters
 	 * @param cols EditBox height in characters
-	 * @param Interface Interface to control
+	 * @param intf Interface to control; must not be null
+	 * @throws IllegalArgumentException if <code>intf</code> is null.
 	 */
-	public JDasherEdit(int rows, int cols, dasher.CDasherInterfaceBase Interface) {
+	public JDasherEdit(int rows, int cols, dasher.CDasherInterfaceBase intf) {
 		super(rows, cols);
-		m_Interface = Interface;
+		m_Interface = intf;
 		
 		this.addCaretListener(this);
 	}
@@ -94,10 +71,8 @@ public class JDasherEdit extends JTextArea implements CaretListener {
 	 */
 	void outputText(String ch) {
 		if(this.getSelectedText()!=null) {
-			supressNextEvent = true;
 			this.replaceSelection("");
 		}
-		supressNextEvent = true;
 		int oldCaret = this.getCaretPosition();
 		this.insert(ch, oldCaret);
 		this.setCaretPosition(oldCaret + 1);
@@ -110,13 +85,9 @@ public class JDasherEdit extends JTextArea implements CaretListener {
 	void deleteText(String ch) {
 		if(!this.getText().equals("")) {
 
-			supressNextEvent = true;
-
 			if(this.getSelectedText()!=null) {
 				this.replaceSelection("");
 			}
-
-			supressNextEvent = true;
 			int oldCaret = this.getCaretPosition();
 			this.replaceRange("", oldCaret - ch.length(), oldCaret);
 			setCaretPosition(oldCaret - ch.length());
@@ -162,32 +133,15 @@ public class JDasherEdit extends JTextArea implements CaretListener {
 	 * Called by Java's event handling subsystem when the user moves
 	 * the caret, either by typing or clicking.
 	 * <p>
-	 * If the supressEvent flag is false, we tell the interface about our
-	 * new cursor position. It will respond by rebuilding the tree, asking
-	 * us about the characters in that position.
-	 * <p>
-	 * If the supressEvent flag is true we set it to false and
-	 * do nothing else.
+	 * We call through to {@link CDasherInterfaceBase#setOffset} to update the model
+	 * if the new cursor location is different from where the model thinks it should be.
+	 * (This is the case if the user has moved the cursor, but if the call to caretUpdate
+	 * is in response to Dasher entering text itself, the model will already be in the
+	 * right position.)
 	 */
 	public void caretUpdate(CaretEvent e) {
 		
-		if(e.getDot() == iPrevDot && e.getMark() == iPrevMark) return;
-		
-		if(!supressNextEvent) {
-			//if getSelectionStart is 0, means the cursor is _before_ character 0
-			// (and if the other end of the selection is >0, char 0 is selected).
-			// We want to build the tree based on the nodes BEFORE char 0, as we'll
-			// be inserting before char 0.
-			m_Interface.setOffset(getSelectionStart()-1, true);
-			
-		}
-		else {
-			// Event caused by Dasher performing modifications; ignore.
-			supressNextEvent = false;
-		}
-		
-		iPrevDot = e.getDot();
-		iPrevMark = e.getMark();
+		m_Interface.setOffset(getSelectionStart()-1, false);
 		
 	}	
 }

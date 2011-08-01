@@ -604,9 +604,11 @@ public class CDasherModel extends CFrameRate {
 	private void EraseBackTo(CDasherNode lastToKeep) {
 		m_pLastOutput.Leave();
 		while (true) {
-			m_pLastOutput.Undo();
-			m_pLastOutput.Seen(false);
+			//update m_pLastOutput first, so GetOffset() consistent with having left the node
+			CDasherNode leave=m_pLastOutput;
 			m_pLastOutput = m_pLastOutput.Parent();
+			leave.Undo();
+			leave.Seen(false);
 			if (m_pLastOutput == lastToKeep) break;
 		}
 		if (m_pLastOutput!=null) m_pLastOutput.Enter();
