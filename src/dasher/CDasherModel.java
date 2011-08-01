@@ -25,13 +25,7 @@
 
 package dasher;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Collections;
 import java.util.LinkedList;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.ListIterator;
 
 /**
  * Dasher 'world' data structures and dynamics.
@@ -130,7 +124,7 @@ public class CDasherModel extends CFrameRate {
 	
 	/**
 	 * Initialise a new DasherModel. Note that you'll still have to call
-	 * {@link #SetOffset(int, CAlphabetManager, boolean)} before you can use it...
+	 * {@link #SetNode(CDasherNode)} before you can use it...
 	 */
 	public CDasherModel(CDasherComponent creator) {
 		super(creator); 
@@ -177,15 +171,14 @@ public class CDasherModel extends CFrameRate {
 	 * m_RootMax, m_TargetMax and their brethren are also updated
 	 * to take into account the new root's Hbnd and Lbnd values.
 	 * <p>
-	 * Due to this function's lack of checks made on the validity
-	 * of the requested operation, it is recommended to use
-	 * RecursiveMakeRoot instead where possible.
 	 * 
 	 * @param whichchild Child to make the new root node.
+	 * @throws NullPointerException if the specified node is not a strict descendant of the current root.
 	 */
-	protected void Make_root(CDasherNode whichchild)
-	//	find a new root node 
-	{
+	protected void Make_root(CDasherNode whichchild){
+		if (whichchild.Parent() != m_Root)
+			Make_root(whichchild.Parent());
+		
 		m_Root.commit(true);
 		
 		oldroots.addLast(m_Root);
@@ -313,53 +306,101 @@ public class CDasherModel extends CFrameRate {
 	}
 	
 	/**
-	 * Forces the current context to a given value, and resets
-	 * our position in the Dasher world based upon it.
-	 * <p>
-	 * If the given context is empty, the context is actually set
-	 * to ". " so that the prediction is the same as for the 
-	 * beginning of a new sentence.
-	 * <p>
-	 * Internally, this works by requesting a new Root node from
-	 * the Alphabet Manager, creating a blank context, and training
-	 * it using the supplied String.
-	 * <p>
-	 * This method also has the following side-effects:
-	 * <p>
-	 * <ul><li>Any zoom scheduled using ScheduleZoom will be cancelled.
-	 * <li>m_RootMax, m_TargetMax and their brethren will be altered
-	 * to reflect the changes.
+	 * Rebuilds the tree around the specified node,
+	 * positioning the crosshair at an appropriate location
+	 * within it but outside any of its children.
 	 * 
-	 * @param sNewContext Context to set
+	 * Any zoom scheduled using ScheduleZoom will be cancelled.
+	 * @param node node within which to place the crosshair.
 	 */
-	public void SetOffset(int iOffset, CAlphabetManager<?> alphMgr, boolean bForce) {
-		if (iOffset == GetOffset() && !bForce) return;
+	public void SetNode(CDasherNode node) {
 		
-		/* If a zoom was in progress, cancel it -- this function will likely change
-		 * our location within the Dasher world, and so the target being aimed for
-		 * is likely not to be there anymore.
-		 */
+		//a not-in-place op, will destroy the old co-ordinate system!
 		m_deGotoQueue.clear();
 		AbortOffset();
 		
+			
 		DeleteRoot();
 
-		m_Root = alphMgr.GetRoot(iOffset, true);
+		m_Root = node;
 		//we've already entered the node, as it was reconstructed from previously-written context
 		m_Root.Enter();
 		m_Root.Seen(true);
-		m_pLastOutput=m_Root;
+
+		m_pLastOutput = node;
+		
 		Expand(m_Root);
 		
-		double dFraction = 1 - (1 - m_Root.MostProbableChild() / (double)NORMALIZATION)/2.0;
-		
-		int iWidth = ( (int)( (MAX_Y / (2.0*dFraction)) ) );
+		//calculate a new position within the root, but not inside any child
+		int iWidth = (int)(MAX_Y / (1.0 + m_Root.MostProbableChild() / (double)NORMALIZATION) );
 		
 		m_Rootmin = MAX_Y / 2 - iWidth / 2;
 		m_Rootmax = MAX_Y / 2 + iWidth / 2;
-	
 	}
 	
+	/**Replaces the last-output node with another, putting the new node in the
+	 * same position onscreen and wrt the crosshair. If the old node has any
+	 * children, these will be transferred to the new node (and will not move
+	 * either), which must have no children; but the new node may have its own
+	 * children if the old node has none. Nodes outside the old node will be
+	 * (re)constructed by {@link CDasherNode#RebuildParent()} on the new node.
+	 * Note, it is safe to call this from {@link CDasherNode#Output()}: such
+	 * changes will be delayed until rendering (and output) has finished.
+	 * @param node new node to put in its place; must not previously be in the tree
+	 * @throws IllegalStateException if there is no existing root.
+	 */
+	public void ReplaceLastOutputNode(CDasherNode node) {
+		if (m_Root==null) throw new IllegalStateException("Must have a root");
+		if (bRendering) {
+			 if (m_replace!=null) {
+					//one node already replacing itself this frame!
+					// the second must be a child of it...
+					for (CDasherNode n=m_pLastOutput; /*true=>NullPtrEx if no break*/; n=n.Parent())
+						if (n==m_replace) break;
+					//yes!
+				}
+			m_replace = m_pLastOutput;
+			m_with = node;
+		} else {
+			ReplaceNode(m_pLastOutput, node);
+		}
+	}
+	
+	private void checkCantReach(CDasherNode from, CDasherNode to) {
+		if (from == to) throw new IllegalStateException("Reachable!");
+		for (int i=0; i<from.ChildCount(); i++)
+			checkCantReach(from.ChildAtIndex(i), to);
+	}
+	
+	private void ReplaceNode(CDasherNode old, CDasherNode node) {
+		
+		assert (old.isSeen());
+		
+		//to do an in-place op, move the co-ordinate system to refer
+		// to the node which we will replace
+		if (old!=null && old!=m_Root)
+			Make_root(old);
+		if (old.ChildCount()>0)
+			old.transferChildrenTo(node);
+		boolean bSeen = old.isSeen();
+		checkCantReach(oldroots.isEmpty() ? m_Root : oldroots.get(0), node);
+		//this makes new nodes disjoint from old, so can now:
+		DeleteRoot(); //also Leave()s m_pLastOutput, but doesn't reset ptr 
+
+		m_Root = node;
+		
+		if (bSeen) m_Root.Seen(true); //any seen children, are still the same
+		if (m_pLastOutput==old) {
+			//we're already inside the node, so assume it has been Output.
+			m_Root.Enter();
+			m_pLastOutput = node;
+		}
+		//else, crosshair was in a child of the new one, or outside root;
+		// in either case, will still be there.
+		
+		Expand(m_Root);
+	}
+
 	public int GetOffset() {
 		return m_pLastOutput==null ? -1 : m_pLastOutput.getOffset();
 	}
@@ -627,6 +668,15 @@ public class CDasherModel extends CFrameRate {
 			Node.PopulateChildren();
 	}
 	
+	/** Whether there is currently a call to RenderToView in progress.
+	 * If so, we'd better not make any significant changes to the tree
+	 * (expanding nodes probably ok but that's about it)
+	 */
+	private boolean bRendering;
+	
+	private CDasherNode m_replace;
+	private CDasherNode m_with;
+	
 	/**
 	 * Calls the View's Render method on our current Root; the View
 	 * will take care of all drawing from here on in. However,
@@ -637,6 +687,8 @@ public class CDasherModel extends CFrameRate {
 	 * @return whether anything was changed (i.e. nodes were expanded or contracted)
 	 */	
 	public boolean RenderToView(CDasherView View) {
+		if (bRendering) throw new IllegalStateException("Some thread already in call to RenderToView!");
+		bRendering=true;
 		while (!View.NodeFillsScreen(m_Rootmin,m_Rootmax)) {
 			if (!Reparent_root()) break;
 		}
@@ -648,12 +700,10 @@ public class CDasherModel extends CFrameRate {
 			// We have zoomed sufficiently that only one child of the root node 
 			// is still alive. We may be able to make it the root.
 				
-			long y1 = m_Rootmin;
-			long y2 = m_Rootmax;
-			long range = y2 - y1;
-			CDasherNode c = m_Root.m_OnlyChildRendered;	
-			long newy1 = y1 + (range * c.Lbnd()) / NORMALIZATION;
-			long newy2 = y1 + (range * c.Hbnd()) / NORMALIZATION;
+			final long range = m_Rootmax - m_Rootmin;
+			final CDasherNode c = m_Root.m_OnlyChildRendered;	
+			final long newy1 = m_Rootmin + (range * c.Lbnd()) / NORMALIZATION;
+			final long newy2 = m_Rootmin + (range * c.Hbnd()) / NORMALIZATION;
 			if(View.NodeFillsScreen(newy1, newy2)) {
 				Make_root(c);
 				//and try again, looking for a child of the new root...
@@ -663,7 +713,13 @@ public class CDasherModel extends CFrameRate {
 			}
 		}
 
-		return pol.apply(this);	
+		boolean bRes = pol.apply(this);
+		bRendering=false;
+		if (m_replace!=null) {
+			ReplaceNode(m_replace, m_with);
+			m_replace=m_with=null;
+		}
+		return bRes;
 	}
 	/**
 	 * ExpansionPolicy to determine which CDasherNodes to expand or collapse in each frame.

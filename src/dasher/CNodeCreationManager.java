@@ -3,14 +3,9 @@ package dasher;
 import java.util.ArrayList;
 import java.util.List;
 
-import dasher.CControlManager.ControlAction;
-
 import static dasher.CDasherModel.NORMALIZATION;
 
 public class CNodeCreationManager extends CDasherComponent {
-	
-	/** package-access because CAlphabetManager indirects through us to call {@link CDasherInterfaceBase#getContext(int) */
-	final CDasherInterfaceBase m_DasherInterface;
 	
 	/**
 	 * Ugh. We do enough stuff with the alphabet here that it's a pain to pull
@@ -47,93 +42,26 @@ public class CNodeCreationManager extends CDasherComponent {
 	// values are calculated when the model is created and are recalculated
 	// in response to any dependent parameter changes.
 
-	/**
-	 * Create a new NCManager, including a new AlphabetManager, Language Model
-	 * and ControlManager, according to standard settings (BP_CONTROL_MODE,
-	 * LP_LANGUAGE_MODEL_ID, SP_ALPHABET_ID).
-	 * 
-	 * <p> Note this does not train the newly created language model;
--    * this must be performed from outside, typically by the Interface.
-	 */
-	public CNodeCreationManager(CDasherComponent creator, CDasherInterfaceBase intf) {
-		this(creator,intf,makeAlphMgr(intf));
-	}
-	
 	/** Creates a new NCManager, (re)using the specified Alphabet and Control Managers
 	 * (perhaps from the previous NCManager). Again, does not perform any training.
 	 */
-	public CNodeCreationManager(CDasherComponent creator, CDasherInterfaceBase intf, CAlphabetManager<?> mgr) {
+	public CNodeCreationManager(CDasherComponent creator, CAlphabetManager<?> mgr, CControlManager cont) {
 		super(creator);
-		this.m_DasherInterface=intf;
 		this.m_cAlphabet = mgr.m_Alphabet;
 		this.m_AlphabetManager = mgr;
 		mgr.ChangeNCManager(this);
-		//System.out.print("make Control Manager...");
-		final List<ControlAction> actions = intf.getControlActions();
-		ControlAction c;
-		if (actions.isEmpty()) {
-			//System.out.println("No control manager");
-			m_ControlManager = null;
-			controlSpace = 0;
-		} else {
-			//System.out.println("Have control manager");
-			m_ControlManager = new CControlManager(this, intf, this, actions);
+		this.m_ControlManager=cont;
+		if (cont!=null) {
 			//TODO fix size of control manager at 5%
 			controlSpace = NORMALIZATION/20;
-		}
-		int iSymbols = m_cAlphabet.GetNumberSymbols();
+			cont.ChangeNCManager(this);
+		} else
+			controlSpace = 0;
+				int iSymbols = m_cAlphabet.GetNumberSymbols();
 
 		final long iNorm = NORMALIZATION-controlSpace;
 		uniformAdd = (int)((iNorm * GetLongParameter(Elp_parameters.LP_UNIFORM)) / 1000) / iSymbols; 
 		nonUniformNorm = iNorm - iSymbols * uniformAdd;
-	}
-	
-	private static CAlphabetManager<?> makeAlphMgr(CDasherInterfaceBase intf) {
-		//Convert the full alphabet to a symbolic representation for use in the language model
-		
-		// -- put all this in a separate method
-		// TODO: Think about having 'prefered' values here, which get
-		// retrieved by DasherInterfaceBase and used to set parameters
-		
-		// TODO: We might get a different alphabet to the one we asked for -
-		// if this is the case then the parameter value should be updated,
-		// but not in such a way that it causes everything to be rebuilt.
-		
-		CAlphIO.AlphInfo cAlphabet = intf.GetInfo(intf.GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
-		
-		// Create an appropriate language model;
-		
-		switch ((int)intf.GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)) {
-		default:
-			// If there is a bogus value for the language model ID, we'll default
-			// to our trusty old PPM language model.
-		case 0:
-			intf.SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, false);
-			return /*ACL (langMod.isRemote())
-		        ? new CRemoteAlphabetManager( this, langMod)
-		        :*/ new CAlphabetManager<CPPMLanguageModel.CPPMnode>( new CPPMLanguageModel(intf, cAlphabet));
-		/* case 2:
-			m_pLanguageModel = new CWordLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
-			break;
-		case 3:
-			m_pLanguageModel = new CMixtureLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
-			break;  
-			#ifdef JAPANESE
-		case 4:
-			m_pLanguageModel = new CJapaneseLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
-			break;
-			#endif */
-			
-		case 5:
-			throw new UnsupportedOperationException("(ACL) Remote LM currently unimplemented");
-			//langMod = new CRemotePPM(m_EventHandler, m_SettingsStore, alphabet);
-			//SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, true);
-		
-			//break;
-		/* CSFS: Commented out the other language models for the time being as they are not
-		 * implemented yet.
-		 */
-		}
 	}
 	
 	public String getDefaultColourScheme() {return m_cAlphabet.GetPalette();}

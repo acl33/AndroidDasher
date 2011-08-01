@@ -339,14 +339,26 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 			CreateInput();
 			Redraw(false);
 		} else if(eParam == Esp_parameters.SP_INPUT_FILTER) {
+			List<ControlAction> prevActs = getControlActions();
 			CreateInputFilter();
+			if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE)
+					&& !prevActs.equals(getControlActions()))
+				UpdateControlManager();
 			Redraw(false);
 		} else if (eParam == Ebp_parameters.BP_TRAINING) {
 			if (!GetBoolParameter(Ebp_parameters.BP_TRAINING))
 				forceRebuild();
 		} else if (eParam == Ebp_parameters.BP_CONTROL_MODE || eParam == Elp_parameters.LP_UNIFORM) {
-			UpdateNCManager();
+			UpdateControlManager();
 		}
+	}
+	
+	/** Create a new NCManager and ControlManager, but using the previous' (existing) NCManager's AlphabetManager
+	 * (preserving training). This'll updates cached values for normalization, uniformity, etc.  
+	 */
+	protected void UpdateControlManager() {
+		if (m_pNCManager!=null) m_pNCManager = new CNodeCreationManager(this, m_pNCManager.getAlphabetManager(), makeControlManager());
+		forceRebuild(); //perhaps overkill, but makes sure control nodes appear, pronto
 	}
 	
 	public void Lock(String msg, int iPercent) {
@@ -388,13 +400,16 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		// the old LM can first be GC'd, as that'll be using memory for both...
 
 		//So, first we make the old NCMgr & LM unreachable (the event handler has only weakrefs)
+		CControlManager cont;
 		if (m_pNCManager!=null) {
 			//since the AlphabetManager is about to be deleted, better write out anything unsaved...
 			m_pNCManager.getAlphabetManager().WriteTrainFileFull(this);
-		}
+			cont = m_pNCManager.m_ControlManager;
+		} else 
+			cont = makeControlManager();
 		
 		//Then we construct a new NCMgr and (untrained) LM...
-		m_pNCManager = new CNodeCreationManager(this, this);
+		m_pNCManager = new CNodeCreationManager(this, CAlphabetManager.makeAlphMgr(this), cont);
 		if (m_ColourIO.getByName(GetStringParameter(Esp_parameters.SP_COLOUR_ID))==null)
 			ChangeColours(); //we must have been using the alphabet palette, which may have changed
 		
@@ -410,21 +425,18 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		forceRebuild();
 	}
 	
-	/** Creates a new NCManager, but using the previous' (existing) NCManager's AlphabetManager
-	 * (preserving training). That is, (re)creates the ControlManager, and updates cached values
-	 * for normalization, uniformity, etc.  
-	 */
-	protected void UpdateNCManager() {
-		m_pNCManager = new CNodeCreationManager(this, this, m_pNCManager.getAlphabetManager());
-		forceRebuild(); //perhaps overkill, but makes sure control nodes appear, pronto
-	
+	private CControlManager makeControlManager() {
+		List<ControlAction> actions = getControlActions();
+		return actions.isEmpty() ? null : new CControlManager(this, actions);	
 	}
+	
 	/**
-	 *  Forces the tree of nodes to be rebuild (in the same location, from the same nc manager),
-	 *  to ensure probabilities are refreshed.
+	 *  Forces the tree of nodes to be rebuilt around the current offset
+	 *  (will reposition at an "appropriate" location, as per {@link CDasherModel#SetNode(CDasherNode)}).
+	 *  Uses the same NCManager, but ensures probabilities are refreshed.
 	 */
-	/*package*/ void forceRebuild() {
-		m_DasherModel.SetOffset(m_DasherModel.GetOffset(), m_pNCManager.getAlphabetManager(), true);
+	private void forceRebuild() {
+		if (m_pNCManager!=null) m_DasherModel.SetNode(m_pNCManager.getAlphabetManager().GetRoot(m_DasherModel.GetOffset(), true));
 	}
 	
 	/**
@@ -789,17 +801,18 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	
 	/**
 	 * Positions the model at the specified offset, retrieving fresh context at that
-	 * offset and rebuilding the Dashernode tree if necessary. Includes pausing Dasher.
-	 * 
+	 * offset and rebuilding the Dashernode tree if necessary. Includes pausing Dasher
+	 * if the tree is rebuilt.
 	 * @param bForce If true, model is rebuilt even if it was already at the right position.
 	 * (appropriate if the text being edited may have changed regardless of cursor position -
 	 * e.g. if moving from one editbox to another.)
 	 */
 	public void setOffset(int iOffset, boolean bForce) {
 		if (m_DasherModel==null) throw new IllegalStateException("Not yet constructed?");
+		if (iOffset == m_DasherModel.GetOffset() && !bForce) return;
 		PauseAt(0,0);
 		
-		m_DasherModel.SetOffset(iOffset,m_pNCManager.getAlphabetManager(), bForce);
+		m_DasherModel.SetNode(m_pNCManager.getAlphabetManager().GetRoot(iOffset, true));
 		
 		Redraw(true);
 		
@@ -897,21 +910,11 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	 * <p>
 	 * If there is an existing filter, it is Deactivated first.
 	 */
-	private void CreateInputFilter()
-	{
-		boolean bSupportedPause;
-		if(m_InputFilter != null) {
-			bSupportedPause = m_InputFilter.supportsPause();
-			m_InputFilter.Deactivate();
-		} else bSupportedPause = false;
-		
+	private void CreateInputFilter() {
 		m_InputFilter = GetModuleByName(CInputFilter.class, GetStringParameter(Esp_parameters.SP_INPUT_FILTER));
 		if (m_InputFilter == null) m_InputFilter = m_DefaultInputFilter;
 		if(m_InputFilter != null) {
 			m_InputFilter.Activate();
-			if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE)
-					&& (m_InputFilter.supportsPause() ^ bSupportedPause))
-				UpdateNCManager();
 		}
 	}
 	
@@ -1057,7 +1060,10 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	};
 	
 	private final Runnable REBUILD_TASK = new Runnable() {
-		public void run() {forceRebuild();}
+		public void run() {
+			//try not to move!
+			m_DasherModel.ReplaceLastOutputNode(m_pNCManager.getAlphabetManager().GetRoot(m_DasherModel.GetOffset(), true));
+		}
 	};
 	
 	public CInputFilter GetActiveInputFilter() {return m_InputFilter;}

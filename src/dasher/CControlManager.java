@@ -8,11 +8,10 @@ import java.util.List;
 import static dasher.CDasherModel.NORMALIZATION;
 
 public class CControlManager extends CDasherComponent {
-	private final CNodeCreationManager m_pNCMgr;
+	private CNodeCreationManager m_pNCMgr;
 	private final ControlAction root;
-	CControlManager(CDasherComponent creator, CDasherInterfaceBase intf, CNodeCreationManager pNCMgr, final List<ControlAction> actions) {
+	CControlManager(CDasherComponent creator, final List<ControlAction> actions) {
 		super(creator);
-		this.m_pNCMgr=pNCMgr;
 		this.root=(actions.size()==1) ? actions.get(0) :
 			new ControlAction() {
 				public String desc() {return "Control";} //TODO internationalize
@@ -20,6 +19,8 @@ public class CControlManager extends CDasherComponent {
 				public List<ControlAction> successors() {return actions;}
 			};
 	}
+
+	void ChangeNCManager(CNodeCreationManager pNCMgr) {m_pNCMgr = pNCMgr;}
 
 	static int getColour(CDasherNode parent) {return parent==null ? 7 : (parent.ChildCount()%99)+11;}
 

@@ -53,6 +53,8 @@ public class CAlphabetManager<C> {
 	 * relative probability assigned to new Nodes. 
 	 */
 	private final CLanguageModel<C> m_LanguageModel;
+
+	private final CDasherInterfaceBase m_Interface;
 	
 	/**
 	 * Pointer to the NCManager, which modifies the probabilities for uniformity and control mode
@@ -85,8 +87,8 @@ public class CAlphabetManager<C> {
      * to modify probabilities for control mode, etc.
      * @param LanguageModel LanguageModel to use to determine relative sizes of child nodes
      */
-    public CAlphabetManager( CLanguageModel<C> LanguageModel) {
-    	
+    public CAlphabetManager(CDasherInterfaceBase intf, CLanguageModel<C> LanguageModel) {
+    	this.m_Interface = intf;
     	this.m_LanguageModel = LanguageModel;
     	
     	m_Alphabet = LanguageModel.getAlphabet();
@@ -112,7 +114,7 @@ public class CAlphabetManager<C> {
      */
     public CAlphNode GetRoot(int iOffset, boolean bEnteredLast) {
     	if (iOffset < -1) throw new IllegalArgumentException("offset "+iOffset+" must be at least -1");
-    	ListIterator<Character> previousChars = m_pNCManager.m_DasherInterface.getContext(iOffset);
+    	ListIterator<Character> previousChars = m_Interface.getContext(iOffset);
     	if (iOffset<0 && previousChars.hasPrevious()) {
     		StringBuilder sb=new StringBuilder();
     		do {
@@ -152,7 +154,7 @@ public class CAlphabetManager<C> {
     	C parCtx = (parent==null) ? m_AlphabetMap.defaultContext(m_LanguageModel) : parent.context;
         if (bufCtx==null || !bufCtx.equals(parCtx)) {
 	    	//changing context. First write the old to the training file...
-			if (strTrainfileBuffer.length()>0) WriteTrainFileFull(m_pNCManager.m_DasherInterface);
+			if (strTrainfileBuffer.length()>0) WriteTrainFileFull(m_Interface);
 			
 			//Now encode a context-switch command (if possible)
 			if (m_Alphabet.ctxChar!=null) {
@@ -344,12 +346,12 @@ public class CAlphabetManager<C> {
 		public void Output() {
 			super.Output();
 			//probability 0 will break user trials, but user trials shouldn't involve unknown symbols anyway...?
-			m_pNCManager.m_DasherInterface.outputText(m_strDisplayText, 0.0);
+			m_Interface.outputText(m_strDisplayText, 0.0);
 		}
 		
 		@Override public void Undo() {
 			super.Undo();
-			m_pNCManager.m_DasherInterface.deleteText(m_strDisplayText, 0.0);
+			m_Interface.deleteText(m_strDisplayText, 0.0);
 		}
 
 		@Override
@@ -388,7 +390,7 @@ public class CAlphabetManager<C> {
 		public void Enter() {
 			//Make damn sure the user notices something funny is going on by
 			// stopping him in his tracks. He can continue by unpausing...
-			m_pNCManager.m_DasherInterface.PauseAt(0, 0);
+			m_Interface.PauseAt(0, 0);
 		}
 	}
 
@@ -439,7 +441,7 @@ public class CAlphabetManager<C> {
          */
     	@Override
         public void Output() {
-    		m_pNCManager.m_DasherInterface.outputText(m_Alphabet.GetText(m_Symbol), GetProb());
+    		m_Interface.outputText(m_Alphabet.GetText(m_Symbol), GetProb());
     		super.Output();
         }
 
@@ -461,7 +463,7 @@ public class CAlphabetManager<C> {
          */    
         public void Undo() {
         	super.Undo();
-        	m_pNCManager.m_DasherInterface.deleteText(m_Alphabet.GetText(m_Symbol), GetProb());
+        	m_Interface.deleteText(m_Alphabet.GetText(m_Symbol), GetProb());
         }
         
         @Override
@@ -684,28 +686,52 @@ public class CAlphabetManager<C> {
     	node.initNode(iOffset, sym, ctx);
     	return node;
     }
-    /**
-     * Suspends the current thread until a given Node's children
-     * have been created. This is for use with specialised
-     * AlphabetManagers which populate their child lists
-     * asynchronously such as RemoteAlphabetManager.
-     * <p>
-     * This simply polls the child-list every 50ms, and returns
-     * when it finds it is neither null nor empty.
-     * 
-     * @param node Node whose children we wish to wait for.
-     */
-    public void WaitForChildren(CDasherNode node) {
-    	while (node.ChildCount() == 0) {
-    		try {
-    			Thread.sleep(50);
-    		}
-    		catch(InterruptedException e) {
-    			// Do nothing
-    		}
-    	}
-    	
-    }
-    
-    
+
+    static CAlphabetManager<?> makeAlphMgr(CDasherInterfaceBase intf) {
+		//Convert the full alphabet to a symbolic representation for use in the language model
+		
+		// -- put all this in a separate method
+		// TODO: Think about having 'prefered' values here, which get
+		// retrieved by DasherInterfaceBase and used to set parameters
+		
+		// TODO: We might get a different alphabet to the one we asked for -
+		// if this is the case then the parameter value should be updated,
+		// but not in such a way that it causes everything to be rebuilt.
+		
+		CAlphIO.AlphInfo cAlphabet = intf.GetInfo(intf.GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
+		
+		// Create an appropriate language model;
+		
+		switch ((int)intf.GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)) {
+		default:
+			// If there is a bogus value for the language model ID, we'll default
+			// to our trusty old PPM language model.
+		case 0:
+			intf.SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, false);
+			return /*ACL (langMod.isRemote())
+		        ? new CRemoteAlphabetManager( this, langMod)
+		        :*/ new CAlphabetManager<CPPMLanguageModel.CPPMnode>(intf, new CPPMLanguageModel(intf, cAlphabet));
+		/* case 2:
+			m_pLanguageModel = new CWordLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
+			break;
+		case 3:
+			m_pLanguageModel = new CMixtureLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
+			break;  
+			#ifdef JAPANESE
+		case 4:
+			m_pLanguageModel = new CJapaneseLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
+			break;
+			#endif */
+			
+		case 5:
+			throw new UnsupportedOperationException("(ACL) Remote LM currently unimplemented");
+			//langMod = new CRemotePPM(m_EventHandler, m_SettingsStore, alphabet);
+			//SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, true);
+		
+			//break;
+		/* CSFS: Commented out the other language models for the time being as they are not
+		 * implemented yet.
+		 */
+		}
+	}    
 }

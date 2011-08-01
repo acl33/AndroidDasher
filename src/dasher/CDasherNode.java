@@ -295,8 +295,15 @@ public abstract class CDasherNode {
 	    m_iLbnd = iLower;
 	    m_iHbnd = iUpper;
 	}
-
-		/**
+	
+	void transferChildrenTo(CDasherNode NewParent) {
+		if (NewParent.ChildCount()!=0) throw new IllegalArgumentException("New (target) parent must have no children");
+		for (CDasherNode c : m_mChildren)
+			(c.m_Parent=NewParent).m_mChildren.add(c);
+		m_mChildren.clear();
+	}
+	
+	/**
 	 * Gets this node's Seen flag
 	 * 
 	 * @return Seen
@@ -403,4 +410,8 @@ public abstract class CDasherNode {
 		this.m_iColour = colour;
 	}
 
+	public String toString() {
+		return m_strDisplayText+"@"+getOffset();
+	}
+	
 }
