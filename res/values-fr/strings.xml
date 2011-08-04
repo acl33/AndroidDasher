@@ -30,14 +30,14 @@
 <string name="AndroidTouch_title">Saisie tactile</string>
 <string name="AndroidTouchUsesTiltX_title">Inclinez pour bouger horizontalement</string>
 <string name="TargetOffset_title">Excentrage de la cible</string>
-<string name="TargetOffset_summary">Bouger la cible verticalement par une distance fixe relative à la position du doigt (400=hauteur de l'écran)</string>
+<string name="TargetOffset_summary">Bouger la cible verticalement par une distance fixe relative à la position du doigt (400=hauteur de l\'écran)</string>
 <string name="AutoAdjust_title">Ajuste automatiquement</string>
 <string name="AutoAdjust_summary">"Apprend l'excentrage vertical (ci-dessus) automatiquement"</string>
 <string name="TapTime_title">"Durée max. pour un clic"</string>
 <string name="TapTime_summary">"Une durée plus élevée est prise pour un glissement"</string>
 <string name="Zoomsteps_title">"Nº d'images pour animer un clic"</string>
 <string name="MaxZoom_title">Zoom max. par clic</string>
-<string name="MaxZoom_summary">Facteur maximum d'un zoom suivant un clic</string>
+<string name="MaxZoom_summary">Facteur maximum d\'un zoom suivant un clic</string>
 <string name="AndroidBoxes_title">Modes à boîtes</string>
 <string name="AndroidBoxes_summary">"Balayez ou cliquez l'écran divisée en boîtes"</string>
 <string name="ButtonMenuBoxes_title">Nombre de boîtes</string>

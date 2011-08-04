@@ -38,7 +38,7 @@
 <string name="TargetOffset_summary">Above/below actual finger position (400=screen height)</string>
 <string name="AutoAdjust_title">Auto-adjust</string>
 <string name="AutoAdjust_summary">Learn offset (previous) automatically</string>
-<string name="TapTime_title">Max time for 'tap'</string>
+<string name="TapTime_title">Max time for \'tap\'</string>
 <string name="TapTime_summary">Anything longer counts as drag</string>
 <string name="Zoomsteps_title">Frames for tap</string>
 <string name="MaxZoom_title">Max zoom for tap</string>
@@ -47,7 +47,7 @@
 <string name="AndroidBoxes_summary">Divide into boxes and scan or tap</string>
 <string name="ButtonMenuBoxes_title">No. of forward boxes</string>
 <string name="ButtonMenuSafety_title">Safety margin</string>
-<string name="ButtonMenuSafety_summary">Don't zoom all the way into box</string>
+<string name="ButtonMenuSafety_summary">Don\'t zoom all the way into box</string>
 <string name="ButtonModeNonuniformity_title">Nonuniformity of box sizes</string>
 <string name="AndroidScan_title">Scan through boxes</string>
 <string name="AndroidScan_summaryOn">Tap screen for highlighted box</string>
@@ -70,7 +70,7 @@
 <string name="SlowStartTime_title">Slow Startup Time</string>
 <string name="SlowStartTime_summary">Time to reach full speed (0=straightaway)</string>
 <string name="ReverseBoost_title">Reverse Faster</string>
-<string name="ReverseBoost_summary">Boost speed of reversing (0=don't)</string>
+<string name="ReverseBoost_summary">Boost speed of reversing (0=don\'t)</string>
 <string name="ColourID_title">Colour Scheme</string>
 <string name="AndroidTwoButtonDynamic_title">Two-btn Dynamic Mode</string>
 <string name="AndroidTwoButtonDynamic_summary">Tap top/bottom or use volume control</string>

@@ -13,7 +13,7 @@
 <string name="DasherFontSize_summary">Klein / medium / groot</string>
 <string name="MarginWidth_title">Marge Breedte</string>
 <string name="MarginWidth_summary">Ruimte op RHS voor vinger</string>
-<string name="ControlMode_title">Commando's</string>
+<string name="ControlMode_title">Commando\'s</string>
 <string name="ControlMode_summary">Creëer nodes voor bvb. IME acties</string>
 <string name="AlphabetID_title">Alfabet naam</string>
 <string name="AndroidInputMethod_title">Input instelling</string>
@@ -33,7 +33,7 @@
 <string name="TargetOffset_summary">Boven/onder de actuele vinger positie (400=scherm hoogte)</string>
 <string name="AutoAdjust_title">Automatisch aanpassen</string>
 <string name="AutoAdjust_summary">Leer de (vorige) compensatie automatisch</string>
-<string name="TapTime_title">Max tijd voor 'aanraking'</string>
+<string name="TapTime_title">Max tijd voor \'aanraking\'</string>
 <string name="TapTime_summary">Alles dat langer duurt geldt als slepen</string>
 <string name="Zoomsteps_title">Kaders voor aanraking</string>
 <string name="MaxZoom_title">Max zoom voor aanraking</string>
