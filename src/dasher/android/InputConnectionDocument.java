@@ -159,4 +159,8 @@ public class InputConnectionDocument implements EditableDocument, Runnable {
 	private String cacheContent;
 	private int cacheStart=-1; //cacheContent[x] = edittext[x+cacheStart]
 
+	/*package*/ InputConnection getInputConnection() {
+		return ic;
+	}
+	
 }

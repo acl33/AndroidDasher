@@ -65,6 +65,10 @@ public class DasherInputMethod extends InputMethodService {
 		final InputConnection ic = getCurrentInputConnection();
 		Log.d("DasherIME",this + " onStartInput ("+attribute+", "+restarting+") with IC "+ic);
 		if (ic==null) return; //yes, it happens. What else can we do????
+		if (restarting) {
+			if (doc!=null && doc.getInputConnection()==ic) return;
+			Log.e("DasherIME","Restarting without document?");
+		}
 		int initCursorPos=Math.max(0,Math.min(attribute.initialSelStart,attribute.initialSelEnd)),
 			initNumSel=Math.abs(attribute.initialSelEnd-attribute.initialSelStart);
 		Log.d("DasherIME","cursor "+initCursorPos+" actionLabel "+attribute.actionLabel);
