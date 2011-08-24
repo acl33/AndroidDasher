@@ -1,59 +1,99 @@
 package dasher.android;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Collections;
-import java.util.ListIterator;
-
+import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
-import android.preference.ListPreference;
-import android.preference.PreferenceActivity;
-import android.util.Log;
-import dasher.CDasherInterfaceBase;
-import dasher.Esp_parameters;
+import android.os.Handler;
+import android.provider.Settings;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.inputmethod.InputMethodInfo;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
 
-public class DasherActivity extends PreferenceActivity {
-    /** Called when the activity is first created. */
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-    	Log.d("DasherIME","Activity onCreate");
-        super.onCreate(savedInstanceState);
-      
-        //We need a DasherInterface to parse alphabet/colour files and find the
-        //available schemes (in future perhaps also input filters, although
-        // atm the available options there are hardcoded into prefs.xml).
-        //However our Interface doesn't need to implement display, editing, etc.
-        // functions, so we stub those methods. (Also it will never load a
-        // training text.)
-        CDasherInterfaceBase intf = new ADasherInterface(this,false);
-        
-        addPreferencesFromResource(R.layout.prefs);
-        
-        IMCheckBox.setPrefScreen(getPreferenceScreen());
-    
-        addPermittedValues(intf, Esp_parameters.SP_ALPHABET_ID);
-        addPermittedValues(intf, Esp_parameters.SP_COLOUR_ID);
-    }
-    
-    private void addPermittedValues(CDasherInterfaceBase intf, Esp_parameters param) {
-    	List<String> values = new ArrayList<String>();
-       	ListPreference lp = (ListPreference)getPreferenceScreen().findPreference(param.regName());
-        intf.GetPermittedValues(param,values);
-        Collections.sort(values);
-        CharSequence[] vals = new CharSequence[values.size()];
-        int i=0;
-        for (String s : values) {
-        	vals[i++] = s;
-        }
-        lp.setEntries(vals);
-        lp.setEntryValues(vals);
-    }
+public class DasherActivity extends Activity implements OnClickListener, Runnable {
+
+	private TextView enabledLbl;
+	private Button imeSettingsBtn;
+	private TextView selectedLbl;
+	private EditText longPress;
+	private Button dasherSettingsButton;
 	
-    @Override
-    public void onDestroy() {
-    	Log.d("DasherIME","Activity onDestroy");
-    	super.onDestroy();
-    	//intf.StartShutdown();
-    }
-    
+	private String m_sID;
+	private boolean bShownDasherSets;
+	private Handler handler;
+	
+	@Override public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.install);
+		enabledLbl = (TextView)findViewById(R.id.enable);
+		imeSettingsBtn = (Button)findViewById(R.id.sys_sets_btn);
+		imeSettingsBtn.setOnClickListener(this);
+		
+		selectedLbl = (TextView)findViewById(R.id.select);
+		longPress = (EditText)findViewById(R.id.long_press);
+		dasherSettingsButton = (Button)findViewById(R.id.dasher_sets_btn);
+		dasherSettingsButton.setOnClickListener(this);
+
+		handler = new Handler();
+	}
+	
+	@Override public void onResume() {
+		super.onResume();
+		//1. is Dasher enabled?
+		m_sID = null;
+		InputMethodManager imm = (InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
+		for (InputMethodInfo inf : imm.getEnabledInputMethodList()) {
+			if (inf.getPackageName().equals(this.getPackageName())
+					&& inf.getServiceName().equals(DasherInputMethod.class.getName())) {
+				m_sID=inf.getId(); break;
+			}
+		}
+		
+		if (m_sID==null) {
+			enabledLbl.setText(R.string.DasherNeedsEnable);
+			imeSettingsBtn.setEnabled(true);
+		} else {
+			enabledLbl.setText(R.string.DasherEnabledOk);
+			imeSettingsBtn.setEnabled(false);
+		}
+		run();
+	}
+	
+	/** Executed on UI Thread, either directly from onResume()
+		or as a callback via handler.postDelayed(). */
+	public void run() {
+		//2. is Dasher the active input method?
+		if (m_sID!=null && 
+				Settings.Secure.getString(getContentResolver(),
+Settings.Secure.DEFAULT_INPUT_METHOD).equals(m_sID)) {
+			
+			selectedLbl.setText(R.string.DasherSelectedOk);
+			longPress.setEnabled(false);
+			//go straight to settings, once
+			if (!bShownDasherSets) {
+				bShownDasherSets=true;
+				onClick(dasherSettingsButton);
+			}
+		} else {
+			selectedLbl.setText(R.string.DasherNeedsSelect);
+			longPress.setEnabled(true);
+		}
+		handler.postDelayed(this,500);
+	}
+		
+	@Override public void onPause() {
+		handler.removeCallbacks(this);
+		super.onPause();
+	}
+	
+	public void onClick(View v) {
+		if (v == imeSettingsBtn)
+			startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS));
+		else if (v==dasherSettingsButton)
+			startActivity(new Intent(this,SettingsActivity.class));
+	}
+
 }

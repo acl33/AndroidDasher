@@ -20,6 +20,6 @@
 <!-- The attributes in this XML file provide configuration information -->
 <!-- for the Search Manager. -->
 <input-method xmlns:android="http://schemas.android.com/apk/res/android"
- android:settingsActivity="dasher.android.DasherActivity"
+ android:settingsActivity="dasher.android.SettingsActivity"
  android:isDefault="true"
  />

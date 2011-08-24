@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:orientation="vertical"
+  android:layout_width="fill_parent"
+  android:layout_height="fill_parent">
+  
+  <TextView android:id="@+id/title"
+  	android:layout_width="fill_parent"
+  	android:layout_height="wrap_content"
+  	android:text="@string/install_title"
+  	android:background="@android:color/background_dark"
+  	android:textSize="20dip"/>
+  	
+  <!-- Text set programmatically according to whether enabled or not -->
+  <TextView android:id="@+id/enable"
+  	android:layout_width="fill_parent"
+  	android:layout_height="wrap_content"
+  	android:layout_below="@id/title"
+  	android:layout_alignRight="@id/title"
+  	android:layout_marginLeft="10dip"/>
+  
+  <Button android:id="@+id/sys_sets_btn"
+  	android:layout_width="wrap_content"
+  	android:layout_height="wrap_content"
+  	android:layout_below="@id/enable"
+  	android:layout_centerHorizontal="true"
+  	android:text="@string/IMESettings"/>
+  
+  <!-- Text set programmatically according to whether Dasher is selected IME -->
+  <TextView android:id="@+id/select"
+  	android:layout_width="fill_parent"
+  	android:layout_height="wrap_content"
+  	android:layout_below="@id/sys_sets_btn"
+  	android:layout_alignRight="@id/title"
+  	android:layout_marginLeft="10dip"
+  	android:layout_marginTop="10dip"/>
+  	
+  <EditText android:id="@+id/long_press"
+  	android:layout_width="fill_parent"
+  	android:layout_height="wrap_content"
+  	android:layout_below="@id/select"/>
+  
+  <TextView android:id="@+id/dasher_sets_title"
+  	android:layout_width="fill_parent"
+  	android:layout_height="wrap_content"
+  	android:layout_below="@id/long_press"
+  	android:layout_marginTop="10dip"
+  	android:text="@string/dasher_sets_title"
+  	android:background="@android:color/background_dark"
+  	android:textSize="20dip"/>
+  	
+  <TextView android:id="@+id/dasher_sets_desc"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:layout_below="@id/dasher_sets_title"
+    android:text="@string/dasher_sets_desc"
+    android:layout_alignRight="@id/title"
+  	android:layout_marginLeft="10dip"/>
+  	
+  <Button android:id="@+id/dasher_sets_btn"
+  	android:layout_width="wrap_content"
+  	android:layout_height="wrap_content"
+  	android:layout_below="@id/dasher_sets_desc"
+  	android:layout_centerHorizontal="true"
+  	android:text="@string/DasherSettingsBtn"/>
+  
+</RelativeLayout>
