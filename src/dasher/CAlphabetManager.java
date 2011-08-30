@@ -143,85 +143,48 @@ public class CAlphabetManager<C> {
     
     /** Entered text which has not yet been written out to disk */
     protected final StringBuilder strTrainfileBuffer = new StringBuilder();
-    /** Context representing the last characters in strTrainfileBuffer */
-    private C bufCtx;
+    /** Context to write out to trainfile, i.e. in which strTrainfileBuffer begins */
+    protected final StringBuilder strTrainfileContext = new StringBuilder();
+    /*package*/ final List<Integer> tempList = new ArrayList<Integer>();
     
     /** The last alphnode to be output (seen). So we can flush _all_ output characters
      * to file + train LM when changing context / exitting.
      */
     private CAlphNode lastOutput;
     
-    protected void Learn(CSymbolNode child) {
-    	CAlphNode parent = checkCast(child.Parent());
-    	C parCtx = (parent==null) ? m_AlphabetMap.defaultContext(m_LanguageModel) : parent.context;
-        if (bufCtx==null || !bufCtx.equals(parCtx)) {
-	    	//changing context. First write the old to the training file...
-			if (strTrainfileBuffer.length()>0) WriteTrainFileFull(m_Interface);
-			
-			//Now encode a context-switch command (if possible)
-			if (m_Alphabet.ctxChar!=null) {
-				// Unfortunately getting the new context may not be possible:
-				// If we're committing a string because the user has finished editing and
-				// switched out of the textbox, we won't be able to get a meaningful context string.
-				// So, we rely on the LM being able to turn a context back into a string...
-				String ctx;
-				if (parent!=null) {
-					List<Integer> syms = new ArrayList<Integer>();
-					m_LanguageModel.ContextToSymbols(parent.context, syms);
-					
-					StringBuilder sb=new StringBuilder();
-					for (int i=0; i<syms.size(); i++)
-						sb.append(m_Alphabet.GetText(syms.get(i)));
-					ctx=sb.toString();
-					//Whatever we write out, when we read in the context-switch command, we automatically 
-					// enter the alphabet default context first. So avoid entering it twice!
-					if (ctx.startsWith(m_Alphabet.getDefaultContext()))
-						ctx = ctx.substring(m_Alphabet.getDefaultContext().length());
-				} else ctx="";
-				//now put the record of it into the buffer. The command format
-				//requires an arbitrary delimiter, so look for the first character
-				//(strictly after 32=space) that's _not_ in the context we need to delimit...
-				char delimiter;
-				for (delimiter=33; ctx.indexOf(delimiter)!=-1 || delimiter==m_Alphabet.ctxChar; delimiter++);
-				//(guaranteed to terminate, the context has only ten characters!)
-				
-				strTrainfileBuffer.append(m_Alphabet.ctxChar).append(delimiter).append(ctx).append(delimiter);
-			}
-        }
-        String sym = m_Alphabet.GetText(child.m_Symbol);
-		if (sym.equals(m_Alphabet.ctxChar)) {
-			//the context-command character is actually being written as a genuine character. Escape it by writing it twice...
-			strTrainfileBuffer.append(m_Alphabet.ctxChar); // (it gets written once more below)
-		}
-		//now schedule the character for writing...
-		strTrainfileBuffer.append(sym); bufCtx = ((CAlphNode)child).context;
-		//and train the LM. Hmmm - this may keep trainfile (eventually) in sync with model,
-		// but still only writes/trains on committed text, i.e. will miss the last few characters
-		// (written but not committed, at the end) of each session (e.g. prior to each textbox/context switch)
-		m_LanguageModel.ContextLearningSymbol(parCtx,child.m_Symbol);
-        //Also note we don't update the child context with the result of ContextLearningSymbol:
-        // this might be different if this is the first time that child symbol has been seen,
-        // but the same context may/will also be stored in child sub (group) nodes,
-        // and unless we also update all of those, <bufCtx> will get out-of-sync,
-        // resulting in lots of spurious context switches being written out to file :-(
-	}
-    
-    protected void flush(CAlphNode output) {
-    	if (output==null || output.m_bCommitted) return;
-    	flush(checkCast(output.Parent()));
-   		output.commit(true);
-    }
-	
     /**
 	 * Writes all the text entered by the user to the training file
 	 * (by calling {@link #WriteTrainFile(String, String)})
 	 * @param filename name of training file, e.g. "training_english_GB.txt"
 	 */
 	protected void WriteTrainFileFull(CDasherInterfaceBase intf) {
+		if (strTrainfileBuffer.length()==0) return;
+		if (strTrainfileContext.length()!=0) {
+			String defCtx=m_Alphabet.getDefaultContext();
+			if (strTrainfileContext.length()>=defCtx.length() && strTrainfileContext.substring(0, defCtx.length()).equals(defCtx))
+				strTrainfileContext.delete(0, defCtx.length());
+			//Now encode a context-switch command (if possible)
+			if (m_Alphabet.ctxChar!=null) {
+				char delimiter;
+				for (delimiter=33; !isValidDelim(delimiter); delimiter++);
+				//(guaranteed to terminate, the context has only ten characters!)
+				strTrainfileContext.insert(0, delimiter); strTrainfileContext.append(delimiter);
+				strTrainfileContext.insert(0,m_Alphabet.ctxChar);
+				strTrainfileBuffer.insert(0,strTrainfileContext);
+			}
+			strTrainfileContext.setLength(0);
+		}
 		intf.WriteTrainFile(m_Alphabet.GetTrainingFile(),strTrainfileBuffer.toString());
 		strTrainfileBuffer.setLength(0);
 	}
 	
+	private boolean isValidDelim(char c) {
+		if (c==m_Alphabet.ctxChar) return false;
+		for (int i=0; i<strTrainfileContext.length(); i++)
+			if (strTrainfileContext.charAt(i)==c) return false;
+		return true;
+	}
+    
 	CAlphNode checkCast(CDasherNode n) {
 		//type erasure means can't check parent has _same_ context type.
 		if (n instanceof CAlphabetManager<?>.CAlphNode) {
@@ -265,15 +228,23 @@ public class CAlphabetManager<C> {
         		m_pNCManager.recycleProbArray(probInfo);
         		probInfo=null;
         	}
+        	if (lastOutput==this) lastOutput=null;
+        	if (isSeen() && !m_bCommitted) {
+        		// Node will already have put itself into strTrainfileBuffer,
+        		// i.e. for loading the next session's LM from disk.
+        		// So train the current in-memory LM too...
+        		commit(true);
+        	}
         	super.DeleteNode();
         	m_bCommitted=false;
         }
 
         @Override public void Output() {
-        	if (lastOutput!=Parent()) {
-        		flush(lastOutput);
-        	}
-        	lastOutput=this;
+        	if (lastOutput!=null && lastOutput==Parent())
+        		lastOutput=this;
+        	//Case where lastOutput != Parent left to subclasses, if they want to
+        	//Note if lastOutput==null, we leave it so - so the first letter after
+        	// startup will be treated as a context switch.
         }
         
         @Override public void Undo() {
@@ -308,21 +279,13 @@ public class CAlphabetManager<C> {
 		 * @return The newly created parent, which may be the root node.
 		 */
 		protected void RebuildParent(int iNewOffset) {
-				/* This used to clear m_Model.strContextBuffer. Removed as per notes
-				 * at the top of CDasherInterfaceBase.
-				 */
-				
-				/* This reconstitutes the parent of the current root in the case
-				 * that we've backed off far enough to need to do so.
-				 */
-				
 			CAlphNode newNode = GetRoot(this, iNewOffset, true);
 			IterateChildGroups(newNode, null, this);
 			CAlphNode node = this;
 			do {
 				node = (CAlphNode)node.Parent();
-				node.Seen(true);
-				node.m_bCommitted=true;
+				if (this.isSeen()) node.Seen(true);
+				if (this.m_bCommitted) node.m_bCommitted=true;
 			} while (node != newNode);
 		}
     
@@ -454,6 +417,59 @@ public class CAlphabetManager<C> {
         	return prob;
     	}
         
+       	/** Text to write to training file. Identical to output text,
+       	 * except that if the user actually writes the context-switching
+       	 * escape character, we double it up (as in \\).
+       	 */
+       	private String trainText() {
+       		String s = outputText();
+       		if (m_Alphabet.ctxChar!=null && 
+       				s.length()==1 && 
+           			m_Alphabet.ctxChar.charValue()==s.charAt(0))
+       			return s+=s;
+       		return s;
+       	}
+       	
+       	@Override public void Output() {
+       		if (m_pNCManager.GetBoolParameter(Ebp_parameters.BP_LM_ADAPTIVE)) {
+       			//Record what we've written in buffer, to save to disk later for next session
+       			if (lastOutput != Parent()) {
+       				//Context changed. Flush to disk the old context + text written in it
+       				WriteTrainFileFull(m_Interface);
+       				
+       				//Now extract the context in which this node is written.
+       				// We'll get it from the LanguageModel, even though we could
+       				// get it from the document/context (as the node is being output
+       				// into that document/context now, so it must exist!)
+       				tempList.clear(); strTrainfileContext.setLength(0);
+       				m_LanguageModel.ContextToSymbols(checkCast(Parent()).context,tempList);
+       				for (int i=0; i<tempList.size(); i++)
+       					strTrainfileContext.append(m_Alphabet.GetText(tempList.get(i)));
+       			}
+       			//Now handle outputting of this node
+       			lastOutput = this;
+       			strTrainfileBuffer.append(trainText());
+       		}
+       		super.Output();
+       	}
+       	
+       	@Override public void Undo() {
+       		if (m_pNCManager.GetBoolParameter(Ebp_parameters.BP_LM_ADAPTIVE)) {
+       			if (lastOutput==this) {
+       				//Erase from training buffer (so the next session _won't_ learn
+       				// from it), and move lastOutput backwards,
+       				// iff this node was actually written (i.e. not rebuilt from context!)
+       				String s = trainText();
+       				if (strTrainfileBuffer.length()>=s.length()
+       						&& strTrainfileBuffer.substring(strTrainfileBuffer.length()-s.length()).equals(s)) {
+       					strTrainfileBuffer.delete(strTrainfileBuffer.length()-s.length(), strTrainfileBuffer.length());
+       					//lastOutput = checkCast(Parent());//done by super.Undo
+       				}
+       			}
+       		}
+       		super.Undo();
+       	}
+       	
         @Override
         public void commit(boolean bNv) {
         	if (((CAlphNode)this).m_bCommitted || !bNv) return;
@@ -461,10 +477,22 @@ public class CAlphabetManager<C> {
 			assert (m_Symbol < m_Alphabet.GetNumberSymbols());
 			//...before performing the following. But I can't see why it should ever fail?!
 			
-			super.commit(bNv);
 			if (m_pNCManager.GetBoolParameter(Ebp_parameters.BP_LM_ADAPTIVE)) {
-				Learn(this);
+				//try to commit (to in-memory LanguageModel)...if we have parent
+				// (else, rebuilding (backwards) -> don't). This'll learn symbols
+				// that may not be written to disk (i.e. if they are subsequently
+				// deleted), as we can't "untrain" the in-memory LM, but we kinda
+				// have to (we can't delay training the LM indefinitely!)
+				CAlphNode parent = checkCast(Parent());
+				if (parent!=null) {
+					//learn symbol in the parent context,
+					// and update this node's context with the new one
+					// (assists later learning, plus in case this node
+					// ever regenerates its children)
+					((CAlphNode)this).context = m_LanguageModel.ContextLearningSymbol(parent.context, m_Symbol);
+				}
 			}
+			super.commit(bNv);
 		}
         
         @Override
@@ -492,10 +520,6 @@ public class CAlphabetManager<C> {
 		
 		@Override
 		public void DeleteNode() {
-			if (lastOutput==this) {
-				flush(this);
-				lastOutput=null;
-			}
 			super.DeleteNode(); //clears Parent(), hence have to do the above first...
 			freeSymbolList.add(this);
 		}
