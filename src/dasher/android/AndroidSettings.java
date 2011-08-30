@@ -25,9 +25,6 @@
 
 package dasher.android;
 
-import java.security.AccessControlException;
-import java.util.prefs.Preferences;
-
 import android.content.SharedPreferences;
 
 import dasher.CParameterNotFoundException;
@@ -40,10 +37,93 @@ import dasher.Esp_parameters;
 public class AndroidSettings extends CSettingsStore implements SharedPreferences.OnSharedPreferenceChangeListener {
 
 	private final SharedPreferences pref;
+	
+	/** We allow the stored settings to be temporarily overriden
+	 * by providing (at most one at a time) instance of this class
+	 * - this allows e.g. properties specific to the document /
+	 * input field being edited, to override the user's general preferences.
+	 * TODO, this is an Android-specific thing at present; consider
+	 * moving into the core of dasher?
+	 */
+	public static interface SettingsOverride {
+		/** Override a boolean parameter
+		 * @return null to use the user's stored preference; Boolean.TRUE or FALSE
+		 * to ignore user preference and instead use that value.
+		 */
+		public Boolean overrideBoolParam(Ebp_parameters bp);
+		
+		/** Override a long parameter
+		 * @return null to use the user's stored preference; an instance of Long
+		 * to ignore user preference and instead use that value.
+		 */
+		public Long overrideLongParam(Elp_parameters lp);
+		
+		/** Override a String parameter.
+		 * @return null to use the user's stored preference; any
+		 * other value to use instead of the user preference.
+		 */
+		public String overrideStringParam(Esp_parameters sp);
+	};
+	
+	/** Instance of SettingsOverride in use, or null to <em>just</em>
+	 * use the stored preferences.
+	 */
+	private SettingsOverride over;
+	
 	public AndroidSettings(SharedPreferences pref) {
 		this.pref=pref;
 		pref.registerOnSharedPreferenceChangeListener(this);
 		LoadPersistent();
+	}
+	
+	/** Override stored settings with e.g. document-specific ones.
+	 * Broadcasts an event to all registered listeners, for any parameter
+	 * changing as a result (e.g. overridden when was not before, no
+	 * longer overridden when it was before, overridden to a different value). 
+	 * @param over SettingsOverride to query for overridden settings,
+	 * or null to just use stored settings; replaces any previous such in use.
+	 */
+	public void setOverride(SettingsOverride over) {
+		SettingsOverride oldOver = this.over;
+		this.over=over;
+		for (Ebp_parameters bp : Ebp_parameters.values())
+			if ((oldOver==null ? null : oldOver.overrideBoolParam(bp))
+					!= (over==null ? null : over.overrideBoolParam(bp)))
+				InsertEvent(bp);
+		for (Elp_parameters lp : Elp_parameters.values())
+			if ((oldOver==null ? null : oldOver.overrideLongParam(lp))
+					!= (over==null ? null : over.overrideLongParam(lp)))
+				InsertEvent(lp);
+		for (Esp_parameters sp : Esp_parameters.values()) {
+			final String old = oldOver==null ? null : oldOver.overrideStringParam(sp),
+					n = over==null ? null : over.overrideStringParam(sp);
+			if (old==null ? n!=null : (n==null || !old.equals(n)))
+				InsertEvent(sp);
+		}
+	}
+	
+	@Override public boolean GetBoolParameter(Ebp_parameters bp) {
+		if (over!=null) {
+			Boolean b = over.overrideBoolParam(bp);
+			if (b!=null) return b.booleanValue();
+		}
+		return super.GetBoolParameter(bp);
+	}
+	
+	@Override public long GetLongParameter(Elp_parameters lp) {
+		if (over!=null) {
+			Long l = over.overrideLongParam(lp);
+			if (l!=null) return l.longValue();
+		}
+		return super.GetLongParameter(lp);
+	}
+	
+	@Override public String GetStringParameter(Esp_parameters sp) {
+		if (over!=null) {
+			String s = over.overrideStringParam(sp);
+			if (s!=null) return s;
+		}
+		return super.GetStringParameter(sp);
 	}
 	
 	public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,

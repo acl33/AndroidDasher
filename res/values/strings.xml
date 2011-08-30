@@ -5,7 +5,7 @@
 
 <!-- Setup strings -->
 <string name="install_title">1. Install Dasher</string>
-<string name="DasherNeedsEnable">1a. First you must enable Dasher as an input method in the system settings. Click below to open the system settings and check the box besides Dasher. (You will be warned about Dasher being able to collect data you enter; indeed it does so, in order to learn your writing style. We do not recommend using Dasher to enter passwords.)</string>
+<string name="DasherNeedsEnable">1a. First you must enable Dasher as an input method in the system settings. Click below to open the system settings and check the box besides Dasher. (You will be warned about Dasher being able to collect data you enter. Dasher does collect data, in order to learn your writing style, but does not record or learn passwords.)</string>
 <string name="IMESettings">Open Input Method Settings</string>
 <string name="DasherEnabledOk">1a. Dasher is enabled as an input method. Proceed to next step...</string>
 <string name="DasherNeedsSelect">1b. To select Dasher as your active input method, make a long-press in the text field, choose \'Input Method\', then \'Dasher\':</string>

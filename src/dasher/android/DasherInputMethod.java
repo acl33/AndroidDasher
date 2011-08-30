@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 
 import dasher.CDasherNode;
+import dasher.Ebp_parameters;
 import dasher.CControlManager.ControlAction;
 
 import android.content.BroadcastReceiver;
@@ -12,16 +13,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.inputmethodservice.InputMethodService;
-import android.os.PowerManager;
-import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.View;
-import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
-import android.widget.LinearLayout;
 
 public class DasherInputMethod extends InputMethodService {
 	private DasherCanvas surf;
@@ -60,10 +56,10 @@ public class DasherInputMethod extends InputMethodService {
 	}
 	
 	@Override 
-	public void onStartInput(final EditorInfo attribute, final boolean restarting) {
+	public void onStartInput(final EditorInfo attribute, boolean restarting) {
 		super.onStartInput(attribute, restarting);
 		final InputConnection ic = getCurrentInputConnection();
-		Log.d("DasherIME",this + " onStartInput ("+attribute+", "+restarting+") with IC "+ic);
+		Log.d("DasherIME",this + " onStartInput ("+InputTypes.getDesc(attribute)+", "+restarting+") with IC "+ic);
 		if (ic==null) return; //yes, it happens. What else can we do????
 		if (restarting) {
 			if (doc!=null && doc.getInputConnection()==ic) return;
@@ -71,8 +67,15 @@ public class DasherInputMethod extends InputMethodService {
 		}
 		int initCursorPos=Math.max(0,Math.min(attribute.initialSelStart,attribute.initialSelEnd)),
 			initNumSel=Math.abs(attribute.initialSelEnd-attribute.initialSelStart);
-		Log.d("DasherIME","cursor "+initCursorPos+" actionLabel "+attribute.actionLabel);
-		intf.SetDocument(doc=new InputConnectionDocument(intf, ic, initCursorPos, initNumSel), makeICAction(ic, attribute), initCursorPos-1);
+		//Log.d("DasherIME","cursor "+initCursorPos+" actionLabel "+attribute.actionLabel);
+		//Prevent learn-as-you-write when editing any field that is a password
+		doc=InputTypes.isPassword(attribute) ? new InputConnectionDocument(intf, ic, initCursorPos, initNumSel) {
+			public Boolean overrideBoolParam(Ebp_parameters bp) {
+				return (bp==Ebp_parameters.BP_LM_ADAPTIVE) ? Boolean.FALSE : null;
+			}
+			public String toString() {return "ICDoc-no-learn";}
+		} : new InputConnectionDocument(intf, ic, initCursorPos, initNumSel);
+		intf.SetDocument(doc, makeICAction(ic, attribute), initCursorPos-1);
 
 		//that'll ensure a setOffset() task is enqueued first...
 		//onCreateInputView().startAnimating();

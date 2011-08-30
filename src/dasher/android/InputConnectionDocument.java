@@ -1,10 +1,12 @@
 package dasher.android;
 
-import java.util.ConcurrentModificationException;
 import android.view.inputmethod.InputConnection;
+import dasher.Ebp_parameters;
 import dasher.EditableDocument;
+import dasher.Elp_parameters;
+import dasher.Esp_parameters;
 
-public class InputConnectionDocument implements EditableDocument, Runnable {
+public class InputConnectionDocument implements EditableDocument, AndroidSettings.SettingsOverride, Runnable {
 	
 	private final InputConnection ic;
 	private final ADasherInterface iface;
@@ -37,6 +39,30 @@ public class InputConnectionDocument implements EditableDocument, Runnable {
 		this.ic=ic;
 		this.lastCursorPos = cursor-1;//convert from Android to Dasher cursor indices
 		this.numSelectedChars = numSelectedChars;
+	}
+	
+	/** Subclasses may override this method to provide a different
+	 * value for the specified boolean user preference. The default
+	 * implementation returns <code>null</code>, i.e. to use the stored
+	 * preferences. */
+	public Boolean overrideBoolParam(Ebp_parameters bp) {
+		return null;
+	}
+	
+	/** Subclasses may override this method to provide a different
+	 * value for the specified long user preference. The default
+	 * implementation returns <code>null</code>, i.e. to use the stored
+	 * preferences. */
+	public Long overrideLongParam(Elp_parameters lp) {
+		return null;
+	}
+	
+	/** Subclasses may override this method to provide a different
+	 * value for the specified String user preference. The default
+	 * implementation returns <code>null</code>, i.e. to use the stored
+	 * preferences. */
+	public String overrideStringParam(Esp_parameters sp) {
+		return null;
 	}
 	
 	/**Called on InputMethod thread when cursor has moved.

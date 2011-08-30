@@ -7,7 +7,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -19,20 +18,22 @@ import java.util.concurrent.LinkedBlockingQueue;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.AssetManager;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.os.Environment;
 import android.os.PowerManager;
-import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
 import dasher.*;
 import dasher.CControlManager.ControlAction;
+import dasher.android.AndroidSettings.SettingsOverride;
 
 public class ADasherInterface extends CDasherInterfaceBase {
+	/** SettingsStore in use. We keep a reference so we can override
+	 * the stored settings on a per-document basis, in {@link #SetDocument(EditableDocument, ControlAction, int)}.
+	 * TODO, there is the question as to whether this is sufficient mechanism for
+	 * per-document customization, or whether we also need documents to be able
+	 * to provide a new (/edit existing) alphabet, etc... */ 
+	private final AndroidSettings sets;
 	protected final Context androidCtx;
 	private final BlockingQueue<Runnable> tasks = supportsLinkedBlockingQueue ? new LinkedBlockingQueue<Runnable>() : new ArrayBlockingQueue<Runnable>(5);
 	private final Thread taskThread;
@@ -64,7 +65,12 @@ public class ADasherInterface extends CDasherInterfaceBase {
 	}
 	
 	public ADasherInterface(Context androidCtx, boolean train) {
-		super(new AndroidSettings(PreferenceManager.getDefaultSharedPreferences(androidCtx)));
+		this(new AndroidSettings(PreferenceManager.getDefaultSharedPreferences(androidCtx)), androidCtx, train);
+	}
+	
+	private ADasherInterface(AndroidSettings sets, Context androidCtx, boolean train) {
+		super(sets);
+		this.sets=sets;
 		this.androidCtx = androidCtx;
 		taskThread = new Thread() {
 			public void run() {
@@ -442,11 +448,30 @@ public class ADasherInterface extends CDasherInterfaceBase {
 		return doc;
 	}
 
+	/**
+	 * Switch to a new document - includes committing (learning) any text entered
+	 * in the previous document, and rebuilding the tree. The document may optionally
+	 * override some user settings, in which case the values returned from GetBoolParameter,
+	 * etc., will change accordingly (and appropriate notifications may be generated).
+	 * @param doc the new document to edit. Note, this may optionally be an instance of
+	 * {@link AndroidSettings.SettingsOverride}; if so, it will be used to override
+	 * stored user settings. (If not, any override due to the previous document, will be
+	 * cleared.)
+	 * @param action If non-null, a command (provided by the IME, or otherwise)
+	 * for which to produce control nodes to perform it on the document.
+	 * @param cursorPos initial cursor position (i.e. to build initial tree of nodes).
+	 */
 	protected void SetDocument(final EditableDocument doc, final ControlAction action, final int cursorPos) {
 		enqueue(new Runnable() {
 			public void run() {
 				Log.d("DasherIME","SetDocument Runnable "+doc);
+				if (ADasherInterface.this.doc!=null) {
+					//get rid of any existing nodes belonging to the old document
+					// (this is in case either old or new documents overrides BP_LM_ADAPTIVE)
+					setOffset(-1,true);
+				}
 				ADasherInterface.this.doc = doc;
+				sets.setOverride(doc instanceof SettingsOverride ? (SettingsOverride)doc : null);
 				if (doc==null) return; //finishInput - don't recheck/compute action, wait until next StartInput()
 				boolean hadAction = icAction!=null;
 				icAction=action;
