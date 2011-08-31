@@ -30,9 +30,11 @@ public class DasherInputMethod extends InputMethodService {
 	}
 	
 	@Override public void onDestroy() {
-		Log.d("DasherIME",this+" onDestroy");
-		//intf.StartShutdown();
+		Log.d("DasherIME",this+" onDestroy...");
+		intf.StartShutdown();
+		intf=null;
 		super.onDestroy();
+		Log.d("DasherIME",this+" onDestroyed");
 	}
 	
 	@Override public DasherCanvas onCreateInputView() {

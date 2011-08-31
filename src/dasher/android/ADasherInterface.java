@@ -74,27 +74,31 @@ public class ADasherInterface extends CDasherInterfaceBase {
 		this.androidCtx = androidCtx;
 		taskThread = new Thread() {
 			public void run() {
-				Queue<Runnable> frameTasks = new LinkedList<Runnable>();
-				while (true) {
-					if (m_DasherScreen!=null && doc!=null && (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) || m_bRedrawRequested)) {
-						m_bRedrawRequested = false;
-						((DasherCanvas)m_DasherScreen).renderFrame();
-						tasks.drainTo(frameTasks);
-						while (!frameTasks.isEmpty())
-							frameTasks.remove().run();
-					} else {
-						try {
-							tasks.take().run();
-						} catch (InterruptedException e) {
-							//we are interrupted if ever BP_DASHER_PAUSED is cleared
-							// (to tell us to start rendering!)
-							// - so loop round
+				try {
+					Queue<Runnable> frameTasks = new LinkedList<Runnable>();
+					while (true) {
+						if (m_DasherScreen!=null && doc!=null && (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) || m_bRedrawRequested)) {
+							m_bRedrawRequested = false;
+							((DasherCanvas)m_DasherScreen).renderFrame();
+							tasks.drainTo(frameTasks);
+							while (!frameTasks.isEmpty())
+								frameTasks.remove().run();
+						} else {
+							try {
+								tasks.take().run();
+							} catch (InterruptedException e) {
+								//we are interrupted if ever BP_DASHER_PAUSED is cleared
+								// (to tell us to start rendering!)
+								// - so loop round
+							}
 						}
 					}
-				}
+				} catch (ThreadDeath d) {}//exit
+				//android.util.Log.d("DasherIME","Background thread for "+this+" exitting");
 			}
 		};
 		LoadData();
+		taskThread.setDaemon(true);
 		if (train) {
 			DoSetup();
 			taskThread.start();
@@ -152,6 +156,15 @@ public class ADasherInterface extends CDasherInterfaceBase {
 			Lock(desc,percent);
 			if (percent<0) p=null; //finished.
 		}
+		//Call from main Dasher thread, but waits to for training thread to respond.
+		public synchronized void abort() {
+			//bAbortRequested is also read by the thread currently doing training
+			bAbortRequested=true;
+			//wait for training thread to abort...
+			while (percent>=0)
+				try {wait();}
+				catch (InterruptedException e) {}
+		}
 		//called from Training thread
 		public boolean notifyProgress(int iPercent) {
 			boolean bRes;
@@ -165,17 +178,14 @@ public class ADasherInterface extends CDasherInterfaceBase {
 	}
 	private Progress p;
 	@Override protected void train(final CAlphabetManager<?> mgr) {
-		//1. we're on main thread, so can read p...
-		if (p!=null) {
-			//p's bAbortRequested field is also read by the thread currently doing training
-			synchronized(p) {
-				p.bAbortRequested=true;
-				//wait for training thread to abort...
-				while (p.percent>=0)
-					try {p.wait();}
-					catch (InterruptedException e) {}
-			}
+		if (Thread.currentThread()!=taskThread) {
+			enqueue(new Runnable() {
+				public void run() {train(mgr);}
+			});
+			return;
 		}
+		//1. we're on main thread, so can read p...
+		if (p!=null) p.abort();
 		//make new lock...
 		final Progress myProg = p = new Progress("Training Dasher");
 		//now we've got lock, train asynchronously...
@@ -197,13 +207,33 @@ public class ADasherInterface extends CDasherInterfaceBase {
 		}.start();
 	}
 	
-	/*@Override
+	@Override
 	public void StartShutdown() {
-		if (taskThread == null) throw new IllegalStateException("Already started shutdown, or never Realize()d!");
-		taskThread.interrupt();
-		taskThread = null;
+		if (Thread.currentThread()!=taskThread) {
+			//Log.d("DasherIME","StartShutdown...");
+			//We just want a holder for a boolean, don't actually need atomicity properties.
+			final java.util.concurrent.atomic.AtomicBoolean done 
+				=new java.util.concurrent.atomic.AtomicBoolean(false);
+			enqueue(new Runnable() {
+				public void run() {
+					StartShutdown();
+					synchronized (done) {
+						done.set(true);
+						done.notifyAll();
+					}
+					throw new ThreadDeath();
+				}
+			});
+			synchronized(done) {
+				while (!done.get())
+					try {done.wait();}
+					catch (InterruptedException e) {}
+			}
+			return;
+		}
+		if (p!=null) p.abort();
 		super.StartShutdown();
-	}*/
+	}
 	
 	@Override
 	public void CreateModules() {
