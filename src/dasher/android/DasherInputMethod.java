@@ -1,5 +1,6 @@
 package dasher.android;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -13,6 +14,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.inputmethodservice.InputMethodService;
+import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -23,10 +25,12 @@ public class DasherInputMethod extends InputMethodService {
 	private DasherCanvas surf;
 	private ADasherInterface intf;
 	private InputConnectionDocument doc;
+	private Handler handler;
 	
 	@Override public void onCreate() {
 		super.onCreate();
 		android.util.Log.d("DasherIME","onCreate "+this);
+		handler = new Handler();
 		//load data (now), and start training in background
 		intf = new ADasherInterface(this, true);
 	}
@@ -75,13 +79,23 @@ public class DasherInputMethod extends InputMethodService {
 			initNumSel=Math.abs(attribute.initialSelEnd-attribute.initialSelStart);
 		//Log.d("DasherIME","cursor "+initCursorPos+" actionLabel "+attribute.actionLabel);
 		//Prevent learn-as-you-write when editing any field that is a password
+		List<ControlAction> acts = new ArrayList<ControlAction>();
+		class Hide implements ControlAction, Runnable {
+			public void happen(CDasherNode node) {handler.post(this);}
+			public void run() {hideWindow();}
+			public String desc() {return "Back";} //TODO internationalize...or icon?
+			public List<ControlAction> successors() {return Collections.emptyList();}
+		};
+		acts.add(new Hide());
+		ControlAction icAction=makeICAction(ic, attribute);
+		if (icAction!=null) acts.add(icAction);
 		doc=InputTypes.isPassword(attribute) ? new InputConnectionDocument(intf, ic, initCursorPos, initNumSel) {
 			public Boolean overrideBoolParam(Ebp_parameters bp) {
 				return (bp==Ebp_parameters.BP_LM_ADAPTIVE) ? Boolean.FALSE : null;
 			}
 			public String toString() {return "ICDoc-no-learn";}
 		} : new InputConnectionDocument(intf, ic, initCursorPos, initNumSel);
-		intf.SetDocument(doc, makeICAction(ic, attribute), initCursorPos-1);
+		intf.SetDocument(doc, acts, initCursorPos-1);
 
 		//that'll ensure a setOffset() task is enqueued first...
 		//onCreateInputView().startAnimating();

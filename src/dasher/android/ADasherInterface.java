@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -444,7 +445,7 @@ public class ADasherInterface extends CDasherInterfaceBase {
 	/** Cache of {@link #GetPackageDir()} */
 	private File PACKAGE_DIR;
 	private EditableDocument doc;
-	private ControlAction icAction;
+	private List<ControlAction> icActions = Collections.emptyList();
 	/** OS-provided directory for storing files for this app, i.e. that will be removed on app uninstallation
 	 * (On API 8+, anyway!). Following Google's specification, this is something like /sdcard/Android/data/dasher.android/files/.
 	 * We store text the user writes whilst using Dasher into this directory.
@@ -488,7 +489,7 @@ public class ADasherInterface extends CDasherInterfaceBase {
 	 * for which to produce control nodes to perform it on the document.
 	 * @param cursorPos initial cursor position (i.e. to build initial tree of nodes).
 	 */
-	protected void SetDocument(final EditableDocument doc, final ControlAction action, final int cursorPos) {
+	protected void SetDocument(final EditableDocument doc, final List<ControlAction> actions, final int cursorPos) {
 		enqueue(new Runnable() {
 			public void run() {
 				Log.d("DasherIME","SetDocument Runnable "+doc);
@@ -500,10 +501,10 @@ public class ADasherInterface extends CDasherInterfaceBase {
 				ADasherInterface.this.doc = doc;
 				sets.setOverride(doc instanceof SettingsOverride ? (SettingsOverride)doc : null);
 				if (doc==null) return; //finishInput - don't recheck/compute action, wait until next StartInput()
-				boolean hadAction = icAction!=null;
-				icAction=action;
-				if (hadAction || icAction!=null)
-					UpdateControlManager();
+				boolean hadAction = !icActions.isEmpty();
+				ADasherInterface.this.icActions=actions;
+				if (hadAction || !icActions.isEmpty())
+				    UpdateControlManager();
 				setOffset(cursorPos,true);
 			}
 		});
@@ -512,7 +513,7 @@ public class ADasherInterface extends CDasherInterfaceBase {
 	@Override
 	public List<ControlAction> getControlActions() {
 		List<ControlAction> lst = super.getControlActions();
-		if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE) && icAction!=null) lst.add(icAction);
+		if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE)) lst.addAll(icActions);
 		return lst;
 	}
 
