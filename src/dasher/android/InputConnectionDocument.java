@@ -39,6 +39,7 @@ public class InputConnectionDocument implements EditableDocument, AndroidSetting
 		this.ic=ic;
 		this.lastCursorPos = cursor-1;//convert from Android to Dasher cursor indices
 		this.numSelectedChars = numSelectedChars;
+		android.util.Log.d("DasherIME","Creating ICDoc w/ cursor"+lastCursorPos);
 	}
 	
 	/** Subclasses may override this method to provide a different
@@ -94,6 +95,7 @@ public class InputConnectionDocument implements EditableDocument, AndroidSetting
 	
 	/** On Dasher Thread, when we've enqueued ourselves */
 	public synchronized void run() {
+		//android.util.Log.d("DasherIME","DasherThread update lastCursorPos to"+new_lastCursorPos);
 		iface.setOffset(lastCursorPos = new_lastCursorPos, false);
 		numSelectedChars = new_numSelectedChars;
 		iface.Redraw(true);
@@ -104,6 +106,7 @@ public class InputConnectionDocument implements EditableDocument, AndroidSetting
 	public void deleteText(String ch, int offset) {
 		synchronized (expectedOffsets) {
 			synchronized(this) {
+				//android.util.Log.d("DasherIME","Deleting "+ch+" with cursorPos "+lastCursorPos+" (will be "+(lastCursorPos-ch.length())+")");
 				ic.deleteSurroundingText(ch.length(), 0);
 				if (lastCursorPos!=offset) throw new IllegalStateException();
 				lastCursorPos-=ch.length();
@@ -118,9 +121,11 @@ public class InputConnectionDocument implements EditableDocument, AndroidSetting
 		synchronized(expectedOffsets) {
 			synchronized(this) {
 				if (numSelectedChars>0) {
+					//android.util.Log.d("DasherIME","Deleting "+numSelectedChars+" selected chars with cursorPos "+lastCursorPos);
 					ic.deleteSurroundingText(0, numSelectedChars);
 					numSelectedChars=0;
 				}
+				//android.util.Log.d("DasherIME","Outputting "+ch+" with cursorPos "+lastCursorPos+" (will be "+(lastCursorPos+ch.length())+")");
 				if (lastCursorPos != offset-ch.length()) throw new IllegalStateException();
 				ic.commitText(ch, 1); //position cursor just after
 				lastCursorPos+=ch.length();
@@ -155,6 +160,7 @@ public class InputConnectionDocument implements EditableDocument, AndroidSetting
 					//desired character is after cursor
 					CharSequence s = ic.getTextAfterCursor(num-cursorPos, 0);
 					if (s==null || s.length() < num-cursorPos) {
+						//android.util.Log.d("DasherIME","Requested "+(num-cursorPos)+" chars after cursor, got \""+s+"\"");
 						return null;
 					}
 					// ok, must have received some data we didn't have before
@@ -168,6 +174,7 @@ public class InputConnectionDocument implements EditableDocument, AndroidSetting
 				} else {
 					CharSequence s = ic.getTextBeforeCursor(cursorPos+1-num, 0);
 					if (s==null || s.length() < cursorPos+1-num) {
+						//android.util.Log.d("DasherIME","Requested "+(cursorPos+1-num)+" chars before cursor, got \""+s+"\"");
 						return null;
 					}
 					if (cacheContent!=null && cacheStart<=cursorPos && cacheStart+cacheContent.length()>cursorPos+1) {
@@ -188,5 +195,9 @@ public class InputConnectionDocument implements EditableDocument, AndroidSetting
 	/*package*/ InputConnection getInputConnection() {
 		return ic;
 	}
-	
+
+	public String toString() {
+		return "ICDoc("+ic+")";
+	}
+
 }

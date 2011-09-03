@@ -469,12 +469,9 @@ public class ADasherInterface extends CDasherInterfaceBase {
 		return PACKAGE_DIR;
 	}
 	public EditableDocument getDocument() {
-		if (doc==null) {
-			//Presumably this may occur, if the Dasher thread does a renderFrame(),
-			// concurrently with the InputMethod thread ending the session. In which
-			// case - TODO - return a dummy document?
-			Log.d("DasherIME","getDocument when no InputConnection?!");
-		}
+		//note this can be called when doc==null, for a common case
+		// of building a new tree at offset -1 - i.e. no context. This
+		// makes no use of the document, so returning null is fine...
 		return doc;
 	}
 

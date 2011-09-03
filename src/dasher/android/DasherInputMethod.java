@@ -23,8 +23,10 @@ public class DasherInputMethod extends InputMethodService {
 	private DasherCanvas surf;
 	private ADasherInterface intf;
 	private InputConnectionDocument doc;
+	
 	@Override public void onCreate() {
 		super.onCreate();
+		android.util.Log.d("DasherIME","onCreate "+this);
 		//load data (now), and start training in background
 		intf = new ADasherInterface(this, true);
 	}
@@ -46,22 +48,24 @@ public class DasherInputMethod extends InputMethodService {
 	private final Intent sepIntent = new Intent("ca.idi.tekla.sep.SEPService");
 	{sepIntent.putExtra("ca.idi.tekla.sep.extra.SHIELD_ADDRESS", (String)null);}
 	
-	@Override public void onBindInput() {
-		super.onBindInput();
-		Log.d("DasherIME","onBindInput - getIC = "+getCurrentInputConnection());
-	}
-	
 	@Override public void onUnbindInput() {
 		super.onUnbindInput();
-		Log.d("DasherIME","onUnbindInput");
+		Log.d("DasherIME",this+" onUnbindInput - intf "+intf+" doc was "+doc);
+		if (doc==null) return;
 		intf.SetDocument(doc=null, null, -1);
 	}
 	
+	@Override
+	public void onStartInput(EditorInfo attr, boolean restart) {
+		super.onStartInput(attr, restart);
+		Log.d("DasherIME",this +" onStartInput ("+InputTypes.getDesc(attr)+", "+restart+") with IC "+getCurrentInputConnection());
+	}
+	
 	@Override 
-	public void onStartInput(final EditorInfo attribute, boolean restarting) {
-		super.onStartInput(attribute, restarting);
+	public void onStartInputView(final EditorInfo attribute, boolean restarting) {
+		super.onStartInputView(attribute, restarting);
 		final InputConnection ic = getCurrentInputConnection();
-		Log.d("DasherIME",this + " onStartInput ("+InputTypes.getDesc(attribute)+", "+restarting+") with IC "+ic);
+		Log.d("DasherIME",this + " onStartInputView ("+InputTypes.getDesc(attribute)+", "+restarting+") with IC "+ic);
 		if (ic==null) return; //yes, it happens. What else can we do????
 		if (restarting) {
 			if (doc!=null && doc.getInputConnection()==ic) return;
