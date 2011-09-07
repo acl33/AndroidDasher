@@ -1,5 +1,6 @@
 package dasher.android;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -402,6 +403,12 @@ public class ADasherInterface extends CDasherInterfaceBase {
 		//1. system file...
 		try {
 			InputStream in = androidCtx.getAssets().open(fname);
+			if (android.os.Debug.isDebuggerConnected()) {
+				//truncate file to 3k to speed up debugging...
+				byte[] b = new byte[3000]; int p=0;
+				for (int r; (r=in.read(b, p, b.length-p))>0; p+=r);
+				in=new ByteArrayInputStream(b, 0, p);
+			}
 			into.add(in);
 			//AssetFileDescriptor fd = androidCtx.getAssets().openFd(fname);
 			//streams.add(fd.createInputStream());

@@ -144,6 +144,13 @@ public class InputConnectionDocument implements EditableDocument, AndroidSetting
 	 * char, wrapped in a Character
 	 */
 	public Character getCharAt(int num) {
+		if (android.os.Debug.isDebuggerConnected()) {
+			try {
+				return "Testing ".charAt(num);
+			} catch (IndexOutOfBoundsException e) {
+				return null;
+			}
+		}
 		/*synchronized(expectedOffsets) {
 		while (expectedOffsets.size()>0)
 			//we've sent text to the IC, but it hasn't called us back yet.
