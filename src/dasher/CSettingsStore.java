@@ -174,9 +174,10 @@ public class CSettingsStore extends Observable<EParameters> {
 
 		if(iParameter == Esp_parameters.SP_ALPHABET_ID) { 
 			// Cycle the alphabet history
-			if(!GetStringParameter(Esp_parameters.SP_ALPHABET_1).equals(sValue)) {
-				if(!GetStringParameter(Esp_parameters.SP_ALPHABET_2).equals(sValue)) {
-					if(!GetStringParameter(Esp_parameters.SP_ALPHABET_3).equals(sValue))
+			String hist = GetStringParameter(Esp_parameters.SP_ALPHABET_ID);
+			if(!GetStringParameter(Esp_parameters.SP_ALPHABET_1).equals(hist)) {
+				if(!GetStringParameter(Esp_parameters.SP_ALPHABET_2).equals(hist)) {
+					if(!GetStringParameter(Esp_parameters.SP_ALPHABET_3).equals(hist))
 						SetStringParameter(Esp_parameters.SP_ALPHABET_4, GetStringParameter(Esp_parameters.SP_ALPHABET_3));
 					SetStringParameter(Esp_parameters.SP_ALPHABET_3, GetStringParameter(Esp_parameters.SP_ALPHABET_2));
 				}
