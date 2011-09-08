@@ -1037,6 +1037,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		if (m_InputFilter!=null && m_InputFilter.supportsPause()) acts.add(PAUSE_ACTION);
 		if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_HAS_MOVE)) acts.add(CControlManager.MOVE);
 		if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_ALPH_SWITCH)) acts.add(new CControlManager.AlphSwitcher(this));
+		if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_HAS_SPEED)) acts.add(CControlManager.SPEED_CHANGE);
 		return acts;
 	}
 	

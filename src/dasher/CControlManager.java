@@ -2,7 +2,9 @@ package dasher;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static dasher.CDasherModel.NORMALIZATION;
 
@@ -148,6 +150,7 @@ public class CControlManager extends CDasherComponent {
 		public void DeleteNode() {
 			super.DeleteNode();
 			nodeCache.add(this);
+			extraInfo.remove(this);
 		}
 	}
 	/** Utility method, to build an appropriate alph-node parent (root) for a control
@@ -171,6 +174,8 @@ public class CControlManager extends CDasherComponent {
 		return ret;
 	}
 	
+	private final Map<CContNode,Object> extraInfo = new HashMap<CContNode, Object>();
+	
 	private final List<CContNode> nodeCache = new ArrayList<CContNode>();
 
 	public CContNode makeCont(ControlAction act, int iOffset, int iColour, String desc) {
@@ -191,7 +196,7 @@ public class CControlManager extends CDasherComponent {
 		MoveAction() {super(null);} //no title
 		public void happen(CControlManager mgr, CDasherNode node) {
 			mgr.m_Interface.getDocument().moveCursor(node.getOffset());
-			if (mgr.GetBoolParameter(Ebp_parameters.BP_MOVE_REBUILD)
+			if (mgr.GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_REBUILD)
 					&& mgr.GetBoolParameter(Ebp_parameters.BP_MOVE_REBUILD_IMMED))
 				replace(mgr,node);
 		}
@@ -227,7 +232,7 @@ public class CControlManager extends CDasherComponent {
 			if (back!=null)
 				back.Reparent(node, low, low+=(NORMALIZATION*backSz)/total);
 			CDasherNode alph =
-					(mgr.GetBoolParameter(Ebp_parameters.BP_MOVE_REBUILD) && !mgr.GetBoolParameter(Ebp_parameters.BP_MOVE_REBUILD_IMMED))
+					(mgr.GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_REBUILD) && !mgr.GetBoolParameter(Ebp_parameters.BP_MOVE_REBUILD_IMMED))
 					? COMMIT_ALPH.make(mgr, node) : mgr.m_pNCMgr.getAlphabetManager().GetRoot(node, node.getOffset(), false);
 			alph.Reparent(node, low, low+=NORMALIZATION/total);
 			if (fwd!=null)
@@ -414,6 +419,75 @@ public class CControlManager extends CDasherComponent {
 			return out; //filled in by recursive calls
 		}
 	}
+	
+	private static final String SPEED_CHANGE_HEADER = "Speed"; //TODO Internationalize
+	
+	public static final ControlAction SPEED_CHANGE = new ControlActionBase(SPEED_CHANGE_HEADER) {
+		// array of slowdown coefficients, in range 0<x<1, with lowest (most extreme slowdown) first
+		private final double[] FRAC = {0.67, 0.95};
+		//Node boundaries in probability (i.e. dasherY) space: for
+		// FRAC decreases; escape to alphabet; then corresponding increases
+		private final long[] BOUNDS = new long[FRAC.length*2+2];
+		{
+			//fill in BOUNDS array. We make the most extreme increase & decrease be
+			// relative size 1; the next most extreme 2; and so on, with the escape
+			// to alphabet being the same size as each of the least-extreme speed changes. 
+			final int max = FRAC.length * (FRAC.length+2);
+			for (int i=0, v=0; i<BOUNDS.length; i++) {
+				BOUNDS[i] = (v*NORMALIZATION)/max;
+				if (i<FRAC.length) {
+					v+=i+1;
+				} else if (i==FRAC.length) {
+					v+=i;
+				} else {
+					v+=BOUNDS.length-1-i;
+				}
+			}
+		}
+		public void populate(CControlManager mgr, CDasherNode node) {
+			//We generate children all with the same ControlAction, abusing the
+			// node's m_strDisplayText to tell us what change (if any) it makes.
+			final long base = (node.m_strDisplayText!=SPEED_CHANGE_HEADER)
+				? (long)(Double.parseDouble(node.m_strDisplayText)*100)
+				: mgr.GetLongParameter(Elp_parameters.LP_MAX_BITRATE);
+			long lower=0;
+			for (int i=0; i<BOUNDS.length-1; i++) {
+				long upper = BOUNDS[i+1];
+				CDasherNode n = (i==FRAC.length)
+						? //escape to alphabet
+								(mgr.GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_REBUILD) 
+										? COMMIT_ALPH.make(mgr, node)
+										: mgr.m_pNCMgr.getAlphabetManager().GetRoot(node, node.getOffset(), false))
+						: mgr.makeCont(this, node.getOffset(), i+99, 
+								Double.toString( ((long)(i<FRAC.length ? base*FRAC[i] : base/FRAC[FRAC.length*2-i])) / 100.0));
+				n.Reparent(node, lower, upper);
+				lower=upper;
+			}
+		}
+		
+		@Override
+		public void happen(CControlManager mgr, CDasherNode node) {
+			//As previous, abusing m_strDisplayText to distinguish
+			// between the "Speed" header and a new speed. 
+			if (node.m_strDisplayText!=SPEED_CHANGE_HEADER) {
+				//backup old speed in case we need to undo
+				mgr.extraInfo.put((CContNode)node,mgr.GetLongParameter(Elp_parameters.LP_MAX_BITRATE));
+				Double d = Double.parseDouble(node.m_strDisplayText);
+				mgr.SetLongParameter(Elp_parameters.LP_MAX_BITRATE, (long)(d*100));
+			}
+		}
+		@Override public void undo(CControlManager mgr, CDasherNode node) {
+			//if there's anything in the map, it should have been put there by our happen(),
+			// so it jolly well should be a Long!
+			Long oldSpeed = (Long)mgr.extraInfo.get(node);
+			if (oldSpeed!=null) mgr.SetLongParameter(Elp_parameters.LP_MAX_BITRATE, oldSpeed.longValue());
+			mgr.extraInfo.remove(node);
+		}
+
+		public int expectedNumSuccs(CDasherNode node) {
+			return BOUNDS.length-1;
+		}		
+	};
 
 	public static void main(String[] args) {
 		String[] s = AlphSwitcher.summarize(args);

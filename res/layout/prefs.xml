@@ -74,18 +74,17 @@
 	    android:title="@string/AndroidSettingsNode_title"
 	    android:summary="@string/AndroidSettingsNode_summary"/>
 	  <CheckBoxPreference
+	    android:key="ControlModeRebuild"
+	    android:title="@string/ControlModeRebuild_title"
+	    android:summary="@string/ControlModeRebuild_summary"/>
+	  <CheckBoxPreference
 	    android:key="ControlModeHasMove"
 	    android:dependency="ControlMode"
 	    android:title="@string/ControlModeHasMove_title"
 	    android:summary="@string/ControlModeHasMove_summary"/>
 	  <CheckBoxPreference
-	    android:key="ControlMoveRebuild"
-	    android:dependency="ControlModeHasMove"
-	    android:title="@string/ControlMoveRebuild_title"
-	    android:summary="@string/ControlMoveRebuild_summary"/>
-	  <CheckBoxPreference
 	    android:key="ControlMoveRebuildImmed"
-	    android:dependency="ControlMoveRebuild"
+	    android:dependency="ControlModeHasMove"
 	    android:title="@string/ControlMoveRebuildImmed_title"
 	    android:summaryOn="@string/ControlMoveRebuildImmed_summaryOn"
 	    android:summaryOff="@string/ControlMoveRebuildImmed_summaryOff"/>
@@ -94,6 +93,11 @@
 	    android:dependency="ControlMode"
 	    android:title="@string/ControlModeHasAlphSwitch_title"
 	    android:summary="@string/ControlModeHasAlphSwitch_summary"/>
+	  <CheckBoxPreference
+	    android:key="ControlModeHasSpeed"
+	    android:dependency="ControlMode"
+	    android:title="@string/ControlModeHasSpeed_title"
+	    android:summary="@string/ControlModeHasSpeed_summary"/>
 	</PreferenceScreen>
 	
     <ListPreference
