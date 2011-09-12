@@ -28,11 +28,6 @@ public class CNodeCreationManager extends CDasherComponent {
 	protected final int uniformAdd;
 	
 	/**
-	 * Probability assigned to the Control Node
-	 */
-	protected final long controlSpace;
-	
-	/**
 	 * Normalization factor as a fraction of which the Language Model should compute
 	 * symbol probabilities, prior to adjusting them with adjustProbs.
 	 */
@@ -51,17 +46,12 @@ public class CNodeCreationManager extends CDasherComponent {
 		this.m_AlphabetManager = mgr;
 		mgr.ChangeNCManager(this);
 		this.m_ControlManager=cont;
-		if (cont!=null) {
-			//TODO fix size of control manager at 5%
-			controlSpace = NORMALIZATION/20;
-			cont.ChangeNCManager(this);
-		} else
-			controlSpace = 0;
-				int iSymbols = m_cAlphabet.GetNumberSymbols();
+		if (cont!=null) cont.ChangeNCManager(this);
+		
+		int iSymbols = m_cAlphabet.GetNumberSymbols();
 
-		final long iNorm = NORMALIZATION-controlSpace;
-		uniformAdd = (int)((iNorm * GetLongParameter(Elp_parameters.LP_UNIFORM)) / 1000) / iSymbols; 
-		nonUniformNorm = iNorm - iSymbols * uniformAdd;
+		uniformAdd = (int)((NORMALIZATION * GetLongParameter(Elp_parameters.LP_UNIFORM)) / 1000) / iSymbols; 
+		nonUniformNorm = NORMALIZATION - iSymbols * uniformAdd;
 	}
 	
 	public String getDefaultColourScheme() {return m_cAlphabet.GetPalette();}
@@ -82,7 +72,7 @@ public class CNodeCreationManager extends CDasherComponent {
 	public <C> long[] GetProbs(CLanguageModel<C> model, C context) {
 		long[] probs;
 		if (freeArrayList.isEmpty())
-			probs = new long[m_cAlphabet.GetNumberSymbols()+(controlSpace==0 ? 1 : 2)];
+			probs = new long[m_cAlphabet.GetNumberSymbols()+(m_ControlManager==null ? 1 : 2)];
 		else {
 			probs = freeArrayList.remove(freeArrayList.size()-1);
 			for (int i=0; i<probs.length; i++) probs[i]=0;
@@ -92,7 +82,25 @@ public class CNodeCreationManager extends CDasherComponent {
 		//element 0 is just a 0, to make computing upper/lower bounds easier...
 		for(int k = m_cAlphabet.GetNumberSymbols(); k >0; --k) probs[k] += uniformAdd;
 
-		if (controlSpace!=0) probs[probs.length-1]=controlSpace;
+		if (m_ControlManager!=null) {
+			//(size of control node after reweighting) = fraction * (size of space node b4 reweighting)
+			// slightly awkward but it means we can make the divisor be the known-power-of-2 NORMALIZATION.
+			final long controlSpace = probs[m_cAlphabet.GetSpaceSymbol()+1]/3;
+			long rem=NORMALIZATION - (probs[probs.length-1] = controlSpace);
+			for (int i=1; i<probs.length-1; i++)
+				rem -= (probs[i] = (probs[i]*(NORMALIZATION-controlSpace)/NORMALIZATION));
+			//now allocate remainder due to rounding error...
+			if (rem>=probs.length-1) {
+				//suggests we've rounded down every element...and rem started off as (NORM - a bit)?!
+				//throw new AssertionError("Shouldn't happen?!");
+				final long each = rem/(probs.length-1);
+				for (int i=1; i<probs.length; i++)
+					probs[i]+=each;
+				rem -= each*(probs.length-1);
+			}
+			for (int i=probs.length-(int)rem; i<probs.length; i++, rem--) probs[i]++;
+			if (rem!=0) throw new AssertionError();
+		}
 		
 		return probs;
 	}
@@ -104,13 +112,13 @@ public class CNodeCreationManager extends CDasherComponent {
 		// actually happen, depends on timing of rebuilding, init'ing
 		// the control manager, etc., when turning control mode on/off,
 		// so programming defensively.
-		if (ar.length >= m_cAlphabet.GetNumberSymbols()+(controlSpace==0 ? 1 : 2))
+		if (ar.length >= m_cAlphabet.GetNumberSymbols()+(m_ControlManager==null ? 1 : 2))
 			freeArrayList.add(ar);
 	}
 	
 	public void addExtraNodes(CDasherNode pParent, long[] probInfo) {
 		//if (probInfo[probInfo.length-1]!=GetLongParameter(Elp_parameters.LP_NORMALIZATION)) throw new AssertionError();
-		if (controlSpace==0) {
+		if (m_ControlManager==null) {
 			//if (pParent.ChildAtIndex(pParent.ChildCount()-1).Hbnd()!=probInfo[probInfo.length-1]) throw new AssertionError();
 			//if (probInfo.length != m_cAlphabet.GetNumberSymbols()+1) throw new AssertionError();
 			return;
