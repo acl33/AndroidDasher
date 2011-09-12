@@ -15,12 +15,13 @@ import android.view.Gravity;
 import android.view.View;
 import android.preference.DialogPreference;
 import android.preference.PreferenceManager;
+import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.LinearLayout;
 
 
-public class SeekBarPreference extends DialogPreference implements SeekBar.OnSeekBarChangeListener, SharedPreferences.OnSharedPreferenceChangeListener
+public class SeekBarPreference extends DialogPreference implements SeekBar.OnSeekBarChangeListener, View.OnClickListener, SharedPreferences.OnSharedPreferenceChangeListener
 {
   private static final String androidns="http://schemas.android.com/apk/res/android";
 
@@ -69,6 +70,7 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
 	  lValue = getPersistedLong(lDef);
 	  updateTitle();
   }
+  
   @Override 
   protected View onCreateDialogView() {
     LinearLayout layout = new LinearLayout(getContext());
@@ -89,6 +91,11 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
     layout.addView(mValueText, new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.FILL_PARENT, 
             LinearLayout.LayoutParams.WRAP_CONTENT));
+    Button b = new Button(getContext());
+    b.setText(R.string.Reset);
+    b.setOnClickListener(this);
+    //hope a click on b comes through to onClick(DialogInterface, int) - but with what int?!
+    layout.addView(b);
     return layout;
   }
   
@@ -107,8 +114,10 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
   }
   
   public void onProgressChanged(SeekBar seek, int value, boolean fromTouch) {
-    lValue = value+lMin;
-    callChangeListener(new Integer(value));
+    if (fromTouch) {
+      lValue = value+lMin;
+      callChangeListener(new Integer(value));
+    }
     String t=valueText();
     mValueText.setText(mSuffix==null ? t : t.concat(mSuffix));
   }
@@ -121,14 +130,22 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
 	  setTitle(mTitle+": "+valueText());
   }
   @Override public void onClick(DialogInterface dialog, int button) {
-	  if (button==DialogInterface.BUTTON1) {
+	  if (button==DialogInterface.BUTTON_POSITIVE) {
 		  //ok button. Store result of sliding, and set the title text
 		  persistLong(lValue);
 		  updateTitle();
-	  } else {
+	  } else if (button==DialogInterface.BUTTON_NEGATIVE){
 		  //cancel button. Restore old value, leave title text alone.
 		  lValue = getPersistedLong(lDef);
+	  } else {
+		  android.util.Log.d("DasherPrefs","Unknown button "+button+" pressed for "+getKey());
 	  }
+  }
+  
+  public void onClick(View v) {
+	//reset button
+	lValue = ((Elp_parameters)EParameters.BY_NAME.get(getKey())).defaultVal;
+	mSeekBar.setProgress((int)(lValue-lMin));
   }
 
   public void onStartTrackingTouch(SeekBar seekBar) {}

@@ -14,6 +14,8 @@
 <string name="dasher_sets_desc">Configure how to control Dasher; how fast; in what language you wish to write; and others</string>
 <string name="DasherSettingsBtn">Open Dasher Settings</string>
 
+<string name="Reset">Reset to Default</string>
+
 <!--Preference Strings-->
 <string name="MaxBitRateTimes100_title">Max speed</string>
 <string name="MaxBitRateTimes100_summary">Max rate of data entry in bits/sec</string>
