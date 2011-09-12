@@ -9,6 +9,7 @@ import dasher.EParameters;
 import dasher.Elp_parameters;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.View;
@@ -19,7 +20,7 @@ import android.widget.TextView;
 import android.widget.LinearLayout;
 
 
-public class SeekBarPreference extends DialogPreference implements SeekBar.OnSeekBarChangeListener
+public class SeekBarPreference extends DialogPreference implements SeekBar.OnSeekBarChangeListener, SharedPreferences.OnSharedPreferenceChangeListener
 {
   private static final String androidns="http://schemas.android.com/apk/res/android";
 
@@ -49,8 +50,20 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
     lMax = attrs.getAttributeIntValue(androidns,"max", 100);
     lMin = attrs.getAttributeIntValue(null, "min", 0);
     lDiv = attrs.getAttributeIntValue(null, "divisor", 1);
+    //Handily, SharedPreferences already keeps its listeners in a WeakHashMap,
+    // so registering as such does not prevent this from being GC'd; and when this
+    // is GC'd, the WeakHashMap'll automatically deregister us.
+    PreferenceManager.getDefaultSharedPreferences(context)
+    	.registerOnSharedPreferenceChangeListener(this);
   }
   
+  public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+	if (key.equals(getKey())) {
+		onSetInitialValue(true, null); //true = "get from sharedpreferences"
+		updateTitle();
+	}
+  }
+
   @Override public void onAttachedToHierarchy(PreferenceManager pm) {
 	  super.onAttachedToHierarchy(pm);
 	  lValue = getPersistedLong(lDef);

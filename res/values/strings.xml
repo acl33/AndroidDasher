@@ -84,9 +84,7 @@
 <string name="ButtonCompassModeRightZoom_title">Zoom Factor</string>
 
 
-
-
-<string name="AndroidGeneralInputSettings_title">General Input Settings</string>
+<!--<string name="AndroidGeneralInputSettings_title">General Input Settings</string>-->
 <string name="AutoSpeedControl_title">Auto speed control</string>
 <string name="RemapXtreme_title">Remap top/bottom</string>
 <string name="RemapXtreme_summary">...to scroll more and zoom less</string>

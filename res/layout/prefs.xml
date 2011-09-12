@@ -116,13 +116,25 @@
 	          android:title="@string/OneDimensionalMode_title"
 	          android:summaryOff="@string/OneDimensionalMode_summaryOff" 
 	          android:summaryOn="@string/OneDimensionalMode_summaryOn"/>
-	        <CheckBoxPreference
+	    	<dasher.android.CheckBoxPreference
+      	      android:key="RemapXtreme"
+      	      android:title="@string/RemapXtreme_title"
+      	      android:summary="@string/RemapXtreme_summary"/> 
+      	    <CheckBoxPreference
 	          android:key="AndroidTiltHoldToGo"
 	          android:title="@string/AndroidTiltHoldToGo_title"/>
 	            <CheckBoxPreference
 	              android:key="AndroidTiltUsesTouchX"
 	              android:title="@string/AndroidTiltUsesTouchX_title"
 	              android:dependency="AndroidTiltHoldToGo"/>
+	            <dasher.android.CheckBoxPreference
+	      		  android:key="AndroidDoubleX"
+	      		  android:title="@string/AndroidDoubleX_title"
+	      		  android:summary="@string/AndroidDoubleX_summary"
+	      		  android:dependency="AndroidTiltUsesTouchX"/>
+	        <dasher.android.CheckBoxPreference
+      	      android:key="AutoSpeedControl"
+      	      android:title="@string/AutoSpeedControl_title"/>
 	        <CheckBoxPreference
 	          android:key="CircleStart"
 	          android:title="@string/CircleStart_title"
@@ -131,6 +143,16 @@
 	          android:key="AndroidCalibNeedsNoName"
 	          android:title="@string/AndroidCalibrateTilting_title"
 	          android:dialogLayout="@layout/calibrate"/>
+	        <dasher.android.SeekBarPreference
+	      	  android:key="SlowStartTime"
+	      	  android:title="@string/SlowStartTime_title"
+	          android:summary="@string/SlowStartTime_summary"
+	          android:max="5000" min="0" android:text="ms"/>
+	        <dasher.android.SeekBarPreference
+	          android:key="ReverseBoost"
+	          android:title="@string/ReverseBoost_title"
+	          android:summary="@string/ReverseBoost_summary"
+	          android:max="10" min="0"/>
 	    </PreferenceScreen>
 	
 	    <PreferenceScreen
@@ -149,6 +171,27 @@
 	      	  android:key="AutoAdjust"
 	      	  android:title="@string/AutoAdjust_title"
 	      	  android:summary="@string/AutoAdjust_summary"/>
+	        <dasher.android.CheckBoxPreference
+      	      android:key="RemapXtreme"
+      	      android:title="@string/RemapXtreme_title"
+      	      android:summary="@string/RemapXtreme_summary"/> 
+      	    <dasher.android.CheckBoxPreference
+	          android:key="AndroidDoubleX"
+	          android:title="@string/AndroidDoubleX_title"
+	          android:summary="@string/AndroidDoubleX_summary"/>
+	        <dasher.android.CheckBoxPreference
+      	  	  android:key="AutoSpeedControl"
+      	      android:title="@string/AutoSpeedControl_title"/>
+    	    <dasher.android.SeekBarPreference
+	          android:key="SlowStartTime"
+	          android:title="@string/SlowStartTime_title"
+	          android:summary="@string/SlowStartTime_summary"
+	          android:max="5000" min="0" android:text="ms"/>
+	    	<dasher.android.SeekBarPreference
+	          android:key="ReverseBoost"
+	          android:title="@string/ReverseBoost_title"
+	          android:summary="@string/ReverseBoost_summary"
+	          android:max="10" min="0"/>
 	        <dasher.android.SeekBarPreference
 	          android:key="TapTime"
 	          android:title="@string/TapTime_title"
@@ -195,6 +238,10 @@
 	          android:title="@string/ButtonScanTime_title"
 	          android:summary="@string/ButtonScanTime_summary"
 	          android:max="1000" min="0" />
+	        <dasher.android.SeekBarPreference
+	          android:key="Zoomsteps"
+	          android:title="@string/Zoomsteps_title"
+	          android:max="64" min="8"/>
 	    </PreferenceScreen>
 	
 	    <PreferenceScreen
@@ -206,6 +253,10 @@
 	          android:key="ButtonCompassModeRightZoom"
 	          android:title="@string/ButtonCompassModeRightZoom_title"
 	          android:max="10240" min="1024" text="/1024" />
+	        <dasher.android.SeekBarPreference
+	          android:key="Zoomsteps"
+	          android:title="@string/Zoomsteps_title"
+	          android:max="64" min="8"/>
 	    </PreferenceScreen>
 	 
 	    <PreferenceScreen
@@ -228,12 +279,21 @@
 	          android:title="@string/OneButtonShortGap_title"
 	          android:summary="@string/OneButtonShortGap_summary"
 	          android:max="90" min="10" text="%"/>
-	        
 	        <CheckBoxPreference
 	          android:key="OneButtonReleaseTime"
 	          android:title="@string/OneButtonReleaseTime_title"
 	          android:summaryOn="@string/OneButtonReleaseTime_summaryOn"
 	          android:summaryOff="@string/OneButtonReleaseTime_summaryOff"/>
+	        <dasher.android.SeekBarPreference
+	          android:key="SlowStartTime"
+	          android:title="@string/SlowStartTime_title"
+	          android:summary="@string/SlowStartTime_summary"
+	          android:max="5000" min="0" android:text="ms"/>
+	        <dasher.android.SeekBarPreference
+	          android:key="ReverseBoost"
+	          android:title="@string/ReverseBoost_title"
+	          android:summary="@string/ReverseBoost_summary"
+	          android:max="10" min="0"/>
 	    </PreferenceScreen>
 	
 		<PreferenceScreen
@@ -256,36 +316,25 @@
 		  	  android:title="@string/DoublePressTime_title"
 		  	  android:summary="@string/DoublePressTime_summary"
 		  	  android:max="1000" min="100"/>
+		  	<dasher.android.SeekBarPreference
+	          android:key="SlowStartTime"
+	          android:title="@string/SlowStartTime_title"
+	          android:summary="@string/SlowStartTime_summary"
+	          android:max="5000" min="0" android:text="ms"/>
+	        <dasher.android.SeekBarPreference
+	          android:key="ReverseBoost"
+	          android:title="@string/ReverseBoost_title"
+	          android:summary="@string/ReverseBoost_summary"
+	          android:max="10" min="0"/>
 		</PreferenceScreen>
 		
  	</PreferenceScreen>
-    <PreferenceScreen
-      android:title="@string/AndroidGeneralInputSettings_title">
+    <!--<PreferenceScreen
+      android:title="@string/AndroidGeneralInputSettings_title">-->
         <CheckBoxPreference
           android:key="AndroidTeklaShield"
           android:title="Tekla Shield"
           android:summary="Listen for tekla switch events"/> 
-        <CheckBoxPreference
-      	  android:key="AutoSpeedControl"
-      	  android:title="@string/AutoSpeedControl_title"/>
-    	<CheckBoxPreference
-      	  android:key="RemapXtreme"
-      	  android:title="@string/RemapXtreme_title"
-      	  android:summary="@string/RemapXtreme_summary"/> 
-      	<CheckBoxPreference
-	      android:key="AndroidDoubleX"
-	      android:title="@string/AndroidDoubleX_title"
-	      android:summary="@string/AndroidDoubleX_summary"/>
-	    <dasher.android.SeekBarPreference
-	      android:key="SlowStartTime"
-	      android:title="@string/SlowStartTime_title"
-	      android:summary="@string/SlowStartTime_summary"
-	      android:max="5000" min="0" android:text="ms"/>
-	    <dasher.android.SeekBarPreference
-	      android:key="ReverseBoost"
-	      android:title="@string/ReverseBoost_title"
-	      android:summary="@string/ReverseBoost_summary"
-	      android:max="10" min="0"/>
-	</PreferenceScreen>
+	<!--</PreferenceScreen>-->
 	
 </PreferenceScreen>
