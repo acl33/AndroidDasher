@@ -68,7 +68,7 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param y Raw y co-ordinate
 	 * @return Converted y co-ordinate
 	 */
-	@Override public long ymap(long y) {
+	private long ymap(long y) {
 		if(y > m_Y2)
 			return m_Y2 + (y - m_Y2) / m_Y1;
 		else if(y < m_Y3)
@@ -83,7 +83,7 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param ydash Converted y co-ordinate
 	 * @return Original, raw y co-ordinate
 	 */
-	public long yunmap(long ydash) {
+	private long yunmap(long ydash) {
 		if(ydash > m_Y2)
 			return (ydash - m_Y2) * m_Y1 + m_Y2;
 		else if(ydash < m_Y3)
@@ -237,7 +237,7 @@ public class CDasherViewSquare extends CDasherView {
 		default:
 			textedge = 0;
 		}
-		RecursiveRender(Root, iRootMin, iRootMax, textedge, 0);
+		RecursiveRender(Root, iRootMin, iRootMax, textedge);
 		
 		// DelayDraw the text nodes
 		m_DelayDraw.Draw(Screen());
@@ -277,7 +277,7 @@ public class CDasherViewSquare extends CDasherView {
 	 * edge of the text that the caller just rendered.)
 	 * @param parentColour colour index in which parent rect was drawn
 	 */
-	public void RecursiveRender(CDasherNode Render, long y1, long y2, int mostleft, int parentColour) {
+	protected void RecursiveRender(CDasherNode Render, long y1, long y2, int mostleft) {
 		// This method takes mostleft by VALUE.
 		
 		CDasherView.DRect visreg = VisibleRegion();
@@ -350,7 +350,6 @@ public class CDasherViewSquare extends CDasherView {
 				if ((y2-y1 < minNodeSizeText && newy2>visreg.minY && newy1<visreg.maxY) //too-small - but other children smaller still
 						|| (newy1 <= visreg.minY && newy2 >= visreg.maxY)) { //covers entire y axis
 					//only need to render this one child. Do it by looping round...
-					parentColour=Render.m_iColour;
 					y1=newy1; y2=newy2;
 					Render=child;
 					continue tailcall;
@@ -372,7 +371,7 @@ public class CDasherViewSquare extends CDasherView {
 					//and loop round
 				} else if (newy2 - newy1 > minNodeSizeText) {
 					//definitely big enough to render
-					RecursiveRender(ch, newy1, newy2, mostleft, Render.m_iColour);
+					RecursiveRender(ch, newy1, newy2, mostleft);
 					if (newy2 >= visreg.maxY) {
 						//remaining children offscreen
 						if (newy1 <= visreg.minY) Render.m_OnlyChildRendered = ch; //and previous ones were too!
@@ -398,7 +397,6 @@ public class CDasherViewSquare extends CDasherView {
 				if (bestSz!=Integer.MAX_VALUE) {
 					Render.m_OnlyChildRendered = bestCh;
 					//tail call...
-					parentColour = Render.m_iColour;
 					y2 = y1 + (bestCh.Hbnd() * iDasherSize)/NORMALIZATION;
 					y1 += (bestCh.Lbnd() * iDasherSize)/NORMALIZATION;
 					Render = bestCh;
@@ -724,30 +722,6 @@ public class CDasherViewSquare extends CDasherView {
 	}
 	
 	/**
-	 * Truncate a set of co-ordinates so that they are on the screen
-	 *   
-	 * @param iX Screen x co-ordinate
-	 * @param iY Screen y co-ordinate
-	 * @return Truncated point
-	 */
-	public CDasherView.Point TruncateToScreen(int iX, int iY) {
-		
-		// I think that this function is now obsolete
-		
-		if(iX < 0)
-			iX = 0;
-		if(iX > Screen().GetWidth())
-			iX = Screen().GetWidth();
-			
-		if(iY < 0)
-			iY = 0;
-		if(iY > Screen().GetHeight())
-			iY = Screen().GetHeight();
-		
-		return new CDasherView.Point(iX, iY);
-	}
-	
-	/**
 	 * Sets a new screen, invalidates our current visible region,
 	 * and recalls SetScalingFactor, since the relationships between
 	 * Dasher and Screen co-ordinates may well have changed at this
@@ -788,7 +762,7 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param x Value to which the mapping should be unapplied
 	 * @return Raw value
 	 */
-	public long unapplyXMapping(long lx) {
+	private long unapplyXMapping(long lx) {
 		double x = lx/(double)MAX_Y;
 		if(x < m_dXMappingLogLinearBoundary * m_dXMappingLinearScaleFactor)
 			x = x / m_dXMappingLinearScaleFactor;
@@ -805,7 +779,7 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param x Value to which the mapping should be applied
 	 * @return Mapped value
 	 */
-	@Override public long applyXMapping(long lx) {
+	private long applyXMapping(long lx) {
 		double x = lx / (double)MAX_Y;
 		if(x < m_dXMappingLogLinearBoundary)
 			x = m_dXMappingLinearScaleFactor * x;

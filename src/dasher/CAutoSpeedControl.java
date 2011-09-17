@@ -266,16 +266,19 @@ public class CAutoSpeedControl extends CDasherComponent {
  *             mouse position.
  */
 	public void SpeedControl(long iDasherX, long iDasherY, double dFrameRate, CDasherView View) {
+		//We'll do all calculations in screen coordinates, as these are linear.
+	    coords[0] = iDasherX; coords[1] = iDasherY;
+	    View.Dasher2Screen(coords);
+	    final long px=coords[0],py=coords[1]; //pointer coords
 	    
-//	  Coordinate transforms:    
-	    iDasherX = View.applyXMapping(iDasherX);
-	    iDasherY = View.ymap(iDasherY);
+	    //compute screen coords of crosshair. TODO, should cache these - but will wait
+	    // for notifications re screen-geometry changing.
+	    coords[0]=CROSS_X; coords[1]=CROSS_Y;
+	    View.Dasher2Screen(coords);
+	    final long iOX = coords[0], iOY=coords[1];
 
-	    long iDasherOX = View.applyXMapping(CROSS_X);
-	    long iDasherOY = View.ymap(CROSS_Y);
-
-	    double x = -(iDasherX - iDasherOX) / (double)iDasherOX; //Use normalised coords so min r works 
-	    double y = -(iDasherY - iDasherOY) / (double)iDasherOY; 
+	    double x = (px - iOX) / (double)iOX; //Use normalised coords so min r works 
+	    double y = (iOY - py) / (double)iOY; 
 	    double theta = Math.atan2(y, x);
 	    double r = Math.sqrt(x * x + y * y);
 	    double dBitrate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) / 100.0; //  stored as long(round(true bitrate * 100))
@@ -327,5 +330,6 @@ public class CAutoSpeedControl extends CDasherComponent {
 		    return dC;
 	  }
 
+	private final long[] coords = new long[2];
 	
 }

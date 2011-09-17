@@ -416,7 +416,6 @@ public abstract class CDasherView extends CDasherComponent {
 	 * @param x raw X co-ordinate
 	 * @return New x co-ordinate
 	 */
-	public abstract long applyXMapping(long x);   
 	
 	/**
 	 * Applies any desired co-ordinate nonlinearity in the Y direction.
@@ -427,7 +426,6 @@ public abstract class CDasherView extends CDasherComponent {
 	 * @param x raw Y co-ordinate
 	 * @return New y co-ordinate
 	 */
-	public abstract long ymap(long y); 
 	
 	/**
 	 * Returns a rectangle indicating the area in Dasher space
