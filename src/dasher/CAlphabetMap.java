@@ -155,62 +155,44 @@ public class CAlphabetMap {
 		}
 	}
 	
-	public ListIterator<Integer> GetSymbols(final ListIterator<Character> previousChars) {
-		return new ListIterator<Integer>() {
-			/** This'll give a false positive iff we have a bad unicode encoding underneath. */
-			public boolean hasPrevious() {return previousChars.hasPrevious();}
-			public Integer previous() {
-				char prev = previousChars.previous();
-				if (Character.isLowSurrogate(prev)) {
-					if (previousChars.hasPrevious()) { 
-						char p=previousChars.previous();
-						if (Character.isHighSurrogate(p)) {
-							Integer i = multiChars.get(Character.toCodePoint(p,prev));
+	/**
+	 * Gets an iterator returning symbols (in this alphabet), reconstructing them
+	 * from the text of the specified document going <em>backwards</em> (that is,
+	 * successive calls to <code>next()</code> will return symbols from further
+	 * and further back / longer and longer ago, in that document)
+	 * @param doc Document to symbolicate
+	 * @param iStartOffset (greatest) index of character in document to use. (I.e.
+	 * this will be the first symbol returned, or part thereof if a two-char unicode
+	 * charpoint.)
+	 * @return Iterator returning successively-longer-ago symbols from the document
+	 */
+	public Iterator<Integer> GetSymbolsBackwards(final Document doc, final int iStartOffset) {
+		return new Iterator<Integer>() {
+			private int pos = iStartOffset;
+			public void remove() {throw new UnsupportedOperationException();}
+			public Integer next() {
+				char c = doc.getCharAt(pos--);
+				if (Character.isLowSurrogate(c)) {
+					if (pos>=0) {
+						char leading = doc.getCharAt(pos--);
+						if (Character.isHighSurrogate(leading)) {
+							Integer i = multiChars.get(Character.toCodePoint(leading, c));
 							return (i==null) ? UNDEFINED : i;
 						}
-						previousChars.next(); //push it back
+						pos++;
 					}
-					System.err.println("Ignoring low surrogate "+prev+" as not preceded by high surrogate");
-					return previous();
-				} else if (m_ParagraphSymbol!=UNDEFINED && prev=='\n') {
-					if (previousChars.hasPrevious())
-						if (previousChars.previous()!='\r') previousChars.next(); //no, don't take
+					System.err.println("Ignoring low surrogate "+c+" as not preceded by high surrogate");
+					return next();
+				}
+				else if (m_ParagraphSymbol!=UNDEFINED && c=='\n') {
+					if (pos>=0 && doc.getCharAt(pos)=='\r') pos--;
 					return m_ParagraphSymbol;
 				}
-				if (prev<256) return singleChars[prev];
-				Integer i=multiChars.get((char)prev);
+				if (c<256) return singleChars[c];
+				Integer i=multiChars.get((char)c);
 				return (i==null) ? UNDEFINED : i;
 			}
-			public int previousIndex() {throw new UnsupportedOperationException("Symbol index");}
-			/** This'll give a false positive iff we have a bad unicode encoding underneath. */
-			public boolean hasNext() {return previousChars.hasNext();}
-			public Integer next() {
-				char next = previousChars.next();
-				if (Character.isHighSurrogate(next)) {
-					if (previousChars.hasNext()) {
-						char l = previousChars.next();
-						if (Character.isLowSurrogate(l)) {
-							Integer i = multiChars.get(Character.toCodePoint(next, l));
-							return (i==null) ? UNDEFINED : i;
-						}
-						previousChars.previous(); //push back
-					}
-					System.err.println("Ignoring high surrogate "+next+" as not followed by low surrogate");
-					return next();
-				} else if (m_ParagraphSymbol!=UNDEFINED && next=='\r') {
-					if (previousChars.hasNext())
-						if (previousChars.next()=='\n') return m_ParagraphSymbol;
-						else previousChars.previous(); //untake
-					//fall through, i.e. attempt to find a symbol for just '\r'
-				}
-				if (next<256) return singleChars[next];
-				Integer i = multiChars.get(next);
-				return (i==null) ? UNDEFINED : i;
-			}
-			public int nextIndex() {throw new UnsupportedOperationException("Symbol index");}
-			public void add(Integer i) {throw new UnsupportedOperationException("Immutable");}
-			public void remove() {throw new UnsupportedOperationException("Immutable");}
-			public void set(Integer i) {throw new UnsupportedOperationException("Immutable");}
+			public boolean hasNext() {return pos>=0;}
 		};
 	}
 	

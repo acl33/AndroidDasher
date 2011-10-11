@@ -272,20 +272,7 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 			}
 			
 			@Override
-			public void deleteText(String ch, double prob) {
-				EditBox.deleteText(ch);
-			}
-
-			@Override
-			public ListIterator<Character> getContext(int iOffset) {
-				return EditBox.getContext(iOffset);
-			}
-
-			@Override
-			public void outputText(String ch, double prob) {
-				EditBox.outputText(ch);
-			}
-			
+			public EditableDocument getDocument() {return EditBox;}			
 		};
 		
 		/* Try to create a clipboard */

@@ -843,5 +843,7 @@ public class CDasherModel extends CFrameRate {
 	public void shutdown() {
 		DeleteRoot();
 	}
+
+	/*package*/ CDasherNode getLastOutputNode() {return m_pLastOutput;}
 	
 }

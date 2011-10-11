@@ -25,12 +25,9 @@
 
 package dasher;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-
-/* CSFS: WARNING: This is a DasherComponent derived class and so MUST
- * have UnregisterComponent called on destruction.
- */
 
 /**
  * LanguageModels are responsible for predicting / guessing the probabilities
@@ -187,13 +184,18 @@ public abstract class CLanguageModel<C> extends CDasherComponent {
 	    return m_Alphabet;
 	}
 
-	public final C BuildContext(ListIterator<Integer> previousSyms) {
+	/** Build a LM context from an iterator of symbols
+	 * @param previousSyms Iterator returning symbols in <em>backwards</em> order
+	 * (i.e. the first call to <code>next()</code> returns the most recent symbol)
+	 * @return
+	 */
+	public final C BuildContext(Iterator<Integer> previousSyms) {
 		return BuildContext(previousSyms,0);
 	}
 	
-	protected C BuildContext(ListIterator<Integer> previousSyms, int countSoFar) {
-		if (previousSyms.hasPrevious()) {
-			int sym = previousSyms.previous();
+	protected C BuildContext(Iterator<Integer> previousSyms, int countSoFar) {
+		if (previousSyms.hasNext()) {
+			int sym = previousSyms.next();
 			if (sym!=CAlphabetMap.UNDEFINED)
 				return ContextWithSymbol(BuildContext(previousSyms,countSoFar+1),sym);
 		}

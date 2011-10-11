@@ -8,10 +8,12 @@ import java.util.List;
 import static dasher.CDasherModel.NORMALIZATION;
 
 public class CControlManager extends CDasherComponent {
+	private final CDasherInterfaceBase m_Interface;
 	private CNodeCreationManager m_pNCMgr;
 	private final ControlAction root;
-	CControlManager(CDasherComponent creator, final List<ControlAction> actions) {
+	CControlManager(CDasherComponent creator, CDasherInterfaceBase iface, final List<ControlAction> actions) {
 		super(creator);
+		this.m_Interface=iface;
 		this.root=(actions.size()==1) ? actions.get(0) :
 			new ControlAction() {
 				public String desc() {return "Control";} //TODO internationalize
@@ -37,6 +39,7 @@ public class CControlManager extends CDasherComponent {
 	private class CContNode extends CDasherNode {
 		
 		private ControlAction act;
+		protected CDasherInterfaceBase getIntf() {return m_Interface;}
 
 		/*package*/ void initNode(int iOffset, int iColour, ControlAction act) {
 			super.initNode(iOffset, iColour, act.desc());
@@ -64,7 +67,7 @@ public class CControlManager extends CDasherComponent {
 			for (int i=0; i<actions.size(); i++) {
 				long next = (i+1) * NORMALIZATION / actions.size();
 				CDasherNode temp = (actions.get(i)==null)
-					? m_pNCMgr.getAlphabetManager().GetRoot(getOffset(), false)
+					? m_pNCMgr.getAlphabetManager().GetRoot(this, getOffset(), false)
 							: makeCont(getOffset(), getColour(this), actions.get(i), existing);
 				temp.Reparent(this, boundary, next);
 				boundary=next;
@@ -80,7 +83,8 @@ public class CControlManager extends CDasherComponent {
 				c.PopulateChildren(this);
 				return c;
 			}
-			return m_pNCMgr.getAlphabetManager().GetRoot(getOffset(), true);			
+			//XXX this won't work, this "parent" won't have us as a child...
+			return m_pNCMgr.getAlphabetManager().GetRoot(this, getOffset(), true);			
 		}		
 	}
 	

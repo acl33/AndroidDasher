@@ -30,8 +30,9 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 
 import dasher.*;
+import dasher.CControlManager.ControlAction;
 
-public abstract class ADasherInterface extends CDasherInterfaceBase {
+public class ADasherInterface extends CDasherInterfaceBase {
 	protected final Context androidCtx;
 	private final BlockingQueue<Runnable> tasks = supportsLinkedBlockingQueue ? new LinkedBlockingQueue<Runnable>() : new ArrayBlockingQueue<Runnable>(5);
 	private final Thread taskThread;
@@ -69,7 +70,7 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 			public void run() {
 				Queue<Runnable> frameTasks = new LinkedList<Runnable>();
 				while (true) {
-					if (m_DasherScreen!=null && (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) || m_bRedrawRequested)) {
+					if (m_DasherScreen!=null && doc!=null && (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) || m_bRedrawRequested)) {
 						m_bRedrawRequested = false;
 						((DasherCanvas)m_DasherScreen).renderFrame();
 						tasks.drainTo(frameTasks);
@@ -406,6 +407,8 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 	
 	/** Cache of {@link #GetPackageDir()} */
 	private File PACKAGE_DIR;
+	private EditableDocument doc;
+	private ControlAction icAction;
 	/** OS-provided directory for storing files for this app, i.e. that will be removed on app uninstallation
 	 * (On API 8+, anyway!). Following Google's specification, this is something like /sdcard/Android/data/dasher.android/files/.
 	 * We store text the user writes whilst using Dasher into this directory.
@@ -429,6 +432,38 @@ public abstract class ADasherInterface extends CDasherInterfaceBase {
 		}
 		return PACKAGE_DIR;
 	}
+	public EditableDocument getDocument() {
+		if (doc==null) {
+			//Presumably this may occur, if the Dasher thread does a renderFrame(),
+			// concurrently with the InputMethod thread ending the session. In which
+			// case - TODO - return a dummy document?
+			Log.d("DasherIME","getDocument when no InputConnection?!");
+		}
+		return doc;
+	}
+
+	protected void SetDocument(final EditableDocument doc, final ControlAction action, final int cursorPos) {
+		enqueue(new Runnable() {
+			public void run() {
+				Log.d("DasherIME","SetDocument Runnable "+doc);
+				ADasherInterface.this.doc = doc;
+				if (doc==null) return; //finishInput - don't recheck/compute action, wait until next StartInput()
+				boolean hadAction = icAction!=null;
+				icAction=action;
+				if (hadAction || icAction!=null)
+					UpdateControlManager();
+				setOffset(cursorPos,true);
+			}
+		});
+	}
+
+	@Override
+	public List<ControlAction> getControlActions() {
+		List<ControlAction> lst = super.getControlActions();
+		if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE) && icAction!=null) lst.add(icAction);
+		return lst;
+	}
+
 	/** Additional directory from which we read any alphabet/training files placed there by the user
 	 * (not removed upon app installation, but much easier for the user to find: /sdcard/dasher).
 	 */

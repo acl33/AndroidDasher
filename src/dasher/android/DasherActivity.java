@@ -25,22 +25,7 @@ public class DasherActivity extends PreferenceActivity {
         //However our Interface doesn't need to implement display, editing, etc.
         // functions, so we stub those methods. (Also it will never load a
         // training text.)
-        CDasherInterfaceBase intf = new ADasherInterface(this,false) {
-			@Override
-			public void outputText(String ch, double prob) {
-				throw new UnsupportedOperationException();
-			}
-			
-			@Override
-			public ListIterator<Character> getContext(int iOffset) {
-				throw new UnsupportedOperationException();
-			}
-			
-			@Override
-			public void deleteText(String ch, double prob) {
-				throw new UnsupportedOperationException();
-			}
-		};
+        CDasherInterfaceBase intf = new ADasherInterface(this,false);
         
         addPreferencesFromResource(R.layout.prefs);
         

@@ -1,6 +1,11 @@
 package dasher.android;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import dasher.CDasherNode;
+import dasher.CControlManager.ControlAction;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -20,11 +25,12 @@ import android.widget.LinearLayout;
 
 public class DasherInputMethod extends InputMethodService {
 	private DasherCanvas surf;
-	private IMDasherInterface intf;
+	private ADasherInterface intf;
+	private InputConnectionDocument doc;
 	@Override public void onCreate() {
 		super.onCreate();
 		//load data (now), and start training in background
-		intf = new IMDasherInterface(this, true);
+		intf = new ADasherInterface(this, true);
 	}
 	
 	@Override public void onDestroy() {
@@ -42,16 +48,28 @@ public class DasherInputMethod extends InputMethodService {
 	private final Intent sepIntent = new Intent("ca.idi.tekla.sep.SEPService");
 	{sepIntent.putExtra("ca.idi.tekla.sep.extra.SHIELD_ADDRESS", (String)null);}
 	
+	@Override public void onBindInput() {
+		super.onBindInput();
+		Log.d("DasherIME","onBindInput - getIC = "+getCurrentInputConnection());
+	}
+	
+	@Override public void onUnbindInput() {
+		super.onUnbindInput();
+		Log.d("DasherIME","onUnbindInput");
+		intf.SetDocument(doc=null, null, -1);
+	}
+	
 	@Override 
-	public void onStartInput(EditorInfo attribute, boolean restarting) {
-		InputConnection ic = getCurrentInputConnection();
-		String msg = this + " onStartInput ("+attribute+", "+restarting+") with IC "+ic;
-		if (ic==null) {Log.d("DasherIME",msg); return;} //yes, it happens. What else can we do????
-		//get current cursor position...
-		int initCursorPos=Math.min(attribute.initialSelStart,attribute.initialSelEnd),initNumSel=Math.abs(attribute.initialSelEnd-attribute.initialSelStart);
-		Log.d("DasherIME",msg+" cursor "+initCursorPos+" actionLabel "+attribute.actionLabel);
-		intf.SetInputConnection(ic, attribute);
-		intf.setSelection(Math.max(0,initCursorPos),initNumSel,true);
+	public void onStartInput(final EditorInfo attribute, final boolean restarting) {
+		super.onStartInput(attribute, restarting);
+		final InputConnection ic = getCurrentInputConnection();
+		Log.d("DasherIME",this + " onStartInput ("+attribute+", "+restarting+") with IC "+ic);
+		if (ic==null) return; //yes, it happens. What else can we do????
+		int initCursorPos=Math.max(0,Math.min(attribute.initialSelStart,attribute.initialSelEnd)),
+			initNumSel=Math.abs(attribute.initialSelEnd-attribute.initialSelStart);
+		Log.d("DasherIME","cursor "+initCursorPos+" actionLabel "+attribute.actionLabel);
+		intf.SetDocument(doc=new InputConnectionDocument(intf, ic, initCursorPos, initNumSel), makeICAction(ic, attribute), initCursorPos-1);
+
 		//that'll ensure a setOffset() task is enqueued first...
 		//onCreateInputView().startAnimating();
 		//...and then any repaint task afterwards.
@@ -95,8 +113,8 @@ public class DasherInputMethod extends InputMethodService {
 	@Override
 	public void onFinishInput() {
 		Log.d("DasherIME",this + " onFinishInput");
+		super.onFinishInput();
 		//if (surf!=null) surf.stopAnimating(); //yeah, we can get sent onFinishInput before/without onCreate...
-		intf.SetInputConnection(null, null);
 		tekla: if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidTeklaShield", false)) {
 			Log.d("DasherIME","Stopping Tekla Service...");
 			try {
@@ -114,12 +132,57 @@ public class DasherInputMethod extends InputMethodService {
 	public void onUpdateSelection(int oldSelStart, int oldSelEnd,
 								  int newSelStart, int newSelEnd,
 								  int candidatesStart, int candidatesEnd) {
-		intf.setSelection(Math.min(newSelStart,newSelEnd),Math.abs(newSelEnd - newSelStart),false);
+		doc.setSelection(Math.min(newSelStart,newSelEnd),Math.abs(newSelEnd - newSelStart));
 	}
 	
-	@Override
+	/*@Override
 	public void onDisplayCompletions(CompletionInfo[] ci) {
 		Log.d("DasherIME","Completions: "+Arrays.toString(ci));
+	}*/
+	
+	private static ControlAction makeICAction(final InputConnection ic,
+			final EditorInfo attribute) {
+		if ((attribute.imeOptions & EditorInfo.IME_FLAG_NO_ACCESSORY_ACTION)!=0
+				|| (attribute.imeOptions & EditorInfo.IME_MASK_ACTION) == EditorInfo.IME_ACTION_NONE)
+			return null;
+		
+		final int actionId =
+			(attribute.actionId!=EditorInfo.IME_ACTION_UNSPECIFIED && attribute.actionId!=EditorInfo.IME_ACTION_NONE)
+			? attribute.actionId : (attribute.imeOptions & EditorInfo.IME_MASK_ACTION);
+		final String actionLabel = getActionLabel(attribute, actionId);
+		final ControlAction act = new ControlAction() {
+			public String desc() {return actionLabel;}
+			public void happen(dasher.CDasherNode node) {ic.performEditorAction(actionId);}
+			public List<ControlAction> successors() {return Collections.<ControlAction>singletonList(null);}
+		};
+		if ((attribute.imeOptions & EditorInfo.IME_FLAG_NO_ENTER_ACTION)==0) return act;
+		
+		return new ControlAction() {
+			private final List<ControlAction> baseSuccs = Arrays.asList(new ControlAction[] {null, act, null});
+			public String desc() {return actionLabel+"?";}
+			public void happen(CDasherNode node) {}					
+			public List<ControlAction> successors() {return baseSuccs;}
+		};
+	}
+
+	private static String getActionLabel(EditorInfo attribute, int actionId) {
+		if (attribute.actionLabel != null)
+			return attribute.actionLabel.toString();
+		switch (actionId) {
+		case EditorInfo.IME_ACTION_UNSPECIFIED:
+		default:
+			return "Action"; //?!?!?!
+		case EditorInfo.IME_ACTION_GO:
+			return "Go";
+		case EditorInfo.IME_ACTION_SEARCH:
+			return "Search";
+		case EditorInfo.IME_ACTION_SEND:
+			return "Send";
+		case EditorInfo.IME_ACTION_NEXT:
+			return "Next";
+		case EditorInfo.IME_ACTION_DONE:
+			return "Done";
+		}
 	}
 	
 	private final BroadcastReceiver sepBroadcastReceiver = new BroadcastReceiver() {

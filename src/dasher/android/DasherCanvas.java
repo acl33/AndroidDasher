@@ -23,7 +23,7 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 	private final ADasherInterface intf;
 	private final SurfaceHolder holder;
     private boolean bReady;
-	
+
 	/** coordinates of last touch */
 	private int x,y;
     
@@ -36,7 +36,7 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 	}
 
 	protected void onMeasure(int widthMS, int heightMS) {
-		Log.d("DasherIME","onMeasure ("+MeasureSpec.toString(widthMS)+","+MeasureSpec.toString(heightMS)+")");
+		//Log.d("DasherIME","onMeasure ("+MeasureSpec.toString(widthMS)+","+MeasureSpec.toString(heightMS)+")");
 		final int aspectPercent = (int)PreferenceManager.getDefaultSharedPreferences(getContext()).getLong("DisplayHeight", 100);
 		//compute desired width, such that height can be aspectPercent of that, and satisfy constraints.
 		int w;
@@ -91,10 +91,13 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 	public void surfaceChanged(SurfaceHolder holder, int format, int width,
 			int height) {
 		Log.d("DasherIME",this+" surfaceChanged ("+width+", "+height+")");
+		synchronized(DasherCanvas.this) {
+			if (bReady) return;
+			bReady = true;
+		}
 		intf.enqueue(new Runnable() {
 			public void run() {
 				intf.ChangeScreen(DasherCanvas.this);
-				bReady = true;
 			}
 		});
 	}
@@ -105,10 +108,16 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 
 	public void surfaceDestroyed(SurfaceHolder holder) {
 		Log.d("DasherIME",this+" surfaceDestroyed");
+		//this stops anything from being rendered to the surface ASAP:
+		synchronized (this) {
+			if (!bReady) return;
+			bReady=false;
+		}
+		//then we employ a slower-acting switch to prevent any more
+		//attempts to render frames (i.e. allowing any concurrent rendering
+		// on the Dasher thread to finish) until we have another surfaceChanged:
 		intf.enqueue(new Runnable() {
 			public void run() {
-				//disable animation until we have another surfaceChanged
-				bReady=false;
 				intf.ChangeScreen(null);
 			}
 		});
@@ -159,15 +168,18 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 	
 	
 	public void renderFrame() {
-		if (!bReady) {
-			Log.d("DasherIME","renderFrame but canvas "+this+" not ready...?");
-			return;
+		synchronized(this) {
+			if (!bReady) {
+				return;
+			}
 		}
 		canvas = holder.lockCanvas();
 		//after a surfaceDestroyed(), renderFrame() can be called once more before we setCanvas(null) to stop it...
 		// in which case, canvas==null and we won't be able to draw anything. But let's at least not NullPtrEx!
-		if (canvas!=null) { 
+		if (canvas==null) return;
+		try { 
 			intf.NewFrame(System.currentTimeMillis());
+		} finally {
 			holder.unlockCanvasAndPost(canvas);
 			canvas=null;
 		}

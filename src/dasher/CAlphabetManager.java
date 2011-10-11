@@ -28,8 +28,8 @@ package dasher;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 
 import static dasher.CDasherModel.NORMALIZATION;
 
@@ -112,31 +112,33 @@ public class CAlphabetManager<C> {
      * -1 indicates the root group node containing all potential first (offset=0) characters
      * @return a symbol node, as long as there is at least one preceding character; a group node if not
      */
-    public CAlphNode GetRoot(int iOffset, boolean bEnteredLast) {
+    public CAlphNode GetRoot(Document doc, int iOffset, boolean bEnteredLast) {
     	if (iOffset < -1) throw new IllegalArgumentException("offset "+iOffset+" must be at least -1");
-    	ListIterator<Character> previousChars = m_Interface.getContext(iOffset);
-    	if (iOffset<0 && previousChars.hasPrevious()) {
-    		StringBuilder sb=new StringBuilder();
-    		do {
-    			sb.append(previousChars.previous());
-    		} while (previousChars.hasPrevious());
-    		throw new IllegalStateException("Got context \""+sb.reverse()+"\" for offset "+iOffset);
-    	}
-    	CAlphNode NewNode;
-    	ListIterator<Integer> previousSyms = m_AlphabetMap.GetSymbols(previousChars);
-    	if (bEnteredLast && previousSyms.hasPrevious()) {
-    		int iSym = previousSyms.previous();
-    		if (iSym==CAlphabetMap.UNDEFINED) {
-    			NewNode = new SpecialNode(iOffset, previousChars.next(),m_LanguageModel.EmptyContext());
-    		} else {
-        		NewNode = allocSymbol(iOffset,iSym, 
-        				m_LanguageModel.ContextWithSymbol(m_LanguageModel.BuildContext(previousSyms),iSym));
+    	C ctx;
+    	Iterator<Integer> previousSyms = m_AlphabetMap.GetSymbolsBackwards(doc, iOffset);
+		if (bEnteredLast) {
+    		if (previousSyms.hasNext()) {
+	    		int iSym = previousSyms.next();
+	    		CAlphNode NewNode;
+	    		if (iSym==CAlphabetMap.UNDEFINED) {
+	    			char c = doc.getCharAt(iOffset);
+	    			String s = (Character.isLowSurrogate(c) && Character.isHighSurrogate(doc.getCharAt(iOffset-1)))
+	    				? new String(new char[] {doc.getCharAt(iOffset-1),c}) : Character.toString(c);
+	    			NewNode = new SpecialNode(iOffset, s, m_LanguageModel.EmptyContext());
+	    		} else {
+	        		NewNode = allocSymbol(iOffset,iSym, 
+	        				m_LanguageModel.ContextWithSymbol(m_LanguageModel.BuildContext(previousSyms),iSym));
+	    		}
+	    		NewNode.m_bCommitted = true;
+	    		return NewNode;
     		}
+    		//else, no previous symbol:
+    		ctx = m_AlphabetMap.defaultContext(m_LanguageModel);
     	} else {
-    		//don't use previous symbol (if any)
-    		NewNode = allocGroup(iOffset, null, getColour(null, null, iOffset), m_AlphabetMap.defaultContext(m_LanguageModel));
+    		//told not to use previous symbol
+    		ctx = m_LanguageModel.BuildContext(previousSyms);
     	}
-    	return NewNode;
+    	return allocGroup(iOffset, null, getColour(null, null, iOffset), ctx);
     }
     
     /** Entered text which has not yet been written out to disk */
@@ -234,6 +236,7 @@ public class CAlphabetManager<C> {
     abstract class CAlphNode extends CDasherNode {
     	
     	protected final CAlphabetManager<C> mgr() {return CAlphabetManager.this;}
+    	protected CDasherInterfaceBase getIntf() {return CAlphabetManager.this.m_Interface;}
     	private long[] probInfo;
     	private boolean m_bCommitted;
     	/**
@@ -250,6 +253,7 @@ public class CAlphabetManager<C> {
         void initNode(int iOffset, int Colour, C context, String label) {
 			super.initNode(iOffset, Colour, label);
 			this.context = context;
+			this.m_bCommitted = false;
 		}
         
         @Override public int ExpectedNumChildren() {
@@ -312,7 +316,7 @@ public class CAlphabetManager<C> {
 				 * that we've backed off far enough to need to do so.
 				 */
 				
-			CAlphNode newNode = GetRoot(iNewOffset, true);
+			CAlphNode newNode = GetRoot(this, iNewOffset, true);
 			IterateChildGroups(newNode, null, this);
 			CAlphNode node = this;
 			do {
@@ -327,10 +331,51 @@ public class CAlphabetManager<C> {
 		protected abstract CDasherNode rebuildSymbol(CAlphNode parent, int sym, long iLbnd, long iHbnd);
 
     }
+    
+    abstract class COutputNode extends CAlphNode {
+    	private COutputNode() {}
+    	protected abstract String outputText();
+    	
+    	/** Outputs {@link outputText} to the document at this node's offset. */
+    	@Override public void Output() {
+			super.Output();
+			m_Interface.getDocument().outputText(outputText(), getOffset());
+		}
+    	
+    	/** Removes {@link #outputText()} from the document at this node's offset. */
+		@Override public void Undo() {
+			super.Undo();
+			m_Interface.getDocument().deleteText(outputText(), getOffset());
+		}
+		/** Begins a fresh copy of the whole alphabet/letter tree */ 
+		@Override
+    	public void PopulateChildren() {
+    		IterateChildGroups(this, null, null);
+    	}
+		
+    	@Override
+    	public Character getCharAt(int idx) {
+    		String s = outputText();
+			if (idx>getOffset())
+				idx -= s.length();
+			else if (idx>getOffset()-s.length())
+				return s.charAt(idx-getOffset()+s.length()-1);
+			return super.getCharAt(idx);
+		}
+    	
+    	@Override
+    	public int undoTransformIndex(int index) {
+    		int len = outputText().length();
+    		//characters after our output position, would be at higher offsets given the output of this node...
+    		if (index>getOffset()-len) index+=len;
+    		return index;
+    	}
 
-    class SpecialNode extends CAlphNode {
-		SpecialNode(int iOffset, Character sym, C ctx) {
-			initNode(iOffset, 1, ctx, sym.toString());
+    }
+
+    class SpecialNode extends COutputNode {
+		SpecialNode(int iOffset, String string, C ctx) {
+			initNode(iOffset, 1, ctx, string);
 		}
 		@Override
 		protected CGroupNode rebuildGroup(CAlphNode parent, SGroupInfo group, long iLbnd, long iHbnd) {
@@ -342,28 +387,13 @@ public class CAlphabetManager<C> {
 			return CAlphabetManager.this.mkSymbol(parent, sym, iLbnd, iHbnd);
 		}
 
-		@Override
-		public void Output() {
-			super.Output();
-			//probability 0 will break user trials, but user trials shouldn't involve unknown symbols anyway...?
-			m_Interface.outputText(m_strDisplayText, 0.0);
-		}
+		protected String outputText() {return m_strDisplayText;}
 		
-		@Override public void Undo() {
-			super.Undo();
-			m_Interface.deleteText(m_strDisplayText, 0.0);
-		}
-
-		@Override
-		public void PopulateChildren() {
-			IterateChildGroups(this,null,null);
-		}
-
 		@Override
 		public CDasherNode RebuildParent() {
 			if (Parent()==null) {
 				//make a node for the previous symbol - i.e. as we'd expect our parent to be...
-				CAlphNode n = GetRoot(getOffset()-1, true);
+				CAlphNode n = GetRoot(this, getOffset()-m_strDisplayText.length(), true);
 				n.Seen(true); n.m_bCommitted=true;
 
 				//however, n won't generate us as a child. That's ok: we'll put in
@@ -374,7 +404,7 @@ public class CAlphabetManager<C> {
 				// if we were a normal symbol, but instead will contain all the
 				// sensible, normal, symbols the user could enter in our place.
 				// However, it will sit beneath our common faked-out parent...
-				CAlphNode temp = GetRoot(getOffset()-1, false);
+				CAlphNode temp = GetRoot(this, getOffset()-m_strDisplayText.length(), false);
 				temp.Reparent(n, 0, cutOff);
 				
 				//make ourselves a child too - as long as n remembers...
@@ -394,7 +424,7 @@ public class CAlphabetManager<C> {
 		}
 	}
 
-    protected class CSymbolNode extends CAlphNode {
+    protected class CSymbolNode extends COutputNode {
     	private CSymbolNode() {}
     	
     	@Override
@@ -405,47 +435,15 @@ public class CAlphabetManager<C> {
 			super.initNode(iOffset, m_Alphabet.GetColour(symbol, iOffset), context, m_Alphabet.GetDisplayText(symbol));
 			this.m_Symbol = symbol;
 		}
-
-    	@Override
-    	public void PopulateChildren() {
-    		IterateChildGroups(this, null, null);
-    	}
-		
+    	
+    	protected String outputText() {return m_Alphabet.GetText(m_Symbol);}
+    	
     	/**
     	 * Symbol number represented by this node
     	 */
     	protected int m_Symbol;	// the character to display
     
-    	/** Absorb the characters output by this symbol in our alphabet */	
-    	@Override public void absorbContext(ListIterator<Character> it) {
-    		String text = m_Alphabet.GetText(m_Symbol);
-    		for (int i=text.length(); i-->0; )
-    			if (it.previous() != text.charAt(i))
-    				throw new IllegalArgumentException("Previous character "+it.next()+" but node would have output "+text.substring(0,i+1));		
-   		}
-    	 
-    	/**
-         * Generates an EditEvent announcing a new character has been
-         * entered, inferring the character from the Node supplied.
-         * <p>
-         * The second and third parameters are solely for logging
-         * purposes. Logging is not currently enabled in JDasher
-         * and so these can safely be set to null and 0 respectively.
-         * <p>
-         * In the case that logging is enabled, passing the second parameter
-         * as null will cause this addition not to be logged.
-         * 
-         * @param Node The node whose symbol we wish to look up and announce.
-         * @param Added An ArrayList<CSymbolProb> to which the typed symbol, annotated with its probability, will be added for logging purposes.
-         * @param iNormalization The total to which probabilities should add (usually LP_NORMALIZATION) for the purposes of generating the logged probability.
-         */
-    	@Override
-        public void Output() {
-    		m_Interface.outputText(m_Alphabet.GetText(m_Symbol), GetProb());
-    		super.Output();
-        }
-
-    	private double GetProb() {
+       	private double GetProb() {
     		double prob = 1.0; CDasherNode p=this;
         	do {
         		prob *= p.Range();
@@ -455,16 +453,6 @@ public class CAlphabetManager<C> {
         	} while (!(p instanceof CAlphabetManager<?>.CSymbolNode));
         	return prob;
     	}
-        /**
-         * Generates an EditEvent announcing that the character represented
-         * by this Node should be removed.
-         * 
-         * @param Node Node whose symbol we wish to remove.
-         */    
-        public void Undo() {
-        	super.Undo();
-        	m_Interface.deleteText(m_Alphabet.GetText(m_Symbol), GetProb());
-        }
         
         @Override
         public void commit(boolean bNv) {
@@ -481,7 +469,7 @@ public class CAlphabetManager<C> {
         
         @Override
         public CDasherNode RebuildParent() {
-	        if (Parent()==null && getOffset()>=0) RebuildParent(getOffset()-1);
+	        if (Parent()==null && getOffset()>=0) RebuildParent(getOffset()-m_Alphabet.GetText(m_Symbol).length());
 			return Parent();
 	    }
         
@@ -647,20 +635,8 @@ public class CAlphabetManager<C> {
      * @return
      */
     CDasherNode mkSymbol(CAlphNode parent, int sym, long iLbnd, long iHbnd) {
-    	//ACL make the new node's context ( - this used to be done only in PushNode(),
-		// before calling populate...)
-		C cont;
-		if (sym < m_Alphabet.GetNumberSymbols() && sym >= 0) {
-			// Normal symbol - derive context from parent
-			cont = m_LanguageModel.ContextWithSymbol(parent.context,sym);
-		} else {
-			assert false; //ACL I don't see how this can/should ever happen?
-			// For new "root" nodes (such as under control mode), we want to 
-			// mimic the root context
-			cont = m_LanguageModel.EmptyContext();
-			//      EnterText(cont, "");
-		}
-		CSymbolNode n = allocSymbol(parent.getOffset()+1, sym, cont);
+    	CSymbolNode n = allocSymbol(parent.getOffset()+m_Alphabet.GetText(sym).length(), sym,
+    			m_LanguageModel.ContextWithSymbol(parent.context, sym));
     	n.Reparent(parent, iLbnd, iHbnd);
     	return n;
     }

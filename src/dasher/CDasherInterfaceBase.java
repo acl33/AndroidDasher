@@ -168,14 +168,9 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	 */
 	protected abstract void GetStreams(String fname, Collection<InputStream> into);
 	
-	/**
-	 * Returns an iterator over all characters that have been entered - including
-	 * any after the (insertion point = node under crosshair). Initial position
-	 * should be such that the first call to previous() returns the character with
-	 * the specified offset.
-	 * @return a ListIterator of all characters entered
-	 */
-	public abstract ListIterator<Character> getContext(int iOffset);
+	/** Must return a representation of whatever we're currently editing. */
+	//TODO can clients keep references to this, that persist over SetOffset(,true)?
+	public abstract EditableDocument getDocument();
 	
 	/**
 	 * Sole constructor. Sets up the tree of DasherComponents
@@ -404,7 +399,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		if (m_pNCManager!=null) {
 			//since the AlphabetManager is about to be deleted, better write out anything unsaved...
 			m_pNCManager.getAlphabetManager().WriteTrainFileFull(this);
-			cont = m_pNCManager.m_ControlManager;
+			cont = m_pNCManager.getControlManager();
 		} else 
 			cont = makeControlManager();
 		
@@ -427,7 +422,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	
 	private CControlManager makeControlManager() {
 		List<ControlAction> actions = getControlActions();
-		return actions.isEmpty() ? null : new CControlManager(this, actions);	
+		return actions.isEmpty() ? null : new CControlManager(this, this, actions);	
 	}
 	
 	/**
@@ -436,8 +431,13 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	 *  Uses the same NCManager, but ensures probabilities are refreshed.
 	 */
 	private void forceRebuild() {
-		if (m_pNCManager!=null) m_DasherModel.SetNode(m_pNCManager.getAlphabetManager().GetRoot(m_DasherModel.GetOffset(), true));
+		if (m_pNCManager!=null) m_DasherModel.SetNode(m_pNCManager.getAlphabetManager().GetRoot(getDocument(), m_DasherModel.GetOffset(), true));
 	}
+	
+	/*package*/ CDasherNode getLastOutputNode() {
+		return m_DasherModel.getLastOutputNode();
+	}
+	
 	
 	/**
 	 * Pauses Dasher at a given mouse location, and schedules
@@ -812,25 +812,11 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		if (iOffset == m_DasherModel.GetOffset() && !bForce) return;
 		PauseAt(0,0);
 		
-		m_DasherModel.SetNode(m_pNCManager.getAlphabetManager().GetRoot(iOffset, true));
+		m_DasherModel.SetNode(m_pNCManager.getAlphabetManager().GetRoot(getDocument(), iOffset, true));
 		
 		Redraw(true);
 		
 	}
-	
-	/** Call to output/write text at the current cursor position
-	 * (when a symbol node is entered).
-	 * @param ch String representation of _a_single_symbol_. (TODO: make a unicode charpoint?)
-	 * @param prob Probability of symbol, conditioned on parent
-	 */
-	public abstract void outputText(String ch, double prob);
-	
-	/** Call to delete text at (i.e. just before) the current cursor position.
-	 * In other words, this performs a single backspace operation - when the user leaves a symbol node.
-	 * @param ch String representation of _a_single_symbol_. (TODO: make a unicode charpoint?)
-	 * @param prob Probability of symbol, conditioned on parent
-	 */
-	public abstract void deleteText(String ch, double prob);
 	
 	/**
 	 * Gets a reference to m_UserLog.
@@ -1062,7 +1048,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	private final Runnable REBUILD_TASK = new Runnable() {
 		public void run() {
 			//try not to move!
-			m_DasherModel.ReplaceLastOutputNode(m_pNCManager.getAlphabetManager().GetRoot(m_DasherModel.GetOffset(), true));
+			m_DasherModel.ReplaceLastOutputNode(m_pNCManager.getAlphabetManager().GetRoot(getDocument(), m_DasherModel.GetOffset(), true));
 		}
 	};
 	

@@ -34,13 +34,14 @@ import javax.swing.text.BadLocationException;
 import javax.swing.JTextArea;
 
 import dasher.CDasherInterfaceBase;
+import dasher.EditableDocument;
 
 /**
  * JDasherEdit is essentially an ordinary JTextArea with methods to deal with
  * outputting/deleting text for Dasher and which listens to caret updates
  * from Swing to rebuild the Dasher tree accordingly.
  */
-public class JDasherEdit extends JTextArea implements CaretListener {
+public class JDasherEdit extends JTextArea implements CaretListener, EditableDocument {
 	
 	/**
 	 * Interface which this EditBox will control when text is
@@ -69,7 +70,7 @@ public class JDasherEdit extends JTextArea implements CaretListener {
 	 * If text is added whilst there is a selection, we delete it
 	 * just as if the user had typed over the selection.
 	 */
-	void outputText(String ch) {
+	public void outputText(String ch, int offset) {
 		if(this.getSelectedText()!=null) {
 			this.replaceSelection("");
 		}
@@ -82,7 +83,7 @@ public class JDasherEdit extends JTextArea implements CaretListener {
 	 * Deleting whilst something is selected removes both the selection and its
 	 * preceding character.
 	 */
-	void deleteText(String ch) {
+	public void deleteText(String ch, int offset) {
 		if(!this.getText().equals("")) {
 
 			if(this.getSelectedText()!=null) {
@@ -143,5 +144,12 @@ public class JDasherEdit extends JTextArea implements CaretListener {
 		
 		m_Interface.setOffset(getSelectionStart()-1, false);
 		
-	}	
+	}
+
+	@Override
+	public Character getCharAt(int pos) {
+		String s = getText();
+		if (pos>=s.length()) return null;
+		return s.charAt(pos);
+	}
 }

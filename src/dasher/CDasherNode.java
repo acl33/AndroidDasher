@@ -28,18 +28,26 @@ package dasher;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.ListIterator;
 
 /**
- * A DasherNode represents a node in the DasherModel's tree; it
+ * <p>A DasherNode represents a node in the DasherModel's tree; it
  * is has a probability, children and one parent, and is typically
- * drawn as a box with a letter or symbol in it.
- * <p>
- * It is capable of finding a Node at a given Screen location
- * and of performing certain tree modifications (such as deleting
- * its children) but otherwise mainly acts as a data structure.
+ * drawn as a box with a letter or symbol in it.</p>
+ * 
+ * <p>Most methods in DasherNode deal with exploring the tree: expanding
+ * ({@link #PopulateChildren()}, collapsing, and actions to be taken when nodes
+ * are entered, exited etc. - subclasses override these to provide a variety of
+ * different effects.</p>
+ * 
+ * <p>Also implements the {@link Document} interface: the document represented
+ * by each node, is the document that <em>would</em> exist <em>if</em> that node
+ * were the last output (i.e. with none of its children output). Other versions
+ * of the Document methods (specifically {@link #hasCharsBackTo(CDasherNode, int)}
+ * and {@link #getCharBackTo(CDasherNode, int)}) allow reconstruction of said Document
+ * from that existing in the Interface (i.e. which represents the document resulting
+ * from the last node that actually has been output).</p>
  */
-public abstract class CDasherNode {
+public abstract class CDasherNode implements Document {
 
 	/** Cache whether only a single child of this node actually fitted on the screen
 	 * (i.e. all others were off-screen - if any were onscreen but too small to render,
@@ -125,7 +133,7 @@ public abstract class CDasherNode {
 	 * @param Colour Colour number
 	 */
     protected void initNode(int iOffset, int Colour, String strDisplayText) {
-    	if (strDisplayText==null) throw new IllegalArgumentException();
+    	if (strDisplayText==null || iOffset<-1) throw new IllegalArgumentException();
     	m_iOffset = iOffset;
 		m_iLbnd = 0;
 		m_iHbnd = CDasherModel.NORMALIZATION;
@@ -239,6 +247,63 @@ public abstract class CDasherNode {
 	  return m_iHbnd - m_iLbnd;
 	}
 
+	protected abstract CDasherInterfaceBase getIntf();
+	
+	/** <p>Gets the character that would be at the specified position,
+	 * if this node were the last output.</p>
+	 * <p>Subclasses <em>must</em> override to take into account any
+	 * modifications to the document that the node performs; they <em>may</em>
+	 * override to change the policy for handling {@link #isSeen()} nodes. (If
+	 * the default policy, which follows, is ok, they can return <code>super.getCharAt(i)</code>,
+	 * for <code>i</code> being the index in the document existing prior to this node being output.)</p>
+	 * <ul>
+	 * <li>For un-seen nodes, the default implementation recurses on the Parent
+	 * if there is one (note unseen nodes must have a parent, unless they are
+	 * the root node and nothing has been output), at the same index (as is
+	 * appropriate for a node that produces no output).</li>
+	 * <li>For seen nodes, there is a choice: we can recurse on the Parent,
+	 * <em>or</em> we can fall back to the Document provided by {@link #getIntf()},
+	 * i.e. which encapsulates all nodes that have been output. The default is
+	 * to prefer the Parent to provide information for characters at offsets
+	 * <em>before</em> this node, but to fall back to the interface (via {@link #getCharWithout(int)})
+	 * for characters <em>after</em> where this node would output. This policy is appropriate
+	 * for nodes which output text sequentially (e.g. Alphabet nodes), as using the
+	 * tree of existing nodes may be more efficient/reliable than making API calls
+	 * out to an external edit box etc. (e.g. on Android); however, nodes implementing
+	 * (say) backwards movement, might prefer an alternative policy. 
+	 * </ul>
+	 */
+	public Character getCharAt(int idx) {
+		if (Parent()==null) return getIntf().getDocument().getCharAt(idx);
+		if (isSeen() && idx > getOffset()) {
+			//if we are seen, there necessarily is a last-output node...
+			CDasherInterfaceBase intf = getIntf();
+			return intf.getDocument().getCharAt(intf.getLastOutputNode().undoTransformIndices(this, idx));
+		}
+		return Parent().getCharAt(idx);
+	}
+	
+	/** Get the index, within the document existing *with* this node output, of the
+     * character that would be at the specified position in the document *without* this
+     * node having been output
+     * @param idx Position in the parent-node's document
+     * @return Corresponding position in the document produced by this node
+     */
+    public int undoTransformIndex(int idx) {return idx;}
+
+    /** Get the index, within the document existing *with* this node output, of the
+     * character that would be at the specified position in the document that would
+     * exist if *only* the specified node (an ancestor of this), and no other node
+     * since, had been output.
+     * @param upTo Last node to consider as having been output
+     * @param idx Position in that node's document
+     * @return Corresponding position in the document produced by this node
+     */
+    private int undoTransformIndices(CDasherNode upTo, int idx) {
+        if (upTo!=this) idx = Parent().undoTransformIndices(upTo, idx); 
+        return undoTransformIndex(idx);
+     }
+	
 	/**
 	 * Gets a (read-only) reference to this Node's child list. 
 	 * 
@@ -247,12 +312,6 @@ public abstract class CDasherNode {
 	public List<CDasherNode> Children() {
 		return Collections.unmodifiableList(m_mChildren);
 	}
-	
-	/**
-	 * Move the supplied ListIterator backwards over the characters output by this node.
-	 * Default does nothing, appropriate only for nodes which don't output anything.
-	 */
-	public void absorbContext(ListIterator<Character> it) {}
 	
 	/**
 	 * Returns the size of our child list. (Avoids allocating unmodifiable lists, etc.)

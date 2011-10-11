@@ -18,8 +18,8 @@ public class CNodeCreationManager extends CDasherComponent {
 	 * Our alphabet manager, for functions which require knowledge
 	 * of an Alphabet.
 	 */
-	protected final CAlphabetManager<?> m_AlphabetManager;
-	protected final CControlManager m_ControlManager;
+	private final CAlphabetManager<?> m_AlphabetManager;
+	private final CControlManager m_ControlManager;
 	
 /**
 	 * Amount to add to all symbols' probabilities, EXCEPT control mode symbol,
@@ -125,5 +125,9 @@ public class CNodeCreationManager extends CDasherComponent {
 	
 	public CAlphabetManager<?> getAlphabetManager() {
 		return m_AlphabetManager;
+	}
+	
+	public CControlManager getControlManager() {
+		return m_ControlManager;
 	}
 }

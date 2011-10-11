@@ -27,7 +27,7 @@
 package dasher;
 
 import java.util.List;
-import java.util.ListIterator;
+import java.util.Iterator;
 
 /**
  * Subclass of LanguageModel which implements Prediction by
@@ -311,7 +311,7 @@ public class CPPMLanguageModel extends CLanguageModel<CPPMLanguageModel.CPPMnode
 	}
 	
 	@Override
-	protected CPPMnode BuildContext(ListIterator<Integer> previousSyms, int countSoFar) {
+	protected CPPMnode BuildContext(Iterator<Integer> previousSyms, int countSoFar) {
 		return (countSoFar >= m_iMaxOrder) ? EmptyContext() : super.BuildContext(previousSyms, countSoFar);
 	}
 
