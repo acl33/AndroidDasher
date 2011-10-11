@@ -5,9 +5,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import dasher.CControlManager;
 import dasher.CDasherNode;
 import dasher.Ebp_parameters;
 import dasher.CControlManager.ControlAction;
+import dasher.CControlManager.ControlActionBase;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -80,11 +82,10 @@ public class DasherInputMethod extends InputMethodService {
 		//Log.d("DasherIME","cursor "+initCursorPos+" actionLabel "+attribute.actionLabel);
 		//Prevent learn-as-you-write when editing any field that is a password
 		List<ControlAction> acts = new ArrayList<ControlAction>();
-		class Hide implements ControlAction, Runnable {
-			public void happen(CDasherNode node) {handler.post(this);}
+		class Hide extends CControlManager.FixedSuccessorsAction implements Runnable {
+			Hide() {super("Back");}//TODO internationalize...or icon?
+			public void happen(CControlManager mgr, CDasherNode node) {handler.post(this);}
 			public void run() {hideWindow();}
-			public String desc() {return "Back";} //TODO internationalize...or icon?
-			public List<ControlAction> successors() {return Collections.emptyList();}
 		};
 		acts.add(new Hide());
 		ControlAction icAction=makeICAction(ic, attribute);
@@ -177,19 +178,11 @@ public class DasherInputMethod extends InputMethodService {
 			(attribute.actionId!=EditorInfo.IME_ACTION_UNSPECIFIED && attribute.actionId!=EditorInfo.IME_ACTION_NONE)
 			? attribute.actionId : (attribute.imeOptions & EditorInfo.IME_MASK_ACTION);
 		final String actionLabel = getActionLabel(attribute, actionId);
-		final ControlAction act = new ControlAction() {
-			public String desc() {return actionLabel;}
-			public void happen(dasher.CDasherNode node) {ic.performEditorAction(actionId);}
-			public List<ControlAction> successors() {return Collections.<ControlAction>singletonList(null);}
+		final ControlAction act = new CControlManager.FixedSuccessorsAction(actionLabel, (ControlAction)null) {
+			public void happen(CControlManager mgr, dasher.CDasherNode node) {ic.performEditorAction(actionId);}
 		};
 		if ((attribute.imeOptions & EditorInfo.IME_FLAG_NO_ENTER_ACTION)==0) return act;
-		
-		return new ControlAction() {
-			private final List<ControlAction> baseSuccs = Arrays.asList(new ControlAction[] {null, act, null});
-			public String desc() {return actionLabel+"?";}
-			public void happen(CDasherNode node) {}					
-			public List<ControlAction> successors() {return baseSuccs;}
-		};
+		return new CControlManager.FixedSuccessorsAction(actionLabel+"?", null, act, null);
 	}
 
 	private static String getActionLabel(EditorInfo attribute, int actionId) {

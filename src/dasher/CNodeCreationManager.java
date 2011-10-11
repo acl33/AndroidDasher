@@ -119,8 +119,7 @@ public class CNodeCreationManager extends CDasherComponent {
 		//if (probInfo.length != m_cAlphabet.GetNumberSymbols()+2) throw new AssertionError();
 		//remaining space from penultimate to last elements of probInfo is for control node.
 		//control nodes have same offset as parent, not one more, as they do not enter a symbol themselves.
-		CDasherNode temp = m_ControlManager.GetRoot(pParent.getOffset());
-		temp.Reparent(pParent, probInfo[probInfo.length-2], probInfo[probInfo.length-1]);
+		m_ControlManager.GetRoot(pParent).Reparent(pParent, probInfo[probInfo.length-2], probInfo[probInfo.length-1]);
 	}
 	
 	public CAlphabetManager<?> getAlphabetManager() {

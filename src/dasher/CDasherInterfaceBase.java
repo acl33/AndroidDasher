@@ -422,7 +422,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	
 	private CControlManager makeControlManager() {
 		List<ControlAction> actions = getControlActions();
-		return actions.isEmpty() ? null : new CControlManager(this, this, actions);	
+		return actions.isEmpty() ? null : new CControlManager(this, this, m_DasherModel, actions);	
 	}
 	
 	/**
@@ -1036,19 +1036,10 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		return acts;
 	}
 	
-	public final CControlManager.ControlAction PAUSE_ACTION = new ControlAction() {
-		public String desc() {return "Pause";} //TODO internationalize
-		public void happen(CDasherNode node) {
+	public final CControlManager.ControlAction PAUSE_ACTION = new CControlManager.FixedSuccessorsAction("Pause") {
+		public void happen(CControlManager mgr,CDasherNode node) {
 			SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
-			endOfFrameTasks.add(REBUILD_TASK);
-		}
-		public List<ControlAction> successors() {return Collections.emptyList();}
-	};
-	
-	private final Runnable REBUILD_TASK = new Runnable() {
-		public void run() {
-			//try not to move!
-			m_DasherModel.ReplaceLastOutputNode(m_pNCManager.getAlphabetManager().GetRoot(getDocument(), m_DasherModel.GetOffset(), true));
+			replace(mgr,node);
 		}
 	};
 	
