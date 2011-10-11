@@ -76,15 +76,20 @@ public class CControlManager extends CDasherComponent {
 		 */
 		protected abstract int applyGetIndex(CControlManager mgr, CDasherNode node);
 	}
+	private final List<CDasherNode> tempList = new ArrayList<CDasherNode>();
 	
 	/*package*/ void populate(CDasherNode node, List<ControlAction> actions) {
-		long boundary = 0;
+		tempList.clear();
 		for (int i=0; i<actions.size(); i++) {
-			long next = (i+1) * NORMALIZATION / actions.size();
 			CDasherNode temp = (actions.get(i)==null)
-				? m_pNCMgr.getAlphabetManager().GetRoot(node, node.getOffset(), false)
-				: actions.get(i).make(this,node);
-			temp.Reparent(node, boundary, next);
+					? m_pNCMgr.getAlphabetManager().GetRoot(node, node.getOffset(), false)
+					: actions.get(i).make(this,node);
+			if (temp!=null) tempList.add(temp);
+		}
+		long boundary = 0;
+		for (int i=0; i<tempList.size(); i++) {
+			long next = (i+1) * NORMALIZATION / tempList.size();
+			tempList.get(i).Reparent(node, boundary, next);
 			boundary=next;
 		}
 	}
@@ -298,4 +303,121 @@ public class CControlManager extends CDasherComponent {
 			return (node.getOffset()>=0 ? 1 : 0) + (node.getCharAt(node.getOffset()+1)!=null ? 1 : 0);
 		}
 	};
+	
+	public static class AlphSwitcher extends CDasherComponent implements ControlAction, Runnable {
+		private String switchTo;
+		
+		AlphSwitcher(CDasherComponent creator) {
+			super(creator);
+			HandleEvent(Esp_parameters.SP_ALPHABET_ID);
+		}
+		
+		private static final Esp_parameters[] PAST_ALPHS = {
+			Esp_parameters.SP_ALPHABET_1, Esp_parameters.SP_ALPHABET_2, Esp_parameters.SP_ALPHABET_3, Esp_parameters.SP_ALPHABET_4
+		};
+	
+		/** cache for next */
+		private final List<ControlAction> alphChanges = new ArrayList<ControlAction>();
+		
+		@Override public void HandleEvent(EParameters param) {
+			if (param == Esp_parameters.SP_ALPHABET_ID) {
+				alphChanges.clear();
+				String n = GetStringParameter(Esp_parameters.SP_ALPHABET_ID);
+				List<String> all = new ArrayList<String>(PAST_ALPHS.length+1);
+				all.add(n); //include for summarizing
+				for (int i=0; i<PAST_ALPHS.length; i++) {
+					String h = GetStringParameter(PAST_ALPHS[i]);
+					if (h.length()>0 && !all.contains(h))
+						all.add(h); //TODO wd like 2 check h exists in CAlphIO?
+				}
+				String[] titles = summarize(all.toArray(new String[all.size()]));
+				//but don't make a node to "change" to the current alph
+				for (int i=1; i<titles.length; i++) {
+					final String alphName = all.get(i);
+					alphChanges.add(new FixedSuccessorsAction(titles[i]) {
+						public void happen(CControlManager mgr, CDasherNode node) {
+							switchTo = alphName;
+							mgr.m_Interface.doAtFrameEnd(AlphSwitcher.this);
+						}
+					});
+				}
+			}
+		}
+
+		//this is the header, it doesn't do anything
+		public void happen(CControlManager mgr, CDasherNode node) {}
+		public void undo(CControlManager mgr, CDasherNode node) {}
+		
+		public void populate(CControlManager mgr, CDasherNode node) {
+			mgr.populate(node, alphChanges);
+		}
+		
+		public int expectedNumSuccs(CDasherNode node) {return alphChanges.size();}		
+		public CContNode make(CControlManager mgr, CDasherNode parent) {
+			if (alphChanges.isEmpty()) return null;
+			if (alphChanges.size()==1) return alphChanges.get(0).make(mgr, parent);
+			return mgr.makeCont(this, parent.getOffset(), 7, "Alph"); //TODO internationalize
+		}
+		
+		public void run() {
+			SetStringParameter(Esp_parameters.SP_ALPHABET_ID, switchTo);
+		}
+	
+		private static final String[] NO_STRINGS = {};
+	
+		/**
+		 * @param in Array of strings to summarize; may be destructively updated
+		 * @param index highest index to which all supplied Strings are known to be the same
+		 * @return new array of summaries
+		 */
+		private static String[] summarize(String[] in) {
+			if (in.length==0) return NO_STRINGS;
+			String[] out = new String[in.length];
+			StringBuilder sb = new StringBuilder(); //the bit which is all the same
+			int c;
+			advanceChar: for (c=0;;c++) {
+				int s;
+				for (s=0; s<in.length; s++)
+					if (in[s].length()<=c || in[s].charAt(c)!=in[0].charAt(c)) break advanceChar;
+				//all the same; add to caption accordingly
+				if (c<3)
+					sb.append(in[0].charAt(c));
+				else if (c<6)
+					sb.append(".");
+				//TODO unicode ellipsis
+			}
+			//some are different, or else some terminate, at index c
+			Arrays.fill(out, sb.toString()); //caption for the bit that's the same
+			str: for (int s=0; s<in.length; s++) {
+				if (in[s].length()<=c) continue; //don't recurse, just use caption above
+				//ok, make recursive call for all elements same as this one at index c,
+				// if we haven't done such already
+				for (int o=0; o<s; o++)
+					if (in[o].length()>c && in[o].charAt(c)==in[s].charAt(c))
+						continue str; //no, already done in previous iter of str
+				//yes, ok, make recursive call.
+				//first gather together all later elements matching this one...
+				List<String> temp = new ArrayList<String>();
+				temp.add(in[s].substring(c));
+				for (int o=s+1; o<in.length; o++)
+					if (in[o].length()>c && in[o].charAt(c)==in[s].charAt(c))
+						temp.add(in[o].substring(c));
+				//now make recursive call to get captions summarizing
+				// the remaining portion of each String
+				String[] sub = summarize(temp.toArray(new String[temp.size()]));
+				//append results of recursive calls to captions already computed
+				out[s]+=sub[0];
+				for (int o=s+1, n=0; o<in.length; o++)
+					if (in[o].length()>c && in[o].charAt(c)==in[s].charAt(c))
+						out[o]+=sub[++n];
+			}
+			return out; //filled in by recursive calls
+		}
+	}
+
+	public static void main(String[] args) {
+		String[] s = AlphSwitcher.summarize(args);
+		for (int i=0; i<s.length; i++)
+			System.out.println(s[i]);
+	}
 }

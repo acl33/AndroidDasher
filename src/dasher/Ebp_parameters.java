@@ -55,6 +55,7 @@ public enum Ebp_parameters implements EParameters {
 			  BP_ONE_DIMENSIONAL_MODE("OneDimensionalMode", PERS, false, "Remap x/y to radius / curve all around origin"),
 			  BP_ONE_BUTTON_RELEASE_TIME("OneButtonReleaseTime", PERS, false, "Use length of single push, not gap, for 1B-dynamic mode"),
 			  BP_CONTROL_MODE_HAS_MOVE("ControlModeHasMove",PERS,true,"Include nodes to move cursor"),
+			  BP_CONTROL_MODE_ALPH_SWITCH("ControlModeHasAlphSwitch",PERS,true,"Include nodes to switch to previous four alphabets"),
 			  BP_MOVE_REBUILD("ControlMoveRebuild",PERS,true,"Rebuild behind cursor-move nodes with new context"),
 			  BP_MOVE_REBUILD_IMMED("ControlMoveRebuildImmed",PERS,false,"Rebuild move nodes immediately rather than on commit");
 

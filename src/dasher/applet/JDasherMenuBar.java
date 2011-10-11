@@ -214,6 +214,7 @@ public class JDasherMenuBar extends JMenuBar implements ActionListener, ItemList
 		cmd.add(makeCheckboxItem("Include Move Nodes", Ebp_parameters.BP_CONTROL_MODE_HAS_MOVE));
 		cmd.add(makeCheckboxItem("Rebuild behind Moves", Ebp_parameters.BP_MOVE_REBUILD));
 		cmd.add(makeCheckboxItem("Rebuild immediately", Ebp_parameters.BP_MOVE_REBUILD_IMMED));
+		cmd.add(makeCheckboxItem("Alphabet switching", Ebp_parameters.BP_CONTROL_MODE_ALPH_SWITCH));
 		
 		control.add(makeCheckboxItem("Start on Mouse", Ebp_parameters.BP_START_MOUSE));
 						

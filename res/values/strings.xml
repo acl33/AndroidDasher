@@ -41,6 +41,8 @@
 <string name="ControlMoveRebuildImmed_title">Rebuild Immediately</string>
 <string name="ControlMoveRebuildImmed_summaryOn">Replacement occurs after every character moved</string>
 <string name="ControlMoveRebuildImmed_summaryOff">Replacement occurs after all movement finished</string>
+<string name="ControlModeHasAlphSwitch_title">Alphabet-switching</string>
+<string name="ControlModeHasAlphSwitch_summary">Include nodes to switch to previous four alphabets</string>
 <string name="AlphabetID_title">Alphabet Name</string>
 <string name="AndroidInputMethod_title">Input Mode</string>
 <string name="AndroidInputMethod_summary">Choose how to control Dasher</string>

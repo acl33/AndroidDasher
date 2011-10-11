@@ -584,6 +584,8 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		endOfFrameTasks.clear();
 	}
 	
+	public void doAtFrameEnd(Runnable r) {endOfFrameTasks.add(r);}
+	
 	/**
 	 * <p>Called to schedule a redraw of the screen. Architectures in which
 	 * drawing must be initiated from the outside (e.g. Swing/AWT: app calls
@@ -1034,6 +1036,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		List<ControlAction> acts = new ArrayList<ControlAction>();
 		if (m_InputFilter!=null && m_InputFilter.supportsPause()) acts.add(PAUSE_ACTION);
 		if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_HAS_MOVE)) acts.add(CControlManager.MOVE);
+		if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_ALPH_SWITCH)) acts.add(new CControlManager.AlphSwitcher(this));
 		return acts;
 	}
 	
