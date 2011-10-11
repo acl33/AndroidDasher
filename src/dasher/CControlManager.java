@@ -173,4 +173,100 @@ public class CControlManager extends CDasherComponent {
 		node.initNode(iOffset, iColour, act, desc);
 		return node;
 	}
+	
+	private static abstract class MoveAction extends ControlActionBase {
+		MoveAction() {super(null);} //no title
+		public void happen(CControlManager mgr, CDasherNode node) {
+			mgr.m_Interface.getDocument().moveCursor(node.getOffset());
+			replace(mgr,node);
+		}
+		public int expectedNumSuccs(CDasherNode node) {
+			int num=1; //escape
+			if (node.getOffset()>=0) num++;
+			if (node.getCharAt(node.getOffset()+1)!=null) num++;
+			return num;
+		}
+		
+		public void populate(CControlManager mgr,CDasherNode node) {
+			int backSz=0;
+			CContNode back = BACK.make(mgr,node);
+			if (back!=null) {//can move back
+				backSz = (this==BACK) ?
+						(Character.isJavaIdentifierPart(node.getCharAt(node.getOffset())) ? 4 : 2) : 1;
+			}
+			int fwdSz=0;
+			CContNode fwd = FWD.make(mgr,node);
+			if (fwd!=null) {
+				fwdSz = (this==FWD) ?
+						(Character.isJavaIdentifierPart(node.getCharAt(node.getOffset()+1)) ? 4 : 2) : 1;
+			}
+			int total=fwdSz+backSz+1, low=0;
+			if (back!=null)
+				back.Reparent(node, low, low+=(NORMALIZATION*backSz)/total);
+			mgr.m_pNCMgr.getAlphabetManager().GetRoot(node, node.getOffset(), false).Reparent(node, low, low+=NORMALIZATION/total);
+			if (fwd!=null)
+				fwd.Reparent(node, low, NORMALIZATION);
+		}
+	}
+	
+	private static final MoveAction FWD = new MoveAction() {
+		private final List<Integer> tempList = new ArrayList<Integer>();
+		public CContNode make(CControlManager mgr, CDasherNode parent) {
+			int nOffset = parent.getOffset()+1;
+			final Character c =parent.getCharAt(nOffset);
+			if (c==null) return null;
+			Character c2;
+			String nxChar = (Character.isHighSurrogate(c)
+					&& (c2=parent.getCharAt(++nOffset))!=null
+					&& Character.isLowSurrogate(c2))
+				? new String(new char[] {c,c2}) : c.toString();
+			tempList.clear();
+			mgr.m_pNCMgr.getAlphabetManager().m_AlphabetMap.GetSymbols(tempList, nxChar);
+			assert tempList.size()==1;
+			String text = (tempList.get(0)==0) ? nxChar : mgr.m_pNCMgr.getAlphabetManager().m_Alphabet.GetDisplayText(tempList.get(0));
+			//sb.append('\u20D5'); //combining clockwise arrow above, but not in Android
+			return mgr.makeCont(this, nOffset, 11, ">"+text);
+		}
+	};
+	private static final MoveAction BACK = new MoveAction() {
+		private final List<Integer> tempList = new ArrayList<Integer>();
+		public CContNode make(CControlManager mgr, CDasherNode parent) {
+			int nOffset = parent.getOffset()-1;
+			if (parent.getOffset()<0) return null;
+			final Character c = parent.getCharAt(nOffset+1);
+			if (c==null) return null;
+			char c2;
+			String nxChar = (Character.isLowSurrogate(c)
+					&& nOffset>=0
+					&& Character.isHighSurrogate(c2=parent.getCharAt(nOffset--)))
+				? new String(new char[] {c2,c}) : c.toString();
+			tempList.clear();
+			mgr.m_pNCMgr.getAlphabetManager().m_AlphabetMap.GetSymbols(tempList, nxChar);
+			assert tempList.size()==1;
+			String text = (tempList.get(0)==0) ? nxChar : mgr.m_pNCMgr.getAlphabetManager().m_Alphabet.GetDisplayText(tempList.get(0));
+			//sb.append('\u20D4'); //combining anticlockwise arrow above, but not in Android
+			return mgr.makeCont(this, nOffset, 13, "<"+text);
+		}
+	};
+
+	/** Just offers a choice between forwards and back - but have to do it the
+	 * hard way, as (a) don't want to rebuild, nor have escape node; (b) might
+	 * not want fwd/back/either according to node offset.
+	 */
+	public static final ControlAction MOVE = new FixedSuccessorsAction("\u21C6") {//2194, 21C4, 21D4
+
+		public void populate(CControlManager mgr, CDasherNode node) {
+			//Note this duplicates a fair bit of MoveAction.populate...
+			CContNode b = BACK.make(mgr,node);
+			CContNode f = FWD.make(mgr,node);
+			if (b!=null)
+				b.Reparent(node, 0, f!=null ? NORMALIZATION/2 : NORMALIZATION);
+			if (f!=null)
+				f.Reparent(node, b!=null ? NORMALIZATION/2 : 0, NORMALIZATION);
+		}
+
+		public int expectedNumSuccs(CDasherNode node) {
+			return (node.getOffset()>=0 ? 1 : 0) + (node.getCharAt(node.getOffset()+1)!=null ? 1 : 0);
+		}
+	};
 }

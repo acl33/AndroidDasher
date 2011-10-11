@@ -15,5 +15,6 @@ public interface EditableDocument extends Document {
 	 * @param offset index where character should previously have been (e.g. 0=delete first character)
 	 */
 	public abstract void deleteText(String ch, int offset);
-	
+
+	public abstract void moveCursor(int iNewOffset);
 }

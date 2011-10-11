@@ -192,6 +192,15 @@ public class InputConnectionDocument implements EditableDocument, AndroidSetting
 	private String cacheContent;
 	private int cacheStart=-1; //cacheContent[x] = edittext[x+cacheStart]
 
+	public void moveCursor(int iNewOffset) {
+		synchronized (expectedOffsets) {
+			synchronized(this) {
+				ic.setSelection(iNewOffset+1, iNewOffset+1);
+				expectedOffsets.push(lastCursorPos=iNewOffset);
+			}
+		}
+	}
+
 	/*package*/ InputConnection getInputConnection() {
 		return ic;
 	}

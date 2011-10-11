@@ -1033,6 +1033,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		if (!GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE)) return Collections.emptyList();
 		List<ControlAction> acts = new ArrayList<ControlAction>();
 		if (m_InputFilter!=null && m_InputFilter.supportsPause()) acts.add(PAUSE_ACTION);
+		acts.add(CControlManager.MOVE);
 		return acts;
 	}
 	

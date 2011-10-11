@@ -93,8 +93,13 @@ public class JDasherEdit extends JTextArea implements CaretListener, EditableDoc
 			this.replaceRange("", oldCaret - ch.length(), oldCaret);
 			setCaretPosition(oldCaret - ch.length());
 		}
-
 	}
+	
+	@Override
+	public void moveCursor(int pos) {
+		setCaretPosition(pos+1);
+	}
+	
 	/** Gets the context, i.e. characters in the editbox,
 	 * starting at the specified position
 	 * @param StartPosition 0-based index of the character AFTER which the cursor is placed
