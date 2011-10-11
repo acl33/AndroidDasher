@@ -27,7 +27,7 @@ public class CControlManager extends CDasherComponent {
 	public CContNode GetRoot(int iOffset) {
 		return makeCont(iOffset, getColour(null), root, null);
 	}
-	
+
 	public static interface ControlAction {
 		public void happen(CDasherNode node);
 		public String desc();
