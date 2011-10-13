@@ -22,6 +22,8 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
+import ca.idi.tecla.sdk.SepManager;
+import ca.idi.tecla.sdk.SwitchEvent;
 
 public class DasherInputMethod extends InputMethodService {
 	private DasherCanvas surf;
@@ -105,8 +107,8 @@ public class DasherInputMethod extends InputMethodService {
 		
 		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidTeklaShield", false)) {
 			Log.d("DasherIME","Starting Tekla Service...");
-			registerReceiver(sepBroadcastReceiver, new IntentFilter("ca.idi.tekla.sep.action.SWITCH_EVENT_RECEIVED"));
-			if (startService(sepIntent)!=null)
+			registerReceiver(sepBroadcastReceiver, new IntentFilter(SwitchEvent.ACTION_SWITCH_EVENT_RECEIVED));
+			if (SepManager.start(this))
 				Log.d("DasherIME","Started Tekla");
 			else Log.d("DasherIME","Couldn't start Tekla");
 		}
@@ -168,7 +170,7 @@ public class DasherInputMethod extends InputMethodService {
 				Log.d("DasherIME","Tekla service not running?");
 				break tekla;
 			}
-			stopService(sepIntent);
+			SepManager.stop(this);
 			Log.d("DasherIME","Stopped Tekla");
 		}
 	}
@@ -225,32 +227,47 @@ public class DasherInputMethod extends InputMethodService {
 	private final BroadcastReceiver sepBroadcastReceiver = new BroadcastReceiver() {
 	    @Override
 	    public void onReceive(Context context, Intent intent) {
-	    	final int keyId;
-	    	switch(intent.getExtras().getInt("ca.idi.tekla.sep.extra.SWITCH_EVENT")) {
-	            case 10: //up
-	            	keyId=4;
-	                break;
-	            case 20: //down
-	            	keyId=2;
-	                break;
-	            case 40: //right
-	            	keyId=3; //=> forward
-	                break;
-	            case 80: //left
-	            	keyId=1; //=> back box
-	                break;
-                default:
-                	Log.d("DasherIME", "switch event received with keyid " +intent.getExtras().getInt("ca.idi.tekla.sep.extra.SWITCH_EVENT"));
-                	//don't know what to do with this switch id?!?!
-                	return;
-	            }
-	        final long time = System.currentTimeMillis();
-	        intf.enqueue(new Runnable() {
-	        	public void run() {
-	        		intf.KeyDown(time, keyId);
-	        		intf.KeyUp(time, keyId);
-	        	}
-	        });
+	    	final SwitchEvent e = new SwitchEvent(intent.getExtras());
+	    	android.util.Log.d("DasherIME","SwitchEvent changed "+e.getSwitchChanges()+" state "+e.getSwitchStates());
+    		intf.enqueue(new Runnable() {
+	    		public void run() {
+	    			for (int all=e.getSwitchChanges(); all!=0;) {
+	    	    		final int sw = (all & -all); //extract least-significant set bit
+	    	    		all &= ~sw; //next iter will process remainder
+	    	    		int keyId;
+	    	    		switch (sw) {
+	    	    			case SwitchEvent.SWITCH_J1: //case 10: //up
+	    	    				keyId = 4;
+	    	    				break;
+	    	    			case SwitchEvent.SWITCH_J2: //case 20: //down
+	    	    				keyId = 2;
+	    	    				break;
+	    	    			case SwitchEvent.SWITCH_J3: //case 40: //right
+	    	    				keyId = 4; // -> forward
+	    	    				break;
+	    	    			case SwitchEvent.SWITCH_J4: //case 80: //left
+	    	    				keyId = 1; // -> back
+	    	    				break;
+	    	    			case SwitchEvent.SWITCH_E1:
+	    	    				keyId = 4;
+	    	    				break;
+	    	    			case SwitchEvent.SWITCH_E2:
+	    	    				keyId = 2;
+	    	    				break;
+	        				default:
+	        					Log.d("DasherIME", "switch event received with change to switch ID "+sw);
+	        					continue;
+	    	    		}
+	    	    		final long time = System.currentTimeMillis();
+	    	    		if (e.isPressed(sw) == e.isReleased(sw))
+	    	    			throw new IllegalStateException(); //???
+	    	    		if (e.isPressed(sw))
+			    			intf.KeyDown(time, keyId);
+			    		else 
+							intf.KeyUp(time, keyId);
+	    			}
+	    		}
+	    	});
 	    }
 	};
 
