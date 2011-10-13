@@ -333,8 +333,12 @@
       android:title="@string/AndroidGeneralInputSettings_title">-->
         <CheckBoxPreference
           android:key="AndroidTeklaShield"
-          android:title="Tekla Shield"
-          android:summary="Listen for tekla switch events"/> 
+          android:title="Tecla Shield"
+          android:summary="Listen for external switch via Tecla shield (bluetooth)"/>
+        <CheckBoxPreference
+          android:key="AndroidUseTeklaNav"
+          android:title="Tecla Navigation"
+          android:summary="Switch to Tecla IME for UI Navigation when Dasher hidden"/>
 	<!--</PreferenceScreen>-->
 	
 </PreferenceScreen>

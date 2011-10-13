@@ -15,6 +15,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.inputmethodservice.InputMethodService;
 import android.os.Handler;
 import android.preference.PreferenceManager;
@@ -24,6 +25,8 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import ca.idi.tecla.sdk.SepManager;
 import ca.idi.tecla.sdk.SwitchEvent;
+import android.view.inputmethod.InputMethodInfo;
+import android.view.inputmethod.InputMethodManager;
 
 public class DasherInputMethod extends InputMethodService {
 	private DasherCanvas surf;
@@ -122,7 +125,11 @@ public class DasherInputMethod extends InputMethodService {
 	
 	
 	private final ControlAction HIDE = new HandlerAction("Back") { //TODO internationalize, or icon?
-		public void run() {hideWindow();}
+		public void run() {
+			if (PreferenceManager.getDefaultSharedPreferences(DasherInputMethod.this).getBoolean("AndroidUseTeklaNav", false))
+				bSwitch=true;
+			hideWindow();
+		}
 	};
 	
 	private final ControlAction SETTINGS = new HandlerAction("Settings") { //TODO internationalize
@@ -172,6 +179,27 @@ public class DasherInputMethod extends InputMethodService {
 			}
 			SepManager.stop(this);
 			Log.d("DasherIME","Stopped Tekla");
+		}
+	}
+	
+	private boolean bSwitch;
+	
+	@Override
+	public void onWindowHidden() {
+		super.onWindowHidden();
+		if (bSwitch) {
+			InputMethodManager mgr = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+			for (InputMethodInfo info : mgr.getEnabledInputMethodList()) {
+				if (info.getId().indexOf("Tecla")!=-1) {
+					android.util.Log.d("DasherIME",this+" switching to "+info.getId());
+					getWindow().dismiss();
+					//requestHideSelf(0);
+					switchInputMethod(info.getId());
+					//SharedPreferences teclaPrefs = createPackageContext(info.getPackageName(), 0).getSharedPreferences("REQ", MODE_WORLD_READABLE | MODE_WORLD_WRITEABLE);
+					
+					break;
+				}
+			}
 		}
 	}
 
