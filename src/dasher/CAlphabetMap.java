@@ -171,15 +171,19 @@ public class CAlphabetMap {
 			private int pos = iStartOffset;
 			public void remove() {throw new UnsupportedOperationException();}
 			public Integer next() {
-				char c = doc.getCharAt(pos--);
+				Character cc = doc.getCharAt(pos);
+				if (cc==null) return 0; //Happens on Android when switching context (?)
+										// - due to asynchronous callbacks from OS?
+				pos--;
+				char c=cc;
 				if (Character.isLowSurrogate(c)) {
 					if (pos>=0) {
-						char leading = doc.getCharAt(pos--);
+						char leading = doc.getCharAt(pos);
 						if (Character.isHighSurrogate(leading)) {
+							pos--;
 							Integer i = multiChars.get(Character.toCodePoint(leading, c));
 							return (i==null) ? UNDEFINED : i;
 						}
-						pos++;
 					}
 					System.err.println("Ignoring low surrogate "+c+" as not preceded by high surrogate");
 					return next();
