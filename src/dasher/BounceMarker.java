@@ -75,7 +75,6 @@ public class BounceMarker {
 			//No need to examine elements where one dist is definitely zero. 
 			for (int i=-weightsNeg.length; i<weightsPos.length; i++) tot+=getWeight(i)*other.getWeight(i+offset);
 			if (tot==0.0) {
-				android.util.Log.d("DynamicLearn", "Offset "+offset+" no ovelap mean "+mean()+" w "+other.mean()+" => "+(mean() + other.mean()-offset)/2);
 				//interpolate the midpoints, evenly weighted. (Better would be to weight
 				// according to variance, i.e. estimator X more concentrated => result
 				// closer to mean of X)
@@ -223,7 +222,6 @@ public class BounceMarker {
 		int iShift = (int)((dNats - expectedNats) *BINS_PER_SEC / LN2 / dCurBitrate);
 		int iMean = window.meanMulOff(other.window, iShift);
 		int iOffset = (int)(Math.exp(iMean*dCurBitrate*LN2/BINS_PER_SEC + (dNats-expectedNats)) * other.m_iLocn);
-		android.util.Log.d("DynamicLearn","Mean "+window.mean()+" & "+other.window.mean()+"<<"+iShift+" => " + iMean + " = offset " + iOffset+" from "+other.m_iLocn);
 		return iOffset;
 	}*/
 
@@ -274,7 +272,7 @@ public class BounceMarker {
 	/** Object pool of allocated but currently-unused PushRecs */
 	
 	private PushRec freeList;
-	private static double NATS_TO_LEARN=Math.log(4096/30.0);//30 =~= line thickness in dasher coords (3 pixels)...
+	private static final double NATS_TO_LEARN=Math.log(4096/30.0);//30 =~= line thickness in dasher coords (3 pixels)...
 	
 	/** Tell the marker that a call to {@link CDasherModel#Offset(int)} has been made.
 	 * The marker needs to know this, to adjust its own records of previous
