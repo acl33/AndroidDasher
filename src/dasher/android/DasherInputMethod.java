@@ -1,21 +1,17 @@
 package dasher.android;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import dasher.CControlManager;
 import dasher.CDasherNode;
 import dasher.Ebp_parameters;
 import dasher.CControlManager.ControlAction;
-import dasher.CControlManager.ControlActionBase;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.inputmethodservice.InputMethodService;
 import android.os.Handler;
 import android.preference.PreferenceManager;
@@ -25,6 +21,7 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import ca.idi.tecla.sdk.SepManager;
 import ca.idi.tecla.sdk.SwitchEvent;
+import ca.idi.tecla.sdk.Switcher;
 import android.view.inputmethod.InputMethodInfo;
 import android.view.inputmethod.InputMethodManager;
 
@@ -34,16 +31,60 @@ public class DasherInputMethod extends InputMethodService {
 	private InputConnectionDocument doc;
 	private Handler handler;
 	
+	private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+		
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			if (intent.getAction().equals(Switcher.ACTION_SHOW_IME))
+				showSoftIME();
+		}
+	};
+	
+	private void showSoftIME() {
+		if (isSoftIMEShowing()) {
+			Log.d("DasherIME", "Soft IME is already showing");
+		} else {
+			showWindow(true);
+			updateInputViewShown();
+			// This call causes a looped intent call until the IME View is created
+			callShowSoftIMEWatchDog(500);
+		}
+	}
+	
+	private void callShowSoftIMEWatchDog(int delay) {
+		handler.removeCallbacks(mShowSoftIMEWatchdog);
+		handler.postDelayed(mShowSoftIMEWatchdog, delay);
+	}
+	
+	private Runnable mShowSoftIMEWatchdog = new Runnable () {
+
+		public void run() {
+			if (!isSoftIMEShowing()) {
+				// If IME View still not showing...
+				// We are force-openning the soft IME through an intent since
+				//it seems to be the only way to make it work
+				sendBroadcast(new Intent(Switcher.ACTION_SHOW_IME));
+			}
+		}
+		
+	};
+	
+	private boolean isSoftIMEShowing() {
+		return surf!=null && surf.isShown();
+	}
+	
 	@Override public void onCreate() {
 		super.onCreate();
 		android.util.Log.d("DasherIME","onCreate "+this);
 		handler = new Handler();
 		//load data (now), and start training in background
 		intf = new ADasherInterface(this, true);
+		registerReceiver(mReceiver, new IntentFilter(Switcher.ACTION_SHOW_IME));
 	}
 	
 	@Override public void onDestroy() {
 		Log.d("DasherIME",this+" onDestroy...");
+		unregisterReceiver(mReceiver);
 		intf.StartShutdown();
 		intf=null;
 		super.onDestroy();
@@ -53,6 +94,7 @@ public class DasherInputMethod extends InputMethodService {
 	@Override public DasherCanvas onCreateInputView() {
 		surf = new DasherCanvas(DasherInputMethod.this, intf);
 		Log.d("DasherIME", this+" onCreateInputView creating surface "+surf);
+		Switcher.notifyIMECreated(this);
 		return surf;
 	}
 	
@@ -126,8 +168,7 @@ public class DasherInputMethod extends InputMethodService {
 	
 	private final ControlAction HIDE = new HandlerAction("Back") { //TODO internationalize, or icon?
 		public void run() {
-			if (PreferenceManager.getDefaultSharedPreferences(DasherInputMethod.this).getBoolean("AndroidUseTeklaNav", false))
-				bSwitch=true;
+			bSwitch=true;
 			hideWindow();
 		}
 	};
@@ -187,20 +228,24 @@ public class DasherInputMethod extends InputMethodService {
 	@Override
 	public void onWindowHidden() {
 		super.onWindowHidden();
-		if (bSwitch) {
-			InputMethodManager mgr = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-			for (InputMethodInfo info : mgr.getEnabledInputMethodList()) {
-				if (info.getId().indexOf("Tecla")!=-1) {
-					android.util.Log.d("DasherIME",this+" switching to "+info.getId());
-					getWindow().dismiss();
-					//requestHideSelf(0);
-					switchInputMethod(info.getId());
-					//SharedPreferences teclaPrefs = createPackageContext(info.getPackageName(), 0).getSharedPreferences("REQ", MODE_WORLD_READABLE | MODE_WORLD_WRITEABLE);
-					
-					break;
-				}
+		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidUseTeklaNav", false)) {
+			if (bSwitch) switchToTekla();
+		}
+	}
+	private void switchToTekla() {
+		InputMethodManager mgr = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+		for (InputMethodInfo info : mgr.getEnabledInputMethodList()) {
+			if (info.getId().indexOf("Tecla")!=-1) {
+				android.util.Log.d("DasherIME",this+" switching to "+info.getId());
+				getWindow().dismiss();
+				Switcher.switchTo(this,info.getId());
+				stopSelf();
+				Log.d("DasherIME",this+" switched");
+				return;
 			}
 		}
+		//couldn't find tekla!
+		bSwitch=false;
 	}
 
 	@Override
