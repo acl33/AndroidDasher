@@ -284,8 +284,8 @@ public class CDasherViewSquare extends CDasherView {
 		
 		//when only a single recursive call is required (and nothing more after that recursion completes),
 		// iterating round this loop allows a "tail call"-like mechanism without using any more stack space.
-		// (Stack space is limited on Android and the render-largest-child-even-if-too-small mechanism
-		// can otherwise lead to very deep recursion in some cases.)
+		// (Stack space is limited on Android and the render-any-child-more-than-half-the-size-of-parent
+		// could otherwise lead to very deep recursion.)
 		tailcall: while (true) {
 		
 			/* Step 1: Render *this* node */
@@ -358,7 +358,6 @@ public class CDasherViewSquare extends CDasherView {
 			}
 			/* Step 3: Draw our child nodes */
 			long newy1 = y1, newy2;
-			int bestSz=(int)(NORMALIZATION/3); CDasherNode bestCh=null;
 			assert newy1 <= visreg.maxY;
 			int i=0; final int j=Render.ChildCount();
 			for(; i<j; i++, newy1=newy2) {
@@ -369,7 +368,7 @@ public class CDasherViewSquare extends CDasherView {
 					//not reached screen yet.
 					m_model.Collapse(ch);
 					//and loop round
-				} else if (newy2 - newy1 > minNodeSizeText) {
+				} else if (newy2 - newy1 > minNodeSizeText || ch.Range()>NORMALIZATION/2) {
 					//definitely big enough to render
 					RecursiveRender(ch, newy1, newy2, mostleft);
 					if (newy2 >= visreg.maxY) {
@@ -377,32 +376,15 @@ public class CDasherViewSquare extends CDasherView {
 						if (newy1 <= visreg.minY) Render.m_OnlyChildRendered = ch; //and previous ones were too!
 						break; 
 					}
-					bestSz = Integer.MAX_VALUE;
 					//and loop round
 				} else {
-					if (ch.Range() > bestSz) {
-						if (bestCh!=null) m_model.Collapse(bestCh);
-						bestCh = ch;
-						bestSz = (int)ch.Range();
-					} else {
-						//did not RecursiveRender, or store into bestCh.
-						m_model.Collapse(ch);
-					}
+					//did not RecursiveRender, or store into bestCh.
+					m_model.Collapse(ch);
 					if (newy2 > visreg.maxY) break; //rest of children are offscreen
 				}
 			}
 			//any remaining children are offscreen, and do not need rendering
 			while (++i<j) m_model.Collapse(Render.ChildAtIndex(i));
-			if (bestSz>NORMALIZATION/3) {
-				if (bestSz!=Integer.MAX_VALUE) {
-					Render.m_OnlyChildRendered = bestCh;
-					//tail call...
-					y2 = y1 + (bestCh.Hbnd() * iDasherSize)/NORMALIZATION;
-					y1 += (bestCh.Lbnd() * iDasherSize)/NORMALIZATION;
-					Render = bestCh;
-					continue tailcall;
-				} else if (bestCh!=null) m_model.Collapse(bestCh);
-			}
 			//node rendered, no tail call required, exit
 			break;
 			// (otherwise, would loop round the tail-call loop)
