@@ -47,20 +47,14 @@ import static dasher.CDasherModel.*;
  */
 public class CDasherViewSquare extends CDasherView {
 
-	/**
-	 * Compression factor
-	 */
-	protected final long m_Y1;
+	/** Compression factor */
+	protected static final long m_Y1 = 4;
 	
-	/**
-	 * Y co-ordinate above which to apply compression
-	 */
-	protected final long m_Y2;
+	/** Y co-ordinate above which to apply compression */
+	protected static final long m_Y2 = (19*MAX_Y) / 20;
 	
-	/**
-	 * Y co-ordinate below which to apply compression
-	 */
-	protected final long m_Y3;
+	/**  Y co-ordinate below which to apply compression */
+	protected static final long m_Y3 = MAX_Y/20;
 		
 	/**
 	 * Converts a y co-ordinate according to this schema
@@ -68,7 +62,7 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param y Raw y co-ordinate
 	 * @return Converted y co-ordinate
 	 */
-	private long ymap(long y) {
+	private static long ymap(long y) {
 		if(y > m_Y2)
 			return m_Y2 + (y - m_Y2) / m_Y1;
 		else if(y < m_Y3)
@@ -83,7 +77,7 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param ydash Converted y co-ordinate
 	 * @return Original, raw y co-ordinate
 	 */
-	private long yunmap(long ydash) {
+	private static long yunmap(long ydash) {
 		if(ydash > m_Y2)
 			return (ydash - m_Y2) * m_Y1 + m_Y2;
 		else if(ydash < m_Y3)
@@ -152,9 +146,6 @@ public class CDasherViewSquare extends CDasherView {
 	public CDasherViewSquare(CDasherComponent creator, CDasherScreen DasherScreen, Opts.ScreenOrientations orient)  {
 		
 		super(creator, DasherScreen, orient);
-		m_Y1 = 4;
-		m_Y2 = (long)(0.95 * MAX_Y);
-		m_Y3 = (long)(0.05 * MAX_Y);
 		
 		m_DelayDraw = new CDelayedDraw();
 		
