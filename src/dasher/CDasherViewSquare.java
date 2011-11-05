@@ -452,7 +452,7 @@ public class CDasherViewSquare extends CDasherView {
 			return lpFontSize*11;
 	}
 	
-	private final long[] temp=new long[2];
+	private final long[] temp=new long[2], temp2=new long[2];
 	/**
 	 * Determines whether a node falls within our current visible
 	 * region. This is determined by the simple expedient of calling
@@ -665,30 +665,27 @@ public class CDasherViewSquare extends CDasherView {
 	public CDasherView.DRect VisibleRegion() {
 		
 		if(visibleRegion==null) {
-			DPoint m_iDasherMin,m_iDasherMax;		
+			final long[] min=temp,max=temp2;
 			switch( getOrientation() ) {
 			case LEFT_TO_RIGHT:
-				m_iDasherMin = Screen2Dasher(Screen().GetWidth(),0);
-				m_iDasherMax = Screen2Dasher(0,Screen().GetHeight());
+				min[0] = Screen().GetWidth(); min[1] = 0;
+				max[0]=0; max[1]=Screen().GetHeight();
 			break;
 			case RIGHT_TO_LEFT:
-				m_iDasherMin = Screen2Dasher(0,0);
-				m_iDasherMax = Screen2Dasher(Screen().GetWidth(),Screen().GetHeight());
+			case BOTTOM_TO_TOP:
+				min[0]=min[0]=0;
+				max[0]=Screen().GetWidth(); max[1]=Screen().GetHeight();
 			break;
 			case TOP_TO_BOTTOM:
-				m_iDasherMin = Screen2Dasher(0,Screen().GetHeight());
-				m_iDasherMax = Screen2Dasher(Screen().GetWidth(),0);
-			break;
-			case BOTTOM_TO_TOP:
-				m_iDasherMin = Screen2Dasher(0,0);
-				m_iDasherMax = Screen2Dasher(Screen().GetWidth(),Screen().GetHeight());
+				min[0]=0; min[1]=Screen().GetHeight();
+				max[0]=Screen().GetWidth(); max[1]=0;
 			break;
 			default:
 				throw new IllegalArgumentException("Unknown Orientation "+getOrientation());
 			}
-			
-			visibleRegion = new CDasherView.DRect(m_iDasherMin.x, m_iDasherMin.y,
-					m_iDasherMax.x, m_iDasherMax.y);
+			Screen2Dasher(min);
+			Screen2Dasher(max);
+			visibleRegion = new CDasherView.DRect(min[0], min[1], max[0], max[1]);
 		}
 		
 		return visibleRegion; 

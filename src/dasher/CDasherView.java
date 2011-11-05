@@ -68,20 +68,6 @@ public abstract class CDasherView extends CDasherComponent {
 		public final int y;
 	}
 
-	/*
-	 * Class representing a point in Dasher space
-	 */
-	static public class DPoint {
-		public DPoint(long x, long y) {this.x=x; this.y=y;}
-		/**
-		 * X co-ord
-		 */
-		public final long x;
-		/**
-		 * Y co-ord
-		 */
-		public final long y;
-	}
 
 	/**
 	 * Rectangle in Dasher space
@@ -348,19 +334,6 @@ public abstract class CDasherView extends CDasherComponent {
 	 */
 	public abstract CDasherNode Render(CDasherNode Root, long iRootMin, long iRootMax, ExpansionPolicy pol, CDasherModel model);
 			
-	/**
-	 * Convert a given screen co-ordinate to dasher co-ordinates. 
-	 * (Wraps {@link #Screen2Dasher(long[])}).
-	 * @param iInputX Screen x co-ordinate  
-	 * @param iInputY Screen y co-ordinate
-	 * @return Dasher co-ordinates
-	 */
-	public CDasherView.DPoint Screen2Dasher(int iInputX, int iInputY) {
-		long[] temp = new long[] {iInputX, iInputY};
-		Screen2Dasher(temp);
-		return new DPoint(temp[0],temp[1]);
-	}
-	
 	/**
 	 * Convert a given screen coordinate into dasher co-ordinates.
 	 * @param coords on entry, contains screen coordinates; on exit, contains dasher coordinates.
