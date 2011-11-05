@@ -258,7 +258,7 @@ public class CAlphabetMap {
 				while (true) {
 					//continues come here => check for -1 and then read next char
 					if (c==-1) break outer; 
-					if (c==m_AlphInfo.ctxChar) {
+					if (m_AlphInfo.ctxChar!=null && c==m_AlphInfo.ctxChar) {
 						int n = chars.read();
 						if (n==c) {
 							//actual occurrence of character wanted.
