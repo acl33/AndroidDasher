@@ -1,6 +1,7 @@
 package dasher;
 
 import static dasher.CDasherModel.CROSS_X;
+import dasher.CDasherView.MutablePoint;
 
 /**
  *
@@ -34,7 +35,7 @@ public class CStylusFilter extends CDefaultFilter {
             if ((iTime - m_iKeyDownTime < GetLongParameter(Elp_parameters.LP_TAP_TIME))) {
             	pInput.GetDasherCoords(pView, lastInputCoords);
     			ApplyClickTransform(pView, lastInputCoords);
-    			model.ScheduleZoom(Math.max(minX,lastInputCoords[0]),lastInputCoords[1]);
+    			model.ScheduleZoom(Math.max(minX,lastInputCoords.x),lastInputCoords.y);
     			//leave unpaused
             } else {
                 m_Interface.PauseAt(0, 0);
@@ -72,8 +73,8 @@ public class CStylusFilter extends CDefaultFilter {
      * subclasses may override to provide different behaviour.
      * @param dasherCoords x&amp;y dasher coordinates which will be target of zoom.
      */
-    protected void ApplyClickTransform(CDasherView pView, long[] dasherCoords) {
-    	dasherCoords[0] = (dasherCoords[0]*(1024+GetLongParameter(Elp_parameters.LP_S))/1024);
+    protected void ApplyClickTransform(CDasherView pView, MutablePoint dasherCoords) {
+    	dasherCoords.x = (dasherCoords.x*(1024+GetLongParameter(Elp_parameters.LP_S))/1024);
     }
     
     @Override public void HandleEvent(EParameters eParam) {

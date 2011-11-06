@@ -27,6 +27,7 @@ package dasher;
 
 import static dasher.CDasherModel.CROSS_X;
 import static dasher.CDasherModel.CROSS_Y;
+import dasher.CDasherView.MutablePoint;
 
 public class CCircleStartHandler extends CDefaultFilter.CStartHandler{
 	
@@ -108,12 +109,12 @@ public class CCircleStartHandler extends CDefaultFilter.CStartHandler{
 	 * @param m_DasherView View against which co-ordinate transforms should be performed.
 	 * @param m_DasherModel Model to which commands should be passed.
 	 */
-	@Override public void Timer(long iTime, long[] lastInputCoords, CDasherView pView) {
+	@Override public void Timer(long iTime, MutablePoint lastInputCoords, CDasherView pView) {
 
-		coords[0] = lastInputCoords[0]; coords[1] = lastInputCoords[1];
+		coords.init(lastInputCoords);
 		pView.Dasher2Screen(coords);
 		CDasherView.Point ctr = getScreenCenter(pView);
-		long xdist = ctr.x - coords[0], ydist = ctr.y - coords[1], rad=getScreenRadius(pView);
+		long xdist = ctr.x - coords.x, ydist = ctr.y - coords.y, rad=getScreenRadius(pView);
 		boolean inCircleNow = (xdist*xdist + ydist*ydist) < rad*rad; 
 		if (inCircleNow) {
 			if (inCircle) {
@@ -139,7 +140,7 @@ public class CCircleStartHandler extends CDefaultFilter.CStartHandler{
 		}
 	}
 	
-	private final long[] coords = new long[2];
+	private final MutablePoint coords = new MutablePoint();
 	
 	/**
 	 * Responds to events:

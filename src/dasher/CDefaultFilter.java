@@ -26,6 +26,7 @@
 package dasher;
 
 import static dasher.CDasherModel.*;
+import dasher.CDasherView.MutablePoint;
 
 /**
  * Dasher's current default input filter, otherwise known as 
@@ -88,7 +89,7 @@ public class CDefaultFilter extends CInputFilter {
 		 * @param inputCoords (Transformed) user input coordinates (Dasher coords)
 		 * @param pView For converting coordinates into screen-space, if necessary.
 		 */
-		public abstract void Timer(long iTime, long[] inputCoords, CDasherView pView);
+		public abstract void Timer(long iTime, MutablePoint inputCoords, CDasherView pView);
 	}
 	
 	/**
@@ -101,7 +102,7 @@ public class CDefaultFilter extends CInputFilter {
 	 */
 	protected CStartHandler m_StartHandler;
 	
-	protected final long[] lastInputCoords = new long[2];
+	protected final MutablePoint lastInputCoords = new MutablePoint();
 	
 	/**
 	 * Sole constructor. Constructs a DefaultFilter with an
@@ -143,12 +144,11 @@ public class CDefaultFilter extends CInputFilter {
 			ApplyTransform(View, lastInputCoords);
 		}
 		
-		temp[0]=lastInputCoords[0];
-		temp[1]=lastInputCoords[1];
+		temp.init(lastInputCoords);
 		View.Dasher2Screen(temp);
 		if(GetBoolParameter(Ebp_parameters.BP_DRAW_MOUSE)) {
 			// Draw a small box at the current mouse position.
-			View.Screen().DrawRectangle((int)temp[0]-5,(int)temp[1]-5,(int)temp[0]+5,(int)temp[1]+5,
+			View.Screen().DrawRectangle((int)temp.x-5,(int)temp.y-5,(int)temp.x+5,(int)temp.y+5,
 							GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 2 : 1, -1, 1);
 			bDidSomething = true;
 		}
@@ -159,16 +159,15 @@ public class CDefaultFilter extends CInputFilter {
 			 * mouse position.
 			 */
 			// End of line is the mouse cursor location...(set above)
-			final int mouseX = (int)temp[0], mouseY = (int)temp[1];
+			final int mouseX = (int)temp.x, mouseY = (int)temp.y;
 			
 			//Start of line is the crosshair location
 			//bah. Do we really have to do this every time? Would need notifying of screen changes...???
-			temp[0] = CROSS_X;
-			temp[1] = CROSS_Y;
+			temp.init(CROSS_X, CROSS_Y);
 			View.Dasher2Screen(temp);
 			
 			// Actually plot the line
-			View.Screen().drawLine((int)temp[0], (int)temp[1], mouseX, mouseY, (int)GetLongParameter(Elp_parameters.LP_LINE_WIDTH), GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 1 : -1);
+			View.Screen().drawLine((int)temp.x, (int)temp.y, mouseX, mouseY, (int)GetLongParameter(Elp_parameters.LP_LINE_WIDTH), GetBoolParameter(Ebp_parameters.BP_COLOUR_MODE) ? 1 : -1);
 
 			bDidSomething = true;
 		}
@@ -202,11 +201,11 @@ public class CDefaultFilter extends CInputFilter {
 			if (pInput.GetDasherCoords(pView,lastInputCoords)) {
 				ApplyTransform(pView, lastInputCoords);
 				float fSpeedMul = getSpeedMul(Time);
-				m_DasherModel.oneStepTowards(lastInputCoords[0],lastInputCoords[1], Time, fSpeedMul);
+				m_DasherModel.oneStepTowards(lastInputCoords.x,lastInputCoords.y, Time, fSpeedMul);
 			
 				//Only measure the user's accuracy (for speed control) when going at full speed
 				if (GetBoolParameter(Ebp_parameters.BP_AUTO_SPEEDCONTROL) && fSpeedMul==1.0f)
-					m_AutoSpeedControl.SpeedControl(lastInputCoords[0], lastInputCoords[1], m_DasherModel.Framerate(), pView);
+					m_AutoSpeedControl.SpeedControl(lastInputCoords.x, lastInputCoords.y, m_DasherModel.Framerate(), pView);
 			} else {
 				m_Interface.PauseAt(0, 0);
 			}
@@ -242,7 +241,7 @@ public class CDefaultFilter extends CInputFilter {
 	/** Modify the input coordinates according to any desired remapping scheme.
 	 * Subclasses may override to change the remapping; the default implementation:
 	 * <ol>
-	 * <li> First calls {@link #ApplyOffset(CDasherView, long[])};
+	 * <li> First calls {@link #ApplyOffset(CDasherView, MutablePoint)};
 	 * <li> then applies the eyetracker-remapping from C++ Dasher
 	 * _iff_ BP_COMPRESS_XTREME is set. (This compresses the y coordinate at
 	 * the extremes of the viewport, and also reduces the maximum x at extreme y
@@ -251,16 +250,16 @@ public class CDefaultFilter extends CInputFilter {
 	 * </ol>
 	 * @param inputCoords dasher co-ordinates of input
 	 */
-	protected void ApplyTransform(CDasherView pView, long[] coords) {
+	protected void ApplyTransform(CDasherView pView, MutablePoint coords) {
 		ApplyOffset(pView, coords);
 		if (GetBoolParameter(Ebp_parameters.BP_REMAP_XTREME)) {
 			// Y co-ordinate...
-			double double_y = ((coords[1]-CROSS_Y)/(double)CROSS_Y ); // Fraction above the crosshair
+			double double_y = ((coords.y-CROSS_Y)/(double)CROSS_Y ); // Fraction above the crosshair
 		  
-			coords[1] = (long)(CROSS_Y * (1.0 + double_y + (double_y*double_y*double_y * REPULSION_PARAM )));
+			coords.y = (long)(CROSS_Y * (1.0 + double_y + (double_y*double_y*double_y * REPULSION_PARAM )));
 		  
 			// X co-ordinate...  
-		 	coords[0] = Math.max(coords[0],(long)(CROSS_X * xmax(double_y)));
+		 	coords.x = Math.max(coords.x,(long)(CROSS_X * xmax(double_y)));
 		}
 	}
 	/**
@@ -268,11 +267,11 @@ public class CDefaultFilter extends CInputFilter {
 	 * Then, <em>iff</em> <code>BP_AUTOCALIBRATE</code> is true and
 	 * <code>BP_DASHER_PAUSED</code> is false, updates the offset params accordingly.
 	 */
-	protected void ApplyOffset(CDasherView pView, long[] coords) {
-		coords[1] += GetLongParameter(Elp_parameters.LP_TARGET_OFFSET) * 10; //Urgh, arbitrary constants. Better would be screen range in dasher coords / pixels ???
+	protected void ApplyOffset(CDasherView pView, MutablePoint coords) {
+		coords.x += GetLongParameter(Elp_parameters.LP_TARGET_OFFSET) * 10; //Urgh, arbitrary constants. Better would be screen range in dasher coords / pixels ???
 		if (GetBoolParameter(Ebp_parameters.BP_AUTOCALIBRATE)) {
 			if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
-			  m_iSum += (CROSS_Y - coords[1]);
+			  m_iSum += (CROSS_Y - coords.y);
 			  if (++m_iCounter>20) {
 				  if (Math.abs(m_iSum) > MAX_Y/2)
 					  SetLongParameter(Elp_parameters.LP_TARGET_OFFSET, GetLongParameter(Elp_parameters.LP_TARGET_OFFSET) + ((m_iSum>0) ? -1 : 1)) ;
@@ -374,5 +373,5 @@ public class CDefaultFilter extends CInputFilter {
 			m_StartHandler = null; //will allow to be GC'd. Ignore if it's still around...
 	}
 	
-	private final long[] temp=new long[2];
+	private final MutablePoint temp=new MutablePoint();
 }

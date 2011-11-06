@@ -1,6 +1,7 @@
 package dasher;
 
 import static dasher.CDasherModel.*;
+import dasher.CDasherView.MutablePoint;
 
 /** Overrides ApplyTransform to apply 1D remapping (using old x coord as radius)
  * if and only if {@link Ebp_parameters#BP_ONE_DIMENSIONAL_MODE} is enabled.
@@ -16,7 +17,7 @@ public class COneDimensionalFilter extends CDefaultFilter {
 	 * If {@link Ebp_parameters#BP_ONE_DIMENSIONAL_MODE} is set, calls {@link #Apply1DTransform}
 	 * (and then skips superclass method); otherwise, falls back to superclass.
 	 */
-	@Override public void ApplyTransform(CDasherView pView, long[] coords) {
+	@Override public void ApplyTransform(CDasherView pView, MutablePoint coords) {
 		if (GetBoolParameter(Ebp_parameters.BP_ONE_DIMENSIONAL_MODE))
 			Apply1DTransform(pView, coords);
 		else
@@ -34,11 +35,11 @@ public class COneDimensionalFilter extends CDefaultFilter {
 	 * @param pView
 	 * @param coords
 	 */
-	protected void Apply1DTransform(CDasherView pView, long[] coords) {
+	protected void Apply1DTransform(CDasherView pView, MutablePoint coords) {
 		// The distance between the Y coordinate and the centreline in pixels
-		final long disty=CROSS_Y-coords[1];
+		final long disty=CROSS_Y-coords.y;
 		  
-		final long circlesize = (long)(forwardmax*(1.0-coords[0]/(double)pView.VisibleRegion().maxX));
+		final long circlesize = (long)(forwardmax*(1.0-coords.x/(double)pView.VisibleRegion().maxX));
 		final long yforwardrange = (MAX_Y*5)/16;
 		final long yfullrange = MAX_Y/2;
 		  
@@ -63,8 +64,8 @@ public class COneDimensionalFilter extends CDefaultFilter {
 			//off limits, go nowhere
 			x=0; y=0;
 		} 
-		coords[0] = CROSS_X-(long)(x*circlesize);
-		coords[1] = CROSS_Y+(long)(y*circlesize);
+		coords.x = CROSS_X-(long)(x*circlesize);
+		coords.y = CROSS_Y+(long)(y*circlesize);
 	}
 	
 	@Override protected void CreateStartHandler() {

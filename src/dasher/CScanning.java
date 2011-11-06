@@ -1,5 +1,6 @@
 package dasher;
 
+import dasher.CDasherView.MutablePoint;
 import dasher.Opts.ScreenOrientations;
 
 public abstract class CScanning extends CDasherButtons {
@@ -17,7 +18,7 @@ public abstract class CScanning extends CDasherButtons {
 	@Override public void KeyDown(long iTime, int iId, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
 		if (iId==100) {
 			pInput.GetScreenCoords(pView, coords);
-			iId = (coords[1]<pView.Screen().GetHeight()/2)
+			iId = (coords.y<pView.Screen().GetHeight()/2)
 				? 1 //scan
 				: 2; //select
 			
@@ -42,7 +43,7 @@ public abstract class CScanning extends CDasherButtons {
 			break;
 		}
 	}
-	private final long coords[]=new long[2]; 
+	private final MutablePoint coords=new MutablePoint(); 
 	
 	@Override public boolean Timer(long Time, CDasherView m_pDasherView, CDasherInput pInput, CDasherModel pModel) {
 		if (GetLongParameter(Elp_parameters.LP_BUTTON_SCAN_TIME)>0) {

@@ -28,6 +28,7 @@ import android.util.Log;
 import dasher.*;
 import dasher.CControlManager.ControlAction;
 import dasher.android.AndroidSettings.SettingsOverride;
+import dasher.CDasherView.MutablePoint;
 
 public class ADasherInterface extends CDasherInterfaceBase {
 	/** SettingsStore in use. We keep a reference so we can override
@@ -242,22 +243,22 @@ public class ADasherInterface extends CDasherInterfaceBase {
 		final SharedPreferences prefs=PreferenceManager.getDefaultSharedPreferences(androidCtx);
 		final CDasherInput touch =new CDasherInput("Touch Input") {
 			@Override
-			public boolean GetScreenCoords(CDasherView pView,long[] Coordinates) {
+			public boolean GetScreenCoords(CDasherView pView, MutablePoint Coordinates) {
 				DasherCanvas surf = (DasherCanvas)m_DasherScreen;
 				if (!surf.GetCoordinates(Coordinates)) return false;
 				if (prefs.getBoolean("AndroidDoubleX", false)) {
 					switch (pView.getOrientation()) {
 					case LEFT_TO_RIGHT:
-						Coordinates[0] = Math.min(Coordinates[0]*2,surf.getWidth());
+						Coordinates.x = Math.min(Coordinates.x*2,surf.getWidth());
 						break;
 					case RIGHT_TO_LEFT:
-						Coordinates[0] = Math.max(0, 2*Coordinates[0]-surf.getWidth());
+						Coordinates.x = Math.max(0, 2*Coordinates.x-surf.getWidth());
 						break;
 					case TOP_TO_BOTTOM:
-						Coordinates[1] = Math.min(Coordinates[1]*2,surf.getHeight());
+						Coordinates.y = Math.min(Coordinates.y*2,surf.getHeight());
 						break;
 					case BOTTOM_TO_TOP:
-						Coordinates[1] = Math.max(0,2*Coordinates[1]-surf.getHeight());
+						Coordinates.y = Math.max(0,2*Coordinates.y-surf.getHeight());
 						break;
 					default:
 						throw new AssertionError();
@@ -275,14 +276,14 @@ public class ADasherInterface extends CDasherInterfaceBase {
 			RegisterModule(tilt);
 			RegisterModule(new CDasherInput("Touch with tilt X") {
 				long lastTouch;
-				@Override public boolean GetScreenCoords(CDasherView pView, long[] coords) {
+				@Override public boolean GetScreenCoords(CDasherView pView, MutablePoint coords) {
 					if (!tilt.GetScreenCoords(pView, coords)) return false;
 					boolean horiz = pView.getOrientation().isHorizontal;
-					long tiltC = (horiz) ? coords[0] : coords[1];
+					long tiltC = (horiz) ? coords.x : coords.y;
 					if (touch.GetScreenCoords(pView, coords))
-						lastTouch = (horiz) ? coords[1] : coords[0];
-					else coords[horiz ? 1 : 0] = lastTouch;
-					coords[horiz ? 0 : 1] = tiltC;
+						lastTouch = (horiz) ? coords.y : coords.x;
+					else if (horiz) coords.y=lastTouch; else coords.x=lastTouch;
+					if (horiz) coords.x=tiltC; else coords.y=tiltC;
 					return true;
 				}
 				@Override public void Activate() {tilt.Activate();}
@@ -296,7 +297,7 @@ public class ADasherInterface extends CDasherInterfaceBase {
 			 * is true, nor get its X coordinate from tilting. (Used for clicks, as opposed to drags)
 			 */
 			private final CDasherInput undoubledTouch = new CDasherInput("Unregistered Input Device") {
-				@Override public boolean GetScreenCoords(CDasherView pView, long[] coords) {
+				@Override public boolean GetScreenCoords(CDasherView pView, MutablePoint coords) {
 					return ((DasherCanvas)pView.Screen()).GetCoordinates(coords);
 				}
 			};
@@ -312,17 +313,17 @@ public class ADasherInterface extends CDasherInterfaceBase {
 			@Override public boolean supportsPause() {
 				return !prefs.getBoolean("AndroidTiltHoldToGo",false);
 			}
-			@Override public void ApplyTransform(CDasherView pView, long[] coords) {
+			@Override public void ApplyTransform(CDasherView pView, MutablePoint coords) {
 				if (prefs.getBoolean("AndroidTiltHoldToGo", false) && prefs.getBoolean("AndroidTiltUsesTouchX", false)) {
-					long iDasherY=coords[1];
+					long iDasherY=coords.y;
 					touch.GetDasherCoords(pView, coords);
-					coords[1]=iDasherY;
+					coords.y=iDasherY;
 				}
 				super.ApplyTransform(pView, coords);
 			}
 			
 			/** Override to disable offset for tilting. */
-			@Override public void ApplyOffset(CDasherView pView, long[] coords) {
+			@Override public void ApplyOffset(CDasherView pView, MutablePoint coords) {
 				//do nothing
 			}
 			

@@ -1,5 +1,7 @@
 package dasher;
 
+import dasher.CDasherView.MutablePoint;
+
 public abstract class CDasherButtons extends CInputFilter {
 	protected int m_iActiveBox;
 	protected SBox m_pBoxes[];
@@ -38,7 +40,7 @@ public abstract class CDasherButtons extends CInputFilter {
 	
 	protected abstract SBox[] SetupBoxes();
 
-	private final long[] mouseCoords = new long[2];
+	private final MutablePoint mouseCoords = new MutablePoint();
 	private long m_iLastTime;
 	
 	@Override public void KeyDown(long iTime, int iId, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
@@ -47,7 +49,7 @@ public abstract class CDasherButtons extends CInputFilter {
 			m_iActiveBox=-1;
 			pInput.GetDasherCoords(pView, mouseCoords);
 			for (int i = 0; i < m_pBoxes.length; i++) {
-				if (isInBox(mouseCoords[0],mouseCoords[1],m_pBoxes[i])) {
+				if (isInBox(mouseCoords.x,mouseCoords.y,m_pBoxes[i])) {
 					m_iActiveBox=i;
 					break;
 				}

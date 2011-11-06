@@ -26,6 +26,8 @@
 package dasher;
 
 import static dasher.CDasherModel.CROSS_X;
+import dasher.CDasherView.MutablePoint;
+
 /**
  * This is an InputFilter implementation which accepts mouse clicks
  * and causes Dasher to zoom to the location of successive clicks.
@@ -96,11 +98,11 @@ public class CClickFilter extends CInputFilter {
 	  switch(iId) {
 	  case 100: // Mouse clicks
 	    pInput.GetDasherCoords(pView,inputCoords);
-	    Model.ScheduleZoom(Math.max(minX, (inputCoords[0]*(1024+GetLongParameter(Elp_parameters.LP_S)))/1024),inputCoords[1]);
+	    Model.ScheduleZoom(Math.max(minX, (inputCoords.x*(1024+GetLongParameter(Elp_parameters.LP_S)))/1024),inputCoords.y);
 	    break;
 	  }
 	}
-	private final long[] inputCoords = new long[2];  
+	private final MutablePoint inputCoords = new MutablePoint();  
 
 	@Override public void HandleEvent(EParameters eParam) {
 		if (eParam==Elp_parameters.LP_MAX_ZOOM)

@@ -28,6 +28,7 @@ package dasher.applet;
 import java.awt.event.*;
 
 import dasher.CDasherView;
+import dasher.CDasherView.MutablePoint;
 
 /**
  * Simple mouse input device which uses a mouse motion listener to
@@ -70,9 +71,8 @@ public class JMouseInput extends dasher.CDasherInput implements MouseMotionListe
 	}
 
 	@Override
-	public boolean GetScreenCoords(CDasherView pView, long[] into) {
-		into[0] = mouseX;
-		into[1] = mouseY;
+	public boolean GetScreenCoords(CDasherView pView, MutablePoint into) {
+		into.init(mouseX, mouseY);
 		return true;
 	}
 	

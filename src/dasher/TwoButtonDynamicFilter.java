@@ -1,6 +1,7 @@
 package dasher;
 
 import static dasher.CDasherModel.CROSS_Y;
+import dasher.CDasherView.MutablePoint;
 
 public class TwoButtonDynamicFilter extends CDynamicPresses {
 
@@ -44,17 +45,17 @@ public class TwoButtonDynamicFilter extends CDynamicPresses {
 		m_bDecorationChanged=true;
 	}
 	
-	private final long[] coords=new long[2];
+	private final MutablePoint coords=new MutablePoint();
 	
 	@Override public void KeyDown(long iTime, int iId, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
 		if (iId==100 && pInput.GetDasherCoords(pView, coords))
-			iId = (coords[1] < CROSS_Y) ? 0 : 1;
+			iId = (coords.y < CROSS_Y) ? 0 : 1;
 		super.KeyDown(iTime, iId, pView, pInput, pModel);
 	}
 	
 	@Override public void KeyUp(long iTime, int iId, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
 		if (iId==100 && pInput.GetDasherCoords(pView, coords))
-			iId = (coords[1] < CROSS_Y) ? 0 : 1;
+			iId = (coords.y < CROSS_Y) ? 0 : 1;
 		super.KeyUp(iTime, iId, pView, pInput, pModel);
 	}
 	
