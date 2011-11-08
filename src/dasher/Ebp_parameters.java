@@ -44,7 +44,6 @@ public enum Ebp_parameters implements EParameters {
 			  BP_OUTLINE_MODE("OutlineBoxes", PERS, true, "OutlineBoxes"),
 			  BP_AUTOCALIBRATE("AutoAdjust", PERS, false, "Auto-adjust offset for eyetracker miscalibration"),
 			  BP_DASHER_PAUSED("DasherPaused", !PERS, true, "Dasher Paused"),
-			  BP_GAME_MODE("GameMode", PERS, false, "Dasher Game Mode"),
 			  BP_TRAINING("Training", !PERS, false, "Provides locking during training"),
 			  BP_LM_DICTIONARY("Dictionary", PERS, true, "Whether the word-based language model uses a dictionary"),
 			  BP_AUTO_SPEEDCONTROL("AutoSpeedControl", PERS, true, "AutoSpeedControl"),
