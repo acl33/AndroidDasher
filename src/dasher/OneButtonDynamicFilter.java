@@ -2,7 +2,7 @@ package dasher;
 
 import static dasher.CDasherModel.CROSS_Y;
 
-public class OneButtonDynamicFilter extends CDynamicFilter {
+public class OneButtonDynamicFilter extends CDynamicButtons {
 
 	private BounceMarker upInner, downInner, upOuter, downOuter;
 	
@@ -65,7 +65,7 @@ public class OneButtonDynamicFilter extends CDynamicFilter {
 				return false;
 			}
 		}
-		pModel.oneStepTowards(0, CROSS_Y, iTime, 1.0f);
+		pModel.oneStepTowards(0, CROSS_Y, iTime, getSpeedMul(pModel, iTime));
         return true;
 	}
 	
@@ -127,7 +127,7 @@ public class OneButtonDynamicFilter extends CDynamicFilter {
 			inner = downInner; outer = downOuter;
 		}
 		double dCurBitrate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) /100.0;
-		int iOffset = inner.GetTargetOffset(dCurBitrate, outer, iTime - m_iFirstPressTime);
+		int iOffset = inner.GetTargetOffset(dCurBitrate*getSpeedMul(pModel, iTime), outer, iTime - m_iFirstPressTime);
 		if (pModel.m_iDisplayOffset!=0) {
 			iOffset -= pModel.m_iDisplayOffset;
 			System.err.println("Display Offset "+pModel.m_iDisplayOffset+" reducing to "+iOffset);

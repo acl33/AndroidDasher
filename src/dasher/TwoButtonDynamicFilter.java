@@ -28,7 +28,7 @@ public class TwoButtonDynamicFilter extends CDynamicPresses {
 	@Override
 	public boolean TimerImpl(long iTime, CDasherView pView,CDasherModel pModel) {
 		super.TimerImpl(iTime, pView, pModel);
-		pModel.oneStepTowards(0, CROSS_Y, iTime, 1.0f);
+		pModel.oneStepTowards(0, CROSS_Y, iTime, getSpeedMul(pModel, iTime));
 		return true;
 	}
 
@@ -65,7 +65,7 @@ public class TwoButtonDynamicFilter extends CDynamicPresses {
 			if (iId==0 || iId==4) pMarker=up; else if (iId==1 || iId==2) pMarker=down; else break marker;
 			//apply offset
 			double dCurBitrate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) / 100.0;
-			int iOffset = pMarker.GetTargetOffset(dCurBitrate);
+			int iOffset = pMarker.GetTargetOffset(dCurBitrate*getSpeedMul(pModel, iTime));
 			if (pModel.m_iDisplayOffset!=0) System.err.println("Display Offset "+pModel.m_iDisplayOffset+" reducing to "+(iOffset -= pModel.m_iDisplayOffset));
 			double dNewNats = pModel.GetNats() - m_dNatsAtLastApply;
 			up.NotifyOffset(iOffset, dNewNats);

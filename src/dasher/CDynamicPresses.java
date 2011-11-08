@@ -1,6 +1,6 @@
 package dasher;
 
-public abstract class CDynamicPresses extends CDynamicFilter {
+public abstract class CDynamicPresses extends CDynamicButtons {
 
 	protected static final int SINGLE_PRESS=1, DOUBLE_PRESS=2, LONG_PRESS=0;
 	

@@ -47,7 +47,7 @@ import dasher.CDasherView.MutablePoint;
  * 
  * @see CAutoSpeedControl
  */
-public class CDefaultFilter extends CInputFilter {
+public class CDefaultFilter extends CDynamicFilter {
 
 	public abstract class CStartHandler extends CDasherComponent {
 		public CStartHandler() {
@@ -200,7 +200,7 @@ public class CDefaultFilter extends CInputFilter {
 		if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
 			if (pInput.GetDasherCoords(pView,lastInputCoords)) {
 				ApplyTransform(pView, lastInputCoords);
-				float fSpeedMul = getSpeedMul(Time) * pModel.getViscosity();
+				float fSpeedMul = getSpeedMul(pModel, Time);
 				pModel.oneStepTowards(lastInputCoords.x,lastInputCoords.y, Time, fSpeedMul);
 			
 				//Only measure the user's accuracy (for speed control) when going at full speed
@@ -217,25 +217,6 @@ public class CDefaultFilter extends CInputFilter {
 			m_StartHandler.Timer(Time, lastInputCoords, pView);
 		}
 		return bDidSomething;
-	}
-	
-	@Override public boolean supportsPause() {return true;}
-	
-	private long m_iStartTime;
-	
-	/** Computes multiplier to apply to speed, for this frame, not including node viscosity
-	 * The default implementation returns <code>1.0f</code> unless it's less than
-	 * <code>LP_SLOW_START_TIME</code> time since we last unpaused, in which case
-	 * we interpolate between 0.1 and 1.0. Subclasses can override to implement different behaviour. 
-	 * @param Time current time
-	 * @return multiplier to apply to speed; 0.0 = go nowhere, 1.0 = normal speed, higher = faster!
-	 */
-	protected float getSpeedMul(long Time) {
-		if (m_iStartTime==-1) m_iStartTime=Time;
-		if (Time-m_iStartTime < GetLongParameter(Elp_parameters.LP_SLOW_START_TIME)) {
-			return 0.1f+0.9f*(Time-m_iStartTime)/GetLongParameter(Elp_parameters.LP_SLOW_START_TIME);
-		}
-		return 1.0f;
 	}
 	
 	/** Modify the input coordinates according to any desired remapping scheme.
@@ -348,10 +329,8 @@ public class CDefaultFilter extends CInputFilter {
 	public void HandleEvent(EParameters eParam) {
 		if(eParam == Ebp_parameters.BP_CIRCLE_START || eParam == Ebp_parameters.BP_MOUSEPOS_MODE) {
 			CreateStartHandler();
-		} else if (eParam == Ebp_parameters.BP_DASHER_PAUSED) {
-			if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
-				m_iStartTime=-1;
 		}
+		super.HandleEvent(eParam);
 	}
 	
 	/**
