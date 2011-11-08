@@ -13,11 +13,10 @@ public abstract class CDynamicPresses extends CDynamicButtons {
 	}
 
 	@Override
-	protected boolean TimerImpl(long iTime, CDasherView pView, CDasherModel pModel) {
+	protected void TimerImpl(long iTime, CDasherView pView, CDasherModel pModel) {
 		if (m_bKeyDown && (iTime-m_iKeyDownTime)>GetLongParameter(Elp_parameters.LP_HOLD_TIME)) {
 			Event(iTime,m_iKeyId, LONG_PRESS, pModel);
 		}
-		return false; //did nothing
 	}
 	
 	@Override
@@ -34,12 +33,11 @@ public abstract class CDynamicPresses extends CDynamicButtons {
 	}
 	
 	protected void Event(long iTime, int iId, int pressType, CDasherModel pModel) {
-		int state = getState();
-		if (state==REVERSING) {
-			pause(iTime, pModel);
+		if (isReversing()) {
+			pause();
 		} else if (pressType!=SINGLE_PRESS) {
 			reverse(iTime, pModel);
-		} else if (state==PAUSED) {
+		} else if (isPaused()) {
 			run(iTime, pModel);
 		}
 	}
@@ -49,13 +47,19 @@ public abstract class CDynamicPresses extends CDynamicButtons {
 		if (iId==m_iKeyId) m_bKeyDown=false;
 	}
 	
-	@Override public void HandleEvent(EParameters eParam) {
-		if (eParam==Ebp_parameters.BP_DASHER_PAUSED && m_Interface.GetActiveInputFilter()==this) {
-			m_iKeyDownTime = Long.MAX_VALUE; //prevents both long-presses and double-presses
-			//Can argue we should do this in pause() / run() / reverse(), I'm being cautious...
-			// (e.g. if paused externally)
-		}
-		super.HandleEvent(eParam);
+	@Override public void pause() {
+		m_iKeyDownTime = Long.MAX_VALUE;
+		super.pause();
+	}
+	
+	@Override protected void reverse(long iTime,CDasherModel pModel) {
+		m_iKeyDownTime = Long.MAX_VALUE;
+		super.reverse(iTime, pModel);
+	}
+	
+	@Override protected void run(long iTime, CDasherModel pModel) {
+		m_iKeyDownTime = Long.MAX_VALUE;
+		super.run(iTime,pModel);
 	}
 	
 }

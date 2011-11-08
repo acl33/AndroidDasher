@@ -138,13 +138,7 @@ public class CDasherModel extends CFrameRate {
 	 */	
 	public void HandleEvent(EParameters eParam) {
 		super.HandleEvent(eParam); //framerate watches LP_MAX_BITRATE
-		if (eParam == Ebp_parameters.BP_DASHER_PAUSED) {
-			if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
-				//just unpaused
-				ResetFramecount();
-				total_nats = 0.0;
-			}
-		} else if (eParam == Elp_parameters.LP_NODE_BUDGET) {
+		if (eParam == Elp_parameters.LP_NODE_BUDGET) {
 			pol = new AmortizedPolicy((int)GetLongParameter(Elp_parameters.LP_NODE_BUDGET));
 		}
 	}
@@ -207,8 +201,8 @@ public class CDasherModel extends CFrameRate {
 			//sgi contains pairs of coordinates for the _old_ root; we need to update it to contain the corresponding
 			// coordinates for the _new_ root, which will be somewhat closer together.
 			// However, it's possible that the existing coordinate pairs may be bigger than would actually be allowed
-			// for a root node (and hence, when we try to NewGoTo them, we'll forcibly reparent); this means that we
-			// may have difficulty working with them...
+			// for a root node (and hence, when we try to use them in nextScheduledStep, we'll forcibly reparent);
+			// this means that we may have difficulty working with them...
 			final long r = m_gotoMax[i] - m_gotoMin[i];
 			m_gotoMax[i] = m_gotoMin[i] + //r * m_Root.Hbnd() / iNorm; //rewrite to ensure no overflow:
 				(r / NORMALIZATION) * m_Root.Hbnd() + ((r % NORMALIZATION) * m_Root.Hbnd())/NORMALIZATION;
@@ -401,13 +395,10 @@ public class CDasherModel extends CFrameRate {
 	}
 	
 	/**
-	 * Updates the model to move one step towards a specified mouse position.
-	 * The distance moved is based on the current frame rate
+	 * Schedules one frame of continuous/steady motion towards a specified
+	 * mouse position. The distance moved is based on the current frame rate
 	 * and a speed multiplier passed in (this can be used to implement slow start,
 	 * etc.)
-	 * 
-	 * Internally, this computes the new boundaries of the current root node,
-	 * and then calls {@link #NewGoTo(long, long)} to take us there.
 	 * 
 	 * @param miMousex Current mouse X co-ordinate
 	 * @param miMousey Current mouse Y co-ordinate
@@ -415,7 +406,7 @@ public class CDasherModel extends CFrameRate {
 	 * controls rate of advance per frame)
 	 * @param dSpeedMul Multiplier to apply to the current speed (i.e. 0.0 = don't move, 10.0 = go 10* as fast)
 	 */
-	public void oneStepTowards(long miMousex,
+	public void ScheduleOneStep(long miMousex,
 			long miMousey, 
 			long Time, 
 			float dSpeedMul)	{
@@ -503,44 +494,15 @@ public class CDasherModel extends CFrameRate {
 		m_gotoMin[0] = ((m_Rootmin - C) * MAX_Y) / (iTargetMax - iTargetMin) + C;
 		m_gotoMax[0] = ((m_Rootmax - C) * MAX_Y) / (iTargetMax - iTargetMin) + C;
 		m_iGotoNext=0;
-		NewGoTo();
-	}
-	
-	public boolean nextScheduledStep(long time) {
-		if (m_iGotoNext==-1) return false;
-		NewGoTo();
-		if (m_iGotoNext==-1) {
-            //just finished. Pause (mouse not held down, or schedule
-            //would have been cleared already)
-            SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
-        }
-		return true;
 	}
 	
 	/**
-	 * Changes the state of the Model updating the values of
-	 * m_RootMax and m_RootMin, which has the effect of making
-	 * us appear to move around. Also pushes the node we're moving
-	 * into, and cues output handling.
-	 * <p>
-	 * Both values are checked for sanity and truncated if necessary.
-	 * <p>
-	 * m_iTargetMax and Min are also updated according to the
-	 * new values of RootMax/Min.
-	 * <p>
-	 * For the purpose of output handling, the node under the
-	 * crosshair is noted before and after enacting the move,
-	 * and HandleOutput invoked upon this pair.
-	 * <p>
-	 * At present, this function takes no action if the proposed
-	 * new values are not allowable; it returns without making
-	 * any changes which has the effect of causing Dasher to
-	 * freeze.
-	 * 
-	 * @param newRootmin Desired new value of m_RootMin
-	 * @param newRootmax Desired new value of m_RootMax
+	 * Applies the next scheduled step of movement, if any, updating
+	 * m_RootMax and m_RootMin. Does not perform output - that's done
+	 * by RenderToView.
 	 */
-	protected void NewGoTo() {
+	public boolean nextScheduledStep(long time) {
+		if (m_iGotoNext==-1) return false;
 		m_iDisplayOffset = offsetQueue[nextOffset];
 		offsetQueue[nextOffset]=0;
 		if (++nextOffset==offsetQueue.length) nextOffset=0;
@@ -590,13 +552,15 @@ public class CDasherModel extends CFrameRate {
 		// (as is trying to go back beyond the earliest char in the current
 		// alphabet, if there are preceding characters not in that alphabet)
 		if ((newRootmax - newRootmin) > MAX_Y / 4) {
+		    total_nats += Math.log((newRootmax-newRootmin) / (double)(m_Rootmax - m_Rootmin));
+		    
 		    m_Rootmax = newRootmax;
 		    m_Rootmin = newRootmin;
 		    
 		    // This may have moved us around a bit...output will happen when the frame is rendered
-		    total_nats += Math.log((newRootmax-newRootmin) / (double)(m_Rootmax - m_Rootmin));
 		} //else, we just stop - this prevents the user from zooming too far back
 		//outside the root node (when we can't generate an older root).
+		return true;
 	}
 	
 	/**
@@ -779,8 +743,6 @@ public class CDasherModel extends CFrameRate {
 			m_gotoMin[s] = targetRootMin + (s * (m_Rootmin - targetRootMin))/iSteps;
 			m_gotoMax[s] = targetRootMax + (s * (m_Rootmax - targetRootMax))/iSteps;
 		}
-		
-		SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, false);
 	}
 	
 	/**

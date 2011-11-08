@@ -44,7 +44,7 @@ import dasher.CDasherView.MutablePoint;
  * This filter registers itself with the name <i>Click Mode</i>.
  */
 
-public class CClickFilter extends CInputFilter {
+public class CClickFilter extends CStaticFilter {
 
 	private long minX;
 	/**
@@ -58,29 +58,6 @@ public class CClickFilter extends CInputFilter {
 	public CClickFilter(CDasherComponent creator, CDasherInterfaceBase iface) {
 	  super(creator, iface, "Click Mode");
 	  HandleEvent(Elp_parameters.LP_MAX_ZOOM);
-	}
-
-	/**
-	 * Timer simply calls {@link CDasherModel#nextScheduledStep(long)},
-	 * causing it to move forward a frame if there is currently
-	 * a zoom scheduled. In the event that no further destination
-	 * is scheduled (ie. we are stationary and the user has not
-	 * clicked a new destination), nothing is done.
-	 * 
-	 * @param Time Current system time as a Unix timestamp
-	 * @param pView View to be used for co-ordinate transforms
-	 * @param pInput current input device from which to obtain coordinates
-	 * @param pModel Model which will be instructed to advance a frame
-	 * @return True if the model has changed, false otherwise. 
-	 */
-	@Override public boolean Timer(long Time, CDasherView pView, CDasherInput pInput, CDasherModel m_DasherModel) {
-	  if (!m_DasherModel.nextScheduledStep(Time)) {
-		  //no steps scheduled. Reached a pause...
-		  assert (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED));
-		  return false;
-	  }
-	  //ok - just executed a scheduled step
-	  return true;
 	}
 
 	/**
@@ -98,7 +75,8 @@ public class CClickFilter extends CInputFilter {
 	  switch(iId) {
 	  case 100: // Mouse clicks
 	    pInput.GetDasherCoords(pView,inputCoords);
-	    Model.ScheduleZoom(Math.max(minX, (inputCoords.x*(1024+GetLongParameter(Elp_parameters.LP_S)))/1024),inputCoords.y);
+	    scheduleZoom(Model, Math.max(minX, (inputCoords.x*(1024+GetLongParameter(Elp_parameters.LP_S)))/1024),inputCoords.y);
+	    m_Interface.Redraw(false);
 	    break;
 	  }
 	}

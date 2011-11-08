@@ -150,31 +150,25 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 			//request to any repaintTask, to perform another repaint;
 			// must ensure there _is_ a repaintTask before setting to true.
 			private boolean m_bRepaintScheduled;
-			@Override public void HandleEvent(EParameters eParam) {
-				super.HandleEvent(eParam);
-				if (eParam == Ebp_parameters.BP_DASHER_PAUSED) {
-					if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
-						Redraw(true);
-				}
-			}
 			
 			/** Called once on the Swing GUI Thread, at startup, when the JDasherPanel
 			 * first becomes paintable. After that, only called from taskScheduler thread.
 			 */
 			@Override public void Redraw(boolean bRedrawNodes) {
 				super.Redraw(bRedrawNodes);
+				m_bRepaintScheduled=true;
 				if (repaintTask==null)
 					taskScheduler.schedule(repaintTask = new TimerTask() {
 						@Override public void run() {
 							m_bRepaintScheduled=false;
-							panel.swapBuffers();
-							if (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) && !m_bRepaintScheduled) {
+							panel.swapBuffers(); //calls NewFrame(), which calls Redraw()
+							if (!m_bRepaintScheduled) {
 								repaintTask=null;
 								cancel();
 							}
 						}
 					}, 0, TIME_BETWEEN_FRAMES);
-				m_bRepaintScheduled=true;
+				
 			}
 			
 			@Override public void Message(String msg, int iSeverity) { // Requested message display

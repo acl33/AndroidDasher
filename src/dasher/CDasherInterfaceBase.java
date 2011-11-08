@@ -438,39 +438,6 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		return m_DasherModel.getLastOutputNode();
 	}
 	
-	
-	/**
-	 * Pauses Dasher at a given mouse location, and schedules
-	 * a full redraw of the nodes at the next frame.
-	 * <p>
-	 * Also generates a StopEvent to notify other components.
-	 * 
-	 * @param MouseX Mouse x co-ordinate at the time of stopping
-	 * @param MouseY Mouse y co-ordinate at the time of stopping
-	 */
-	public void PauseAt(int MouseX, int MouseY) {
-		SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
-		m_DasherModel.clearScheduledSteps();
-		// Request a full redraw at the next time step.
-		Redraw(true);
-
-		if (m_UserLog != null)
-			m_UserLog.StopWriting((float) GetNats());
-	}
-	
-	/**
-	 * Unpause Dasher. This will send a StartEvent to all
-	 * components.
-	 * 
-	 * @param Time System time as a UNIX timestamp at which Dasher was restarted.
-	 */
-	public void Unpause(long Time) { // CSFS: Formerly unsigned.
-		SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, false);
-
-		if (m_UserLog != null)
-			m_UserLog.StartWriting();
-	}
-	
 	/**
 	 * Creates an input device by calling GetModuleByName on the parameter
 	 * SP_INPUT_DEVICE. In the event that this does not correspond
@@ -510,6 +477,8 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	 */
 	private boolean m_bForceRedrawNodes;
 	
+	private boolean m_bLastPaused=true;
+	
 	/**
 	 * Encapsulates the entire process of drawing a
 	 * new frame of the Dasher world.
@@ -544,7 +513,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		//ok, we want to render some nodes...if there are any...
 		if (m_DasherModel == null) throw new IllegalStateException("Not yet constructed?");
 		
-		boolean bMoved = (m_InputFilter!=null) && m_InputFilter.Timer(iTime, m_DasherView, m_Input, m_DasherModel); 
+		if (m_InputFilter!=null) m_InputFilter.Timer(iTime, m_DasherView, m_Input, m_DasherModel); 
 					
 		/*Logging code. TODO: capture int iNumDeleted / Vector<CSymbolProb>
 		 * from information passed to outputText/deleteText, then:
@@ -553,6 +522,10 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		 *    if (vAdded.size() > 0)
 		 *        m_UserLog.AddSymbols(vAdded);
 		 */
+		final boolean bMoved = m_DasherModel.nextScheduledStep(iTime);
+		if (bMoved) {
+			if (m_bLastPaused) {onUnpause(); m_bLastPaused=false;}
+		} else if (!m_bLastPaused) {onPause(); m_bLastPaused=true;}
 		
 		boolean bRedraw = false; //did nodes change (move, expand, collapse)?
 		renderModel: {
@@ -565,6 +538,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 			m_DasherModel.CountFrame(iTime);
 			bRedraw = m_DasherModel.RenderToView(m_DasherView) || bMoved;
 		}
+		
 		if (m_MarkerScreen!=null)
 			m_MarkerScreen.SendMarker(1);
 		
@@ -583,6 +557,21 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		for (int i=0; i<endOfFrameTasks.size(); i++)
 			endOfFrameTasks.get(i).run();
 		endOfFrameTasks.clear();
+	}
+	
+	protected void onUnpause() {
+		if (m_UserLog != null)
+			m_UserLog.StartWriting();
+		m_DasherModel.ResetFramecount();
+		Redraw(true); //kick the render thread
+	}
+	
+	protected void onPause() {
+		// Request a full redraw at the next time step.
+		Redraw(true);
+
+		if (m_UserLog != null) //Hmmm. Really? between zooms of click mode?
+			m_UserLog.StopWriting((float) GetNats());
 	}
 	
 	public void doAtFrameEnd(Runnable r) {endOfFrameTasks.add(r);}
@@ -805,7 +794,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	public void setOffset(int iOffset, boolean bForce) {
 		if (m_DasherModel==null) throw new IllegalStateException("Not yet constructed?");
 		if (iOffset == m_DasherModel.GetOffset() && !bForce) return;
-		PauseAt(0,0);
+		m_InputFilter.pause();
 		
 		m_DasherModel.SetNode(m_pNCManager.getAlphabetManager().GetRoot(getDocument(), iOffset, true));
 		

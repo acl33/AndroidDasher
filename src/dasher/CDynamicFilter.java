@@ -21,21 +21,22 @@ public abstract class CDynamicFilter extends CInputFilter {
 	 */
 	protected float getSpeedMul(CDasherModel pModel, long Time) {
 		float dMul = pModel.getViscosity();
-		if (m_iStartTime==-1) m_iStartTime=Time;
+		//if (m_iStartTime==-1) m_iStartTime=Time;
 		if (Time-m_iStartTime < GetLongParameter(Elp_parameters.LP_SLOW_START_TIME)) {
 			dMul *= 0.1f+0.9f*(Time-m_iStartTime)/GetLongParameter(Elp_parameters.LP_SLOW_START_TIME);
 		}
 		return dMul;
 	}
 
-	/**
-	 * Watches for unpausing so we know to begin slowstart.
-	 */
-	public void HandleEvent(EParameters eParam) {
-		if (eParam == Ebp_parameters.BP_DASHER_PAUSED) {
-			if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
-				m_iStartTime=-1;
-		}
+	@Override public void pause() {m_bPaused=true;}
+	
+	protected void unpause(long iTime) {
+		if (!m_bPaused) return;
+		m_iStartTime=iTime;
+		m_bPaused=false;
+		m_Interface.Redraw(false);
 	}
-
+	
+	protected final boolean isPaused() {return m_bPaused;}
+	private boolean m_bPaused=true;
 }

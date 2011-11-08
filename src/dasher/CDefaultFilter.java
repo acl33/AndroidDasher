@@ -49,25 +49,16 @@ import dasher.CDasherView.MutablePoint;
  */
 public class CDefaultFilter extends CDynamicFilter {
 
-	public abstract class CStartHandler extends CDasherComponent {
-		public CStartHandler() {
-			super(CDefaultFilter.this);
-			// TODO Auto-generated constructor stub
+	public static abstract class CStartHandler extends CDasherComponent {
+		protected final CDefaultFilter filter;
+		public CStartHandler(CDefaultFilter filter) {
+			super(filter);
+			this.filter=filter;
 		}
 
-		/** Subclasses should call this to start */
-		protected void start(long iTime) {
-			//ignore request if we're no longer the active StartHandler
-			if (CDefaultFilter.this.m_StartHandler==this)
-				CDefaultFilter.this.m_Interface.Unpause(iTime);
-		}
+		/*package*/ void onPause() {}
+		/*package*/ void onUnpause() {}
 		
-		/** Subclasses should call this to stop */
-		protected void stop(long iTime) {
-			//ignore request if we're no longer the active StartHandler
-			if (CDefaultFilter.this.m_StartHandler==this)
-				CDefaultFilter.this.m_Interface.PauseAt(0, 0);
-		}
 		/**
 		 * Similar to its companion method in CInputFilter, this gives
 		 * the start handler an opportunity to draw itself and other
@@ -138,7 +129,7 @@ public class CDefaultFilter extends CDynamicFilter {
 		
 		boolean bDidSomething = (false);
 		
-		if (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
+		if (isPaused()) {
 			//not retrieving input coords in Timer, so better try here...
 			if (!pInput.GetDasherCoords(View, lastInputCoords)) return false;
 			ApplyTransform(View, lastInputCoords);
@@ -195,28 +186,33 @@ public class CDefaultFilter extends CDynamicFilter {
 	 * @param m_DasherModel Model to alter using these co-ordinates
 	 * @return True if the model has been changed, false if not.
 	 */
-	@Override public boolean Timer(long Time, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
-		boolean bDidSomething;
-		if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
+	@Override public void Timer(long Time, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
+		if (!isPaused()) {
 			if (pInput.GetDasherCoords(pView,lastInputCoords)) {
 				ApplyTransform(pView, lastInputCoords);
 				float fSpeedMul = getSpeedMul(pModel, Time);
-				pModel.oneStepTowards(lastInputCoords.x,lastInputCoords.y, Time, fSpeedMul);
+				pModel.ScheduleOneStep(lastInputCoords.x,lastInputCoords.y, Time, fSpeedMul);
 			
 				//Only measure the user's accuracy (for speed control) when going at full speed
 				if (GetBoolParameter(Ebp_parameters.BP_AUTO_SPEEDCONTROL) && fSpeedMul==1.0f)
 					m_AutoSpeedControl.SpeedControl(lastInputCoords.x, lastInputCoords.y, pView);
-			} else {
-				m_Interface.PauseAt(0, 0);
-			}
-			bDidSomething = true;
-		} else {
-			bDidSomething = false;
+			} else pause();
 		}
 		if(m_StartHandler != null) {
 			m_StartHandler.Timer(Time, lastInputCoords, pView);
 		}
-		return bDidSomething;
+	}
+	
+	@Override public void pause() {
+		super.pause();
+		if (m_StartHandler!=null)
+			m_StartHandler.onPause();
+	}
+	
+	@Override protected void unpause(long time) {
+		super.unpause(time);
+		if (m_StartHandler!=null)
+			m_StartHandler.onUnpause();
 	}
 	
 	/** Modify the input coordinates according to any desired remapping scheme.
@@ -251,7 +247,7 @@ public class CDefaultFilter extends CDynamicFilter {
 	protected void ApplyOffset(CDasherView pView, MutablePoint coords) {
 		coords.x += GetLongParameter(Elp_parameters.LP_TARGET_OFFSET) * 10; //Urgh, arbitrary constants. Better would be screen range in dasher coords / pixels ???
 		if (GetBoolParameter(Ebp_parameters.BP_AUTOCALIBRATE)) {
-			if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
+			if (!isPaused()) {
 			  m_iSum += (CROSS_Y - coords.y);
 			  if (++m_iCounter>20) {
 				  if (Math.abs(m_iSum) > MAX_Y/2)
@@ -295,25 +291,10 @@ public class CDefaultFilter extends CDynamicFilter {
 	 * @param Model Ignored by this filter
 	 */
 	@Override public void KeyDown(long iTime, int iId, CDasherView pView, CDasherInput pInput, CDasherModel Model) {
-		
-		switch(iId) {
-		case 0: // Start on space
-			// FIXME - wrap this in a 'start/stop' method (and use for buttons as well as keys)
-			if(GetBoolParameter(Ebp_parameters.BP_START_SPACE)) {
-				if(GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
-					m_Interface.Unpause(iTime);
-				else
-					m_Interface.PauseAt(0, 0);
-			}
-			break; 
-		case 100: // Start on mouse
-			if(GetBoolParameter(Ebp_parameters.BP_START_MOUSE)) {
-				if(GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
-					m_Interface.Unpause(iTime);
-				else
-					m_Interface.PauseAt(0, 0);
-			}
-			break;
+		if ((iId==0 && GetBoolParameter(Ebp_parameters.BP_START_SPACE))
+				|| (iId==100 && GetBoolParameter(Ebp_parameters.BP_START_MOUSE))) {
+			if (isPaused()) unpause(iTime);
+			else pause();
 		}
 	}
 	

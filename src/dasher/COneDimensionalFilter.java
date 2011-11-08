@@ -73,7 +73,7 @@ public class COneDimensionalFilter extends CDefaultFilter {
 			m_StartHandler= new CCircleStartHandler(this) {
 				private CDasherView.Point fwdCircle;
 				@Override protected CDasherView.Point getScreenCenter(CDasherView pView) {
-					if (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)
+					if (filter.isPaused()
 							&& GetBoolParameter(Ebp_parameters.BP_ONE_DIMENSIONAL_MODE)) {
 						//move circle
 						if (fwdCircle==null) {

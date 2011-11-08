@@ -26,10 +26,9 @@ public class TwoButtonDynamicFilter extends CDynamicPresses {
 	}
 	
 	@Override
-	public boolean TimerImpl(long iTime, CDasherView pView,CDasherModel pModel) {
+	public void TimerImpl(long iTime, CDasherView pView,CDasherModel pModel) {
 		super.TimerImpl(iTime, pView, pModel);
-		pModel.oneStepTowards(0, CROSS_Y, iTime, getSpeedMul(pModel, iTime));
-		return true;
+		pModel.ScheduleOneStep(0, CROSS_Y, iTime, getSpeedMul(pModel, iTime));
 	}
 
 	@Override
@@ -60,7 +59,7 @@ public class TwoButtonDynamicFilter extends CDynamicPresses {
 	}
 	
 	@Override public void Event(long iTime, int iId, int pressType, CDasherModel pModel) {
-		marker: if (pressType==SINGLE_PRESS && getState()==RUNNING) {
+		marker: if (pressType==SINGLE_PRESS && isRunning()) {
 			BounceMarker pMarker;
 			if (iId==0 || iId==4) pMarker=up; else if (iId==1 || iId==2) pMarker=down; else break marker;
 			//apply offset
@@ -71,21 +70,15 @@ public class TwoButtonDynamicFilter extends CDynamicPresses {
 			up.NotifyOffset(iOffset, dNewNats);
 			down.NotifyOffset(iOffset, dNewNats);
 			pMarker.RecordPush(iOffset, 0.0, dCurBitrate);
-			pModel.Offset(iOffset);
+			ApplyOffset(pModel,iOffset);
 			m_dNatsAtLastApply = pModel.GetNats();
 		}
 		super.Event(iTime, iId, pressType, pModel);
 	}
 	
-	@Override public void reverse(long iTime, CDasherModel pModel) {
-		pModel.AbortOffset();
+	@Override protected void reverse(long iTime, CDasherModel pModel) {
 		up.clearPushes(); down.clearPushes();
 		super.reverse(iTime, pModel);
-	}
-	
-	@Override public void pause(long iTime, CDasherModel pModel) {
-		pModel.AbortOffset();
-		super.pause(iTime,pModel);
 	}
 
 }

@@ -40,7 +40,6 @@ public class ADasherInterface extends CDasherInterfaceBase {
 	protected final Context androidCtx;
 	private final BlockingQueue<Runnable> tasks = supportsLinkedBlockingQueue ? new LinkedBlockingQueue<Runnable>() : new ArrayBlockingQueue<Runnable>(5);
 	private final Thread taskThread;
-	private boolean m_bRedrawRequested;
 	private static final boolean supportsLinkedBlockingQueue;
 	private TiltInput tilt;
 	
@@ -80,10 +79,11 @@ public class ADasherInterface extends CDasherInterfaceBase {
 				try {
 					Queue<Runnable> frameTasks = new LinkedList<Runnable>();
 					while (true) {
-						if (m_DasherScreen!=null && doc!=null && (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) || m_bRedrawRequested)) {
-							m_bRedrawRequested = false;
-							((DasherCanvas)m_DasherScreen).renderFrame();
+						if (m_DasherScreen!=null && doc!=null) {
 							tasks.drainTo(frameTasks);
+							((DasherCanvas)m_DasherScreen).renderFrame();
+							//that'll call round to Redraw(boolean) to schedule another frame
+							// if anything happened in this one.
 							while (!frameTasks.isEmpty())
 								frameTasks.remove().run();
 						} else {
@@ -112,25 +112,16 @@ public class ADasherInterface extends CDasherInterfaceBase {
 	
 	@Override
 	public void Redraw(final boolean bChanged) {
-		if (Thread.currentThread()==taskThread) {
+		if (Thread.currentThread()==taskThread)
 			super.Redraw(bChanged);
-			m_bRedrawRequested=true;
-		} else
+		else
 			enqueue(new Runnable() {
 				public void run() {
 					Redraw(bChanged);
 				}
-			});
+			}); //enqueue-ing, will unblock the taskThread waiting in tasks.take()...
 	}
-	
-	@Override
-	public void HandleEvent(EParameters eParam) {
-		super.HandleEvent(eParam);
-		if (eParam == Ebp_parameters.BP_DASHER_PAUSED
-				&& !GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
-			taskThread.interrupt();
-	}
-	
+
 	@Override public void Message(String msg, int iSeverity) {
 		switch (iSeverity) {
 		case 0:
@@ -329,26 +320,23 @@ public class ADasherInterface extends CDasherInterfaceBase {
 			
 			@Override public void KeyDown(long iTime, int iID, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
 				if (iID==100 && prefs.getBoolean("AndroidTiltHoldToGo", false)) {
-					m_Interface.Unpause(iTime);
+					unpause(iTime);
 				} else
 					super.KeyDown(iTime, iID, pView, pInput, pModel);
 			}
 			
-			@Override public void HandleEvent(EParameters eParam) {
-				super.HandleEvent(eParam);
-				if (m_Interface.GetActiveInputFilter()==this && eParam == Ebp_parameters.BP_DASHER_PAUSED &&
-						!prefs.getBoolean("AndroidTiltHoldToGo", false)) {
-					if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
-						if (!wl.isHeld()) wl.acquire();
-					} else {
-						if (wl.isHeld()) wl.release();
-					}
-				}
+			@Override public void pause() {
+				if (wl.isHeld()) wl.release();
+				super.pause();
+			}
+			@Override protected void unpause(long iTime) {
+				if (!wl.isHeld()) wl.acquire();
+				super.unpause(iTime);
 			}
 			
 			@Override public void KeyUp(long iTime, int iID, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
 				if (iID==100 && prefs.getBoolean("AndroidTiltHoldToGo", false))
-					m_Interface.PauseAt(0,0);
+					pause();
 				else
 					super.KeyUp(iTime, iID, pView, pInput, pModel);
 			}
@@ -358,6 +346,22 @@ public class ADasherInterface extends CDasherInterfaceBase {
 		RegisterModule(new AndroidCompass(this,this));
 		RegisterModule(new Android1BDynamic(this, this));
 		RegisterModule(new Android2BDynamic(this, this));
+	}
+	
+	@Override public void KeyDown(final long iTime, final int iId) {
+		if (Thread.currentThread()==taskThread)
+			super.KeyDown(iTime, iId);
+		else enqueue(new Runnable() {
+			public void run() {KeyDown(iTime,iId);}
+		});
+	}
+	
+	@Override public void KeyUp(final long iTime, final int iId) {
+		if (Thread.currentThread()==taskThread)
+			super.KeyUp(iTime, iId);
+		else enqueue(new Runnable() {
+			public void run() {KeyUp(iTime,iId);}
+		});
 	}
 	
 	@Override public void ChangeScreen(CDasherScreen surf) {

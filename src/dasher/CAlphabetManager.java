@@ -383,7 +383,7 @@ public class CAlphabetManager<C> {
 		public void Enter() {
 			//Make damn sure the user notices something funny is going on by
 			// stopping him in his tracks. He can continue by unpausing...
-			m_Interface.PauseAt(0, 0);
+			m_Interface.GetActiveInputFilter().pause();
 		}
 	}
 

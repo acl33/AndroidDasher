@@ -10,6 +10,7 @@ import dasher.CDasherView.MutablePoint;
 public class CStylusFilter extends CDefaultFilter {
     private long m_iKeyDownTime;
     private long minX;
+    private CDasherModel model; //model with which any zoom was scheduled
     
     public CStylusFilter(CDasherComponent creator, CDasherInterfaceBase iface) {
         this(creator, iface, "Stylus Control");
@@ -24,7 +25,7 @@ public class CStylusFilter extends CDefaultFilter {
     public void KeyDown(long iTime, int keyId, CDasherView pView, CDasherInput pInput, CDasherModel model) {
         if (keyId == 100) {
             model.clearScheduledSteps();
-            m_Interface.Unpause(iTime);
+            unpause(iTime);
             m_iKeyDownTime = iTime;
         }
     }
@@ -32,29 +33,27 @@ public class CStylusFilter extends CDefaultFilter {
     @Override
     public void KeyUp(long iTime, int keyId, CDasherView pView, CDasherInput pInput, CDasherModel model) {
         if(keyId == 100) {
+        	pause(); //stops continuous motion...
             if ((iTime - m_iKeyDownTime < GetLongParameter(Elp_parameters.LP_TAP_TIME))) {
             	pInput.GetDasherCoords(pView, lastInputCoords);
     			ApplyClickTransform(pView, lastInputCoords);
-    			model.ScheduleZoom(Math.max(minX,lastInputCoords.x),lastInputCoords.y);
-    			//leave unpaused
-            } else {
-                m_Interface.PauseAt(0, 0);
+    			(this.model=model).ScheduleZoom(Math.max(minX,lastInputCoords.x),lastInputCoords.y);
+    			m_Interface.Redraw(false);
+    			//...as we've scheduled quite a few frames, instead
             }
         }
     }
     
     @Override
-    public boolean Timer(long iTime, CDasherView view, CDasherInput pInput, CDasherModel model) {
-        if (model.nextScheduledStep(iTime)) {
-            //continued scheduled zoom - must have been in middle
-            // (and thus not cleared by subsequent click)
-            return true;
-            //note that this skips the rest of CDefaultFilter::Timer;
-            //however, given we're paused, this is only the Start Handler,
-            //which we're not using anyway.
-        }
-        //no zoom was scheduled.
-        return super.Timer(iTime, view, pInput, model);
+    public void Timer(long iTime, CDasherView view, CDasherInput pInput, CDasherModel model) {
+    	if (model.ScheduledSteps()==0) //zoom cleared by KeyDown
+    		super.Timer(iTime, view, pInput, model);
+    	//else, continue zoom previously scheduled - must have been in middle
+        // (and no click since)
+        
+    	//note that this skips the rest of CDefaultFilter::Timer;
+        //however, given we're paused, this is only the Start Handler,
+        //which we're not using anyway.
     }
     
     /** Whilst we do kinda support pause, if you can start the filter, you can also
@@ -63,6 +62,11 @@ public class CStylusFilter extends CDefaultFilter {
      * @return false
      */
     @Override public boolean supportsPause() {return false;}
+    
+    @Override public void pause() {
+    	if (model!=null) model.clearScheduledSteps();
+    	super.pause();
+    }
     
     /**
      * Called to apply any coordinate transform required for
