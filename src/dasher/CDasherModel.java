@@ -97,6 +97,9 @@ public class CDasherModel extends CFrameRate {
 	 */
 	protected double total_nats;            // Information entered so far
 	
+	protected double m_dLastNats;
+	protected long m_iLastMinSize = MAX_Y;
+	
 	/* CSFS: Converted a struct in the original C into this class */
 	
 	/**
@@ -424,7 +427,6 @@ public class CDasherModel extends CFrameRate {
 			long miMousey, 
 			long Time, 
 			float dSpeedMul)	{
-		CountFrame(Time);
 		if (dSpeedMul <= 0.0) return;
 			
 		//ACL I've inlined Get_new_root_coords here, so we don't have to allocate a temporary object to return two values...
@@ -466,11 +468,12 @@ public class CDasherModel extends CFrameRate {
 
 		// Calculate the minimum size of the viewport corresponding to the
 		// maximum zoom.
-		long iMinSize = (long)(MAX_Y/(dSpeedMul==1.0 ? maxZoom() : Math.pow(maxZoom(), dSpeedMul)));
-
-		if((iTargetMax - iTargetMin) < iMinSize) {
-			iNewTargetMin = iTargetMin * (MAX_Y - iMinSize) / (MAX_Y - (iTargetMax - iTargetMin));
-		    iNewTargetMax = iNewTargetMin + iMinSize;
+		double dNats = maxNatsPerFrame()*dSpeedMul;
+		if (m_dLastNats!=dNats) m_iLastMinSize = (long)(MAX_Y/Math.exp(m_dLastNats = dNats));
+		
+		if((iTargetMax - iTargetMin) < m_iLastMinSize) {
+			iNewTargetMin = iTargetMin * (MAX_Y - m_iLastMinSize) / (MAX_Y - (iTargetMax - iTargetMin));
+		    iNewTargetMax = iNewTargetMin + m_iLastMinSize;
 
 		    iTargetMin = iNewTargetMin;
 		    iTargetMax = iNewTargetMax;

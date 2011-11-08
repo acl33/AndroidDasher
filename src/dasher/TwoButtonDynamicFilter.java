@@ -64,7 +64,7 @@ public class TwoButtonDynamicFilter extends CDynamicPresses {
 			BounceMarker pMarker;
 			if (iId==0 || iId==4) pMarker=up; else if (iId==1 || iId==2) pMarker=down; else break marker;
 			//apply offset
-			double dCurBitrate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) * GetLongParameter(Elp_parameters.LP_BOOSTFACTOR) / 10000.0;
+			double dCurBitrate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) / 100.0;
 			int iOffset = pMarker.GetTargetOffset(dCurBitrate);
 			if (pModel.m_iDisplayOffset!=0) System.err.println("Display Offset "+pModel.m_iDisplayOffset+" reducing to "+(iOffset -= pModel.m_iDisplayOffset));
 			double dNewNats = pModel.GetNats() - m_dNatsAtLastApply;

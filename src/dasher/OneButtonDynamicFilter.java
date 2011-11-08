@@ -126,7 +126,7 @@ public class OneButtonDynamicFilter extends CDynamicFilter {
 		} else {
 			inner = downInner; outer = downOuter;
 		}
-		double dCurBitrate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) * GetLongParameter(Elp_parameters.LP_BOOSTFACTOR) / 10000.0;
+		double dCurBitrate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) /100.0;
 		int iOffset = inner.GetTargetOffset(dCurBitrate, outer, iTime - m_iFirstPressTime);
 		if (pModel.m_iDisplayOffset!=0) {
 			iOffset -= pModel.m_iDisplayOffset;

@@ -417,32 +417,12 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 		Dasher.KeyUp(System.currentTimeMillis(), 100);
 	}
 	
-	/**
-	 * We respond to the following key presses:
-	 * <p>
-	 * CTRL: Set speed boost factor to 175<br>
-	 * SHIFT: Set speed boost factor to 25.
-	 * </p>
-	 */	
-	public void keyPressed(KeyEvent e) {
-		boost: {
-			final int newBoostFactor;
-			if(e.getKeyCode() == KeyEvent.VK_CONTROL) 
-				newBoostFactor = 175; // Speed boost for pressing CTRL. Should this be in the interface?
-			else if(e.getKeyCode() == KeyEvent.VK_SHIFT)
-				newBoostFactor = 25; // Speed reduced when SHIFT pressed. As above?
-			else break boost;
-			menuSetLong(Elp_parameters.LP_BOOSTFACTOR, newBoostFactor);
-		}
-	}
-	
+	/** Ignore. */
+	public void keyPressed(KeyEvent e) {}
+		
 	/**
 	 * Upon releasing the space bar, we signal Dasher a KeyDown
 	 * event with a key of zero.
-	 * <p>
-	 * If either CTRL or SHIFT are released, the speed boost
-	 * constant is reset to 100, 175 or 25, dependent on which
-	 * keys are still down.
 	 */
 	public void keyReleased(KeyEvent e) {
 		
@@ -452,20 +432,6 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 			Dasher.KeyDown(System.currentTimeMillis(), 0);
 		}
 		
-		
-		/* This completes the boost-key implementation by considering
-		 * whether the other boost key is currently pressed when one
-		 * is released.
-		 */
-		boost: {
-			final int newBoostFactor;
-			if(e.getKeyCode() == KeyEvent.VK_CONTROL) {
-				newBoostFactor = (e.isShiftDown()) ? 25 : 100;
-			} else if(e.getKeyCode() == KeyEvent.VK_SHIFT) {
-				newBoostFactor = (e.isControlDown()) ? 175 : 100;
-			} else break boost;
-			menuSetLong(Elp_parameters.LP_BOOSTFACTOR, newBoostFactor);
-		}
 	}
 
 	/**

@@ -120,7 +120,7 @@ public class CDefaultFilter extends CInputFilter {
 	{ 
 		super(creator, iface, szName);
 		m_StartHandler = null;
-		m_AutoSpeedControl = new CAutoSpeedControl(this, iface.GetCurFPS());
+		m_AutoSpeedControl = new CAutoSpeedControl(this);
 		
 		CreateStartHandler();
 	}
@@ -205,7 +205,7 @@ public class CDefaultFilter extends CInputFilter {
 			
 				//Only measure the user's accuracy (for speed control) when going at full speed
 				if (GetBoolParameter(Ebp_parameters.BP_AUTO_SPEEDCONTROL) && fSpeedMul==1.0f)
-					m_AutoSpeedControl.SpeedControl(lastInputCoords.x, lastInputCoords.y, m_DasherModel.Framerate(), pView);
+					m_AutoSpeedControl.SpeedControl(lastInputCoords.x, lastInputCoords.y, pView);
 			} else {
 				m_Interface.PauseAt(0, 0);
 			}

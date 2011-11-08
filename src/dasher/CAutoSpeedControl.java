@@ -93,7 +93,7 @@ public class CAutoSpeedControl extends CDasherComponent {
 	 * @param dFrameRate Initial frame rate, in FPS.
 	 */
 	
-	public CAutoSpeedControl(CDasherComponent creator, double dFrameRate)	  {
+	public CAutoSpeedControl(CDasherComponent creator)	  {
 	
 	super(creator);
 	  
@@ -121,7 +121,7 @@ public class CAutoSpeedControl extends CDasherComponent {
 	m_nSpeedCounter = 0;
 
 	  UpdateMinRadius();
-	  UpdateSampleSize(dFrameRate); 
+	  UpdateSampleSize(GetLongParameter(Elp_parameters.LP_FRAMERATE)/100.0); 
 	}
 
 	  ////////////////////////////////////////////////
@@ -267,7 +267,8 @@ public class CAutoSpeedControl extends CDasherComponent {
  * @param View Current DasherView, used to ascertain the user's true
  *             mouse position.
  */
-	public void SpeedControl(long iDasherX, long iDasherY, double dFrameRate, CDasherView View) {
+	public void SpeedControl(long iDasherX, long iDasherY, CDasherView View) {
+		double dFrameRate = GetLongParameter(Elp_parameters.LP_FRAMERATE)/100.0;
 		//We'll do all calculations in screen coordinates, as these are linear.
 	    coords.init(iDasherX,iDasherY);
 	    View.Dasher2Screen(coords);

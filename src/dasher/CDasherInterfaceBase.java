@@ -554,14 +554,15 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		 *        m_UserLog.AddSymbols(vAdded);
 		 */
 		
-	
-		boolean bRedraw = false; //do we need another frame after this?
+		boolean bRedraw = false; //did nodes change (move, expand, collapse)?
 		renderModel: {
 			if (m_MarkerScreen!=null) {
 				if (bMoved || m_bForceRedrawNodes)
 					m_MarkerScreen.SendMarker(0);
 				else break renderModel;
 			}
+			m_bForceRedrawNodes=false;
+			m_DasherModel.CountFrame(iTime);
 			bRedraw = m_DasherModel.RenderToView(m_DasherView) || bMoved;
 		}
 		if (m_MarkerScreen!=null)
@@ -779,14 +780,6 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	public double GetCurCPM() {
 		//
 		return 0;
-	}
-	
-	/**
-	 * ACL TODO - was "not yet implemented", so trying returning the model's
-	 * {@link CDasherModel#Framerate()}.
-	 */
-	public double GetCurFPS() {
-		return m_DasherModel.Framerate();
 	}
 	
 	/**

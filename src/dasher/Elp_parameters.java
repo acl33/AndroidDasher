@@ -31,6 +31,7 @@ package dasher;
  */
 public enum Elp_parameters implements EParameters {
 	  LP_MAX_BITRATE("MaxBitRateTimes100", PERS, 80, "Max Bit Rate Times 100"),
+	  LP_FRAMERATE("FrameRate", PERS, 3200, "Decaying average of last known frame rates, *100"),
 	  LP_VIEW_ID("ViewID", PERS, 1, "ViewID"),
 	  LP_LANGUAGE_MODEL_ID("LanguageModelID", PERS, 0, "LanguageModelID"),
 	  LP_DASHER_FONTSIZE("DasherFontSize", PERS, 1, "DasherFontSize"),
@@ -51,7 +52,6 @@ public enum Elp_parameters implements EParameters {
 	  LP_R("ButtonModeNonuniformity", PERS, 0, "Button mode box non-uniformity"),
 	  //LP_Z("ButtonMenuBackwardsBox", PERS, 1, "Number of back-up boxes for button menu mode"),
 	  LP_RIGHTZOOM("ButtonCompassModeRightZoom", PERS, 5120, "Zoomfactor (*1024) for compass mode"),
-	  LP_BOOSTFACTOR("BoostFactor", !PERS, 100, "Boost/brake factor (multiplied by 100)"),
 	  LP_AUTOSPEED_SENSITIVITY("AutospeedSensitivity", PERS, 100, "Sensitivity of automatic speed control (percent)"),
 	  /*LP_SOCKET_PORT("SocketPort", PERS, 20320, "UDP/TCP socket to use for network socket input"),
 	  LP_SOCKET_INPUT_X_MIN("SocketInputXMinTimes1000", PERS, 0, "Bottom of range of X values expected from network input"),
