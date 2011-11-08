@@ -394,6 +394,21 @@ public class CDasherModel extends CFrameRate {
 		return m_pLastOutput==null ? 1.0f : m_pLastOutput.getViscosity();
 	}
 	
+	private static final boolean EXACT_DYNAMICS=false;
+	private static long mysq(long in) {
+		//1. Find greatest i satisfying 1<<(i<<1) < in; let rt = 1<<i be first approx
+		// but find by binary chop: at first double each time..
+		long i=1;
+		while (1l<<4*i < in) i*=2;
+		//then try successively smaller bits.
+		for (long test=i; (test/=2)!=0;)
+		    if (1l<<2*(i+test) < in) i+=test;
+		//so, first approx:
+		long rt = 1<<i;
+		rt = (rt+in/rt)/2;//better
+		return (rt+in/rt)/2;//better still
+	}
+	
 	/**
 	 * Schedules one frame of continuous/steady motion towards a specified
 	 * mouse position. The distance moved is based on the current frame rate
@@ -422,13 +437,9 @@ public class CDasherModel extends CFrameRate {
 		// probably do it a little more scientifically)
 		if(miMousex > 60000000) miMousex = 60000000;
 
-		// Calculate what the extremes of the viewport will be when the
-		// point under the cursor is at the cross-hair. This is where 
-		// we want to be in iSteps updates
-		long iTargetMin = (miMousey - (MAX_Y * miMousex) / (2 * CROSS_X));
-		long iTargetMax = (miMousey + (MAX_Y * miMousex) / (2 * CROSS_Y));
-		//back these up, we may want them later
-		long origMin=iTargetMin,origMax=iTargetMax;
+		long y1= (miMousey - (MAX_Y * miMousex) / (2 * CROSS_X));
+		long y2 = (miMousey + (MAX_Y * miMousex) / (2 * CROSS_Y));
+		long targetRange = y2-y1;
 		
 		// iSteps is the number of update steps we need to get the point
 		// under the cursor over to the cross hair. Calculated in order to
@@ -436,63 +447,61 @@ public class CDasherModel extends CFrameRate {
 
 		final int iSteps = Math.max(1,(int)(Steps()/dSpeedMul));
 		
-		// Calculate the new values of iTargetMin and iTargetMax required to
-		// perform a single update step. Note the awkward equations
-		// interpolating between (iTargetMin,iTargetMax), with weight lpMaxY,
-		// and (0,iMaxY), with weight iOldWeight; in the olg algorithm, the latter was
-		// (iSteps-1)*(iTargetMax-iTargetMin), but people wanted to reverse faster!
-		// (TODO: should this be a parameter? I'm resisting "too many user settings" atm, but maybe...)
-		final long iOldWeight = (iSteps-1) * Math.min(iTargetMax - iTargetMin, MAX_Y+(iTargetMax-iTargetMin)>>>GetLongParameter(Elp_parameters.LP_REVERSE_BOOST));
-		long iDenom = MAX_Y + iOldWeight;
-		long iNewTargetMin = (iTargetMin * MAX_Y) / iDenom;
-		long iNewTargetMax = (iTargetMax+iOldWeight) * MAX_Y / iDenom;
-		iTargetMin = iNewTargetMin;
-		iTargetMax = iNewTargetMax;
-
-		// Calculate the minimum size of the viewport corresponding to the
-		// maximum zoom.
-		double dNats = maxNatsPerFrame()*dSpeedMul;
-		if (m_dLastNats!=dNats) m_iLastMinSize = (long)(MAX_Y/Math.exp(m_dLastNats = dNats));
+		//root node bounds for final destination:
+		final long r1 = MAX_Y*(m_Rootmin-y1)/targetRange,
+				r2 = MAX_Y*(m_Rootmax-y1)/targetRange;
 		
-		if((iTargetMax - iTargetMin) < m_iLastMinSize) {
-			iNewTargetMin = iTargetMin * (MAX_Y - m_iLastMinSize) / (MAX_Y - (iTargetMax - iTargetMin));
-		    iNewTargetMax = iNewTargetMin + m_iLastMinSize;
-
-		    iTargetMin = iNewTargetMin;
-		    iTargetMax = iNewTargetMax;
+		long m1=(r1-m_Rootmin), m2=(r2-m_Rootmax);
+		
+		//Any interpolation (m_Rootmin,m_Rootmax) + alpha*(m1,m2) moves along the correct path.
+		// Just have to decide how far, i.e. what alpha.
+		
+		if (targetRange < 2*GetLongParameter(Elp_parameters.LP_X_LIMIT_SPEED)) {
+			//atm we have Rw=R2-R1, rw=r2-r1 = Rw*MAX_Y/targetRange, (m1,m2) to take us there
+		    
+			long limRange = 2*GetLongParameter(Elp_parameters.LP_X_LIMIT_SPEED);
+			//if targetRange were = limRange, we'd have rw' = Rw*MAX_Y/limRange < rw
+		    //the movement necessary to take us to rw', rather than rw, is thus:
+		    // (m1',m2') = (m1,m2) * (rw' - Rw) / (rw-Rw) => scale m1,m2 by (rw'-Rw)/(rw-Rw)
+		    // = (Rw*MAX_Y/(limRange) - Rw)/(Rw*MAX_Y/targetRange-Rw)
+		    // = (MAX_Y/(limRange)-1) / (MAX_Y/targetRange-1)
+		    // = (MAX_Y-(limRange))/(limRange) / ((MAX_Y-targetRange)/targetRange)
+		    // = (MAX_Y-(limRange)) / (limRange) * targetRange / (MAX_Y-targetRange)
+		    m1 = (m1*targetRange*(MAX_Y-limRange))/(MAX_Y-targetRange)/(limRange);
+		    m2 = (m2*targetRange*(MAX_Y-limRange))/(MAX_Y-targetRange)/(limRange);
+		    //then make the stepping function, which follows, behave as if we were at limX:
+		    targetRange=limRange;
 		}
 		
-		//Now calculate the bounds of the root node, that put (y1,y2) at the screen edges...
-		// If |(0,Y2)| = |(y1,y2)|, the "zoom factor" is 1, so we just translate.
-		if (MAX_Y == iTargetMax - iTargetMin) {
-		    m_Rootmin -= iTargetMin;
-		    m_Rootmax -= iTargetMin;
-		    return;
-	    }
-		
-		// There is a point C on the y-axis such the ratios (y1-C):(0-C) and
-		// (y2-C):(iMaxY-C) are equal - iow that divides the "target" region y1-y2
-		// into the same proportions as it divides the screen (0-iMaxY). I.e., this
-		// is the center of expansion - the point on the y-axis which everything
-		// moves away from (or towards, if reversing).
-		  
-		//We prefer to compute C from the _original_ (y1,y2) pair, as this is more
-		// accurate (and avoids drifting up/down when heading straight along the
-		// x-axis in dynamic button modes). However...
-		if ((iTargetMax-iTargetMin) < MAX_Y ^ (origMax-origMin) < MAX_Y) {
-		    //Sometimes (very occasionally), the calculation of a single-step above
-		    // can turn a zoom-in into a zoom-out, or vice versa, when the movement
-		    // is mostly translation. In which case, must compute C consistently with
-		    // the (scaled, single-step) movement we are going to perform, or else we
-		    // will end up suddenly going the wrong way along the y-axis (i.e., the
-		    // sense of translation will be reversed) !
-		    origMin=iTargetMin; origMax=iTargetMax;
-		}
-		final long C = (origMin * MAX_Y) / (origMin + MAX_Y - origMax);
+		if (EXACT_DYNAMICS) {
+			double frac;
+			if (targetRange == MAX_Y) 
+				frac = 1.0/iSteps;
+			else {
+				double tr=targetRange;
+				//expansion factor (of root node) for one step, post-speed-limit
+				double eFac = Math.pow(MAX_Y/tr,1.0/iSteps);
+			    //fraction of way along linear interpolation Rw->rw that yields that width:
+			    // = (Rw*eFac - Rw) / (rw-Rw)
+			    // = Rw * (eFac-1.0) / (Rw*MAX_Y/tr-Rw)
+			    // = (eFac - 1.0) / (MAX_Y/tr - 1.0)
+			    frac = (eFac-1.0) /  (MAX_Y/tr - 1.0);
+			}
+			m1*=frac; m2*=frac;
+		} else {
+			//approximate dynamics: interpolate
+		    // apsq parts rw to 64*(nSteps-1) parts Rw
+		    // (no need to compute target width)
+		    long apsq = mysq(targetRange);
+		    long denom = 64*(iSteps-1) + apsq;
 
-		//finally, update the rootnode bounds to put iTargetMin/iTargetMax at (0,LP_MAX_Y).
-		m_gotoMin[0] = ((m_Rootmin - C) * MAX_Y) / (iTargetMax - iTargetMin) + C;
-		m_gotoMax[0] = ((m_Rootmax - C) * MAX_Y) / (iTargetMax - iTargetMin) + C;
+		    // so new width nw = (64*(nSteps-1)*Rw + apsq*rw)/denom
+		    // = Rw*(64*(nSteps-1) + apsq*MAX_Y/targetRange)/denom
+		    m1 = (m1*apsq)/denom; m2=(m2*apsq)/denom;
+		}
+
+		m_gotoMin[0] = m_Rootmin + m1;
+		m_gotoMax[0] = m_Rootmax + m2;
 		m_iGotoNext=0;
 	}
 	
@@ -707,42 +716,46 @@ public class CDasherModel extends CFrameRate {
 
 		final long y1 = dashery - dasherx, y2 = dashery + dasherx;
 
-		long targetRootMin,targetRootMax;
+		long targetRootMin = MAX_Y*(m_Rootmin-y1)/(y2-y1),
+			 targetRootMax = MAX_Y*(m_Rootmax-y1)/(y2-y1);
+
+		//We're going to interpolate in steps whose size starts at nsteps
+		// and decreases by one each time - so cumulatively: 
+		// <nsteps> <2*nsteps-1> <3*nsteps-3> <4*nsteps-6>
+		// (until the next value is the same as the previous)
+		//These will sum to / reach (triangular number formula):
+		final int max = (iSteps*(iSteps+1))/2;
 		
-		if (y2-y1 == MAX_Y) {
-			//just translate
-			targetRootMin = m_Rootmin + y1;
-			targetRootMax = m_Rootmax + y1;
-		} else {
-			//find the center of expansion / contraction - this divides interval
-			// (iTarget1,iTarget2) into the same proportions as it divides (0,maxY),
-			// i.e. (C-iTarget1)/(C-0) == (C-iTarget2)/(C-iMaxY)
-			final long C = (y1 * MAX_Y) / (y1 + MAX_Y - y2);
-			if (y1 != C) {
-		          targetRootMin = ((m_Rootmin - C) * (0 - C)) / (y1 - C) + C;
-		          targetRootMax = ((m_Rootmax - C) * (0 - C)) / (y1 - C) + C;
-		      } else if (y2 != C) {
-		          targetRootMin = ((m_Rootmin - C) * (MAX_Y - C)) / (y2 - C) + C;
-		          targetRootMax = ((m_Rootmax - C) * (MAX_Y - C)) / (y2 - C) + C;
-		      } else { // implies y1 = y2
-		          throw new AssertionError("Impossible geometry in CDasherModel.ScheduleZoom");
-		      }
-		}
+		//heights:
+		final long oh = m_Rootmax - m_Rootmin, nh = targetRootMax-targetRootMin;
 		
-		//now a simple linear interpolation from m_Root{min,max} to targetRoot{Min,Max}
+		//log(the amount by which we wish to multiply the height):
+		final double logHeightMul = (nh==oh) ? 0 : Math.log(nh/(double)oh);
+		
+		//make space for interpolation
 		if (m_gotoMin.length < iSteps) {
 			m_gotoMin = new long[iSteps];
 			m_gotoMax = new long[iSteps];
 		}
 		
-		m_iGotoNext=iSteps-1;
-		
 		//note element 0 arrives at destination.
-		for(int s = 0; s<iSteps; ++s) {
-			
-			m_gotoMin[s] = targetRootMin + (s * (m_Rootmin - targetRootMin))/iSteps;
-			m_gotoMax[s] = targetRootMax + (s * (m_Rootmax - targetRootMax))/iSteps;
+		for (int s=iSteps, t=iSteps; s>1; t+=s) {
+		    double dFrac; //(linear) fraction of way from oh to nh...
+			if (nh==oh)
+				dFrac = t/(double)max;
+			else {
+				//interpolate expansion logarithmically to get new height:
+				double h = oh*Math.exp((logHeightMul*t)/max);
+				//then treat that as a fraction of the way between oh to nh linearly
+				dFrac = (h-oh)/(nh-oh);
+			}
+		    //and use that fraction to interpolate from R to r
+		    m_gotoMin[--s]=(long)(m_Rootmin+dFrac*(targetRootMin-m_Rootmin));
+		    m_gotoMax[s]=(long)(m_Rootmax+dFrac*(targetRootMax-m_Rootmax));
 		}
+		//final point, done accurately/simply:
+		m_gotoMin[0]=targetRootMin; m_gotoMax[0]=targetRootMax;
+		m_iGotoNext=iSteps-1;
 	}
 	
 	/**
