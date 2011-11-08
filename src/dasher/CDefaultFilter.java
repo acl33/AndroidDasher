@@ -195,13 +195,13 @@ public class CDefaultFilter extends CInputFilter {
 	 * @param m_DasherModel Model to alter using these co-ordinates
 	 * @return True if the model has been changed, false if not.
 	 */
-	@Override public boolean Timer(long Time, CDasherView pView, CDasherInput pInput, CDasherModel m_DasherModel) {
+	@Override public boolean Timer(long Time, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
 		boolean bDidSomething;
 		if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
 			if (pInput.GetDasherCoords(pView,lastInputCoords)) {
 				ApplyTransform(pView, lastInputCoords);
-				float fSpeedMul = getSpeedMul(Time);
-				m_DasherModel.oneStepTowards(lastInputCoords.x,lastInputCoords.y, Time, fSpeedMul);
+				float fSpeedMul = getSpeedMul(Time) * pModel.getViscosity();
+				pModel.oneStepTowards(lastInputCoords.x,lastInputCoords.y, Time, fSpeedMul);
 			
 				//Only measure the user's accuracy (for speed control) when going at full speed
 				if (GetBoolParameter(Ebp_parameters.BP_AUTO_SPEEDCONTROL) && fSpeedMul==1.0f)
@@ -223,7 +223,7 @@ public class CDefaultFilter extends CInputFilter {
 	
 	private long m_iStartTime;
 	
-	/** Computes multiplier to apply to speed, for this frame.
+	/** Computes multiplier to apply to speed, for this frame, not including node viscosity
 	 * The default implementation returns <code>1.0f</code> unless it's less than
 	 * <code>LP_SLOW_START_TIME</code> time since we last unpaused, in which case
 	 * we interpolate between 0.1 and 1.0. Subclasses can override to implement different behaviour. 

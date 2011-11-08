@@ -408,6 +408,10 @@ public class CDasherModel extends CFrameRate {
 		return m_pLastOutput==null ? -1 : m_pLastOutput.getOffset();
 	}
 	
+	public float getViscosity() {
+		return m_pLastOutput==null ? 1.0f : m_pLastOutput.getViscosity();
+	}
+	
 	/**
 	 * Updates the model to move one step towards a specified mouse position.
 	 * The distance moved is based on the current frame rate

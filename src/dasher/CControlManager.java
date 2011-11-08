@@ -116,7 +116,11 @@ public class CControlManager extends CDasherComponent {
 			super.initNode(iOffset, iColour, desc);
 			this.act=act;
 		}
-		
+
+		@Override public float getViscosity() {
+			return 0.5f;
+		}
+
 		@Override
 		public int ExpectedNumChildren() {
 			return act.expectedNumSuccs(this); 

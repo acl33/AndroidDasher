@@ -22,7 +22,7 @@ public abstract class CDynamicFilter extends CInputFilter {
 			return false;
 		}
 		if (m_iState==REVERSING) {
-			pModel.oneStepTowards(41904, CROSS_Y, iTime, 1.0f);
+			pModel.oneStepTowards(41904, CROSS_Y, iTime, pModel.getViscosity());
 			return true;
 		}
 		return TimerImpl(iTime, pView, pModel);

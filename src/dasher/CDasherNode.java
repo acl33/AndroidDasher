@@ -54,9 +54,13 @@ public abstract class CDasherNode implements Document {
 	 * they count as fitting on the screen!). Read & written by DasherModel & DasherViewSquare...
 	 */
 	public CDasherNode m_OnlyChildRendered;
-	
-	//	Information required to display the node
-	
+
+	/** A viscous node is harder to move through, i.e. slower.
+	 * The default is to return 1.0, i.e. "normal" viscosity and speed.
+	 * @return multiplier to apply to speed (<1.0 = slower)
+	 */
+	public float getViscosity() {return 1.0f;}
+
 	/**
 	 * Colour number if this node is using a colour scheme defined
 	 * by an instance of CCustomColours
