@@ -141,7 +141,9 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	
 	/**
 	 * Lock engaged when we're in the process of connecting
-	 * to a remote language model
+	 * to a remote language model. TODO: no subclass ever sets this
+	 * (and there is no synchronization protocol for doing so);
+	 * remove, or implement?
 	 */
 	protected boolean m_bConnectLock; // Connecting to server.
 	
@@ -272,8 +274,6 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	 * <p>
 	 * <i>BP_OUTLINE_MODE</i>: Redraws the display.
 	 * <p>
-	 * <i>BP_CONNECT_LOCK</i>: Sets the internal m_bConnectLock variable.
-	 * <p>
 	 * <i>LP_ORIENTATION</i>: Sets the LP_REAL_ORIENTATION parameter either
 	 * to the value of LP_ORIENTATION, or if the latter is -2 (a special sentinel value)
 	 * queries the current alphabet for its preferred orientation, and
@@ -314,8 +314,6 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 			Redraw(true);
 		} else if(eParam ==  Ebp_parameters.BP_OUTLINE_MODE) {
 			Redraw(true);
-		} else if(eParam == Ebp_parameters.BP_CONNECT_LOCK) {
-			m_bConnectLock = GetBoolParameter(Ebp_parameters.BP_CONNECT_LOCK);
 		} else if(eParam ==  Esp_parameters.SP_ALPHABET_ID) {
 			ChangeAlphabet();
 			Redraw(true);

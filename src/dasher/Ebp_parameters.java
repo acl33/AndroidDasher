@@ -48,7 +48,6 @@ public enum Ebp_parameters implements EParameters {
 			  BP_LM_ADAPTIVE("LMAdaptive", PERS, true, "Whether language model should learn as you enter text"),
 			  BP_CIRCLE_START("CircleStart", PERS, false, "Start on circle mode"),
 			  BP_LM_REMOTE("RemoteLM", PERS, false, "Language model is remote and responds asynchronously."),
-			  BP_CONNECT_LOCK("Connecting", !PERS, false, "Currently waiting for a connection to a remote LM; lock Dasher."),
 			  BP_ONE_DIMENSIONAL_MODE("OneDimensionalMode", PERS, false, "Remap x/y to radius / curve all around origin"),
 			  BP_ONE_BUTTON_RELEASE_TIME("OneButtonReleaseTime", PERS, false, "Use length of single push, not gap, for 1B-dynamic mode"),
 			  BP_CONTROL_MODE_REBUILD("ControlModeRebuild",PERS,true,"Replace control nodes that have happened with characters to left of cursor"),
