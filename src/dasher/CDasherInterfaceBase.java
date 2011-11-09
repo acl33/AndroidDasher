@@ -27,11 +27,15 @@ package dasher;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Collection;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.io.*;
+import java.lang.ref.WeakReference;
+import java.nio.channels.AsynchronousCloseException;
 
 import org.xml.sax.SAXException;
 
@@ -321,6 +325,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 			Redraw(true);
 		} else if(eParam == Elp_parameters.LP_LANGUAGE_MODEL_ID
 				|| (eParam == Esp_parameters.SP_LM_HOST && GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)==5)) {
+			m_LMcache.clear(); //All existing LMs use old param values
 			CreateNCManager();
 			Redraw(true);
 		} else if(eParam == Elp_parameters.LP_LINE_WIDTH) {
@@ -374,6 +379,8 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	 */
 	public abstract void Message(String msg, int severity);
 	
+	private final Map<CAlphIO.AlphInfo,WeakReference<CLanguageModel<?>>> m_LMcache
+		= new HashMap<CAlphIO.AlphInfo, WeakReference<CLanguageModel<?>>>();
 	/**
 	 * Creates a new DasherModel, deleting any previously existing
 	 * one if necessary.
@@ -389,12 +396,10 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		if(m_AlphIO == null)
 			throw new IllegalStateException("Not yet constructed?");
 		
-		// TODO: Move training into AlphabetManager?
-		
-		//Not for now - we don't want train the LM too soon, i.e. until
-		// the old LM can first be GC'd, as that'll be using memory for both...
+		//Memory is a big issue here - we don't want train the LM too soon, i.e. until
+		// the old LM can first be GC'd, as that'd need memory for both simultaneously...
 
-		//So, first we make the old NCMgr & LM unreachable (the event handler has only weakrefs)
+		//(1) So, first we make the old NCMgr & LM unreachable (the event handler has only weakrefs)
 		CControlManager cont;
 		if (m_pNCManager!=null) {
 			//since the AlphabetManager is about to be deleted, better write out anything unsaved...
@@ -403,8 +408,54 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		} else 
 			cont = makeControlManager();
 		
-		//Then we construct a new NCMgr and (untrained) LM...
-		m_pNCManager = new CNodeCreationManager(this, CAlphabetManager.makeAlphMgr(this), cont);
+		//(2)Then we construct a new NCMgr and (untrained) LM...
+		
+		//(2a) Get the alphabet...TODO: if the alphabet we ask for doesn't exist,
+		// We might get a different/fallback one instead. Should we update the
+		// parameter value to reflect this? ATM I'm thinking not, the user's
+		// request stands?
+		CAlphIO.AlphInfo cAlphabet = m_AlphIO.GetInfo(GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
+		
+		//(2b) LanguageModel
+		CLanguageModel<?> lm=null;
+		WeakReference<CLanguageModel<?>> ref = m_LMcache.get(cAlphabet);
+		if (ref!=null) {lm = ref.get(); if (lm==null) m_LMcache.remove(cAlphabet);}
+		boolean bTrain;
+		if (lm==null) {
+			bTrain=true;
+			switch ((int)GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)) {
+			/* CSFS: Commented out the other language models for the time being as they are not
+			 * implemented yet.
+			 */
+			default:
+				// If there is a bogus value for the language model ID, we'll default
+				// to our trusty old PPM language model.
+			case 0:
+				SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, false);
+				lm= new CPPMLanguageModel(this, cAlphabet);
+				break;
+			/* case 2:
+				lm = new CWordLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
+				break;
+			case 3:
+				lm = new CMixtureLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
+				break;  
+				#ifdef JAPANESE
+			case 4:
+				lm = new CJapaneseLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
+				break;
+				#endif
+			case 5:
+				throw new UnsupportedOperationException("(ACL) Remote LM currently unimplemented");
+				//lm = new CRemotePPM(m_EventHandler, m_SettingsStore, alphabet);
+				//SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, true);
+				//break;
+			*/
+			}
+		} else
+			bTrain=false;
+		
+		m_pNCManager = new CNodeCreationManager(this, CAlphabetManager.makeAlphMgr(this,lm), cont);
 		if (m_ColourIO.getByName(GetStringParameter(Esp_parameters.SP_COLOUR_ID))==null)
 			ChangeColours(); //we must have been using the alphabet palette, which may have changed
 		
@@ -414,7 +465,13 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		System.gc(); //the old LM should now be collectable, so just a hint...
 		
 		//At last we (hopefully) have enough memory to train the new LM...
-		train(m_pNCManager.getAlphabetManager());
+		//TODO, can we train in the background, on another thread?
+		if (bTrain) {
+			//Put it in cache pre-emptively: we are going to train it! :)
+			// If train(AlphabetManager, ProgressNotifier) is aborted, that will remove from map.
+			m_LMcache.put(cAlphabet,new WeakReference<CLanguageModel<?>>(lm));
+			train(m_pNCManager.getAlphabetManager());
+		}
 		
 		//Finally we rebuild the tree _again_ :-(, so as to get probabilities from the trained LM...
 		forceRebuild();
@@ -676,15 +733,6 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		Redraw(true);
 	}
 	
-	/**
-	 * Deferred to m_AlphIO
-	 * 
-	 * @see CAlphIO
-	 */
-	public CAlphIO.AlphInfo GetInfo(String AlphID) {
-		return m_AlphIO.GetInfo(AlphID);
-	}
-	
 	/** Called to train the model. This method creates and broadcasts
 	 * a CLockEvent, then calls {@link #train(String, CLockEvent)},
 	 * then clears the event's {@link CLockEvent#m_bLock} and broadcasts it again.
@@ -695,9 +743,8 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		// Train the new language model
 		Lock("Training Dasher", 0); 
 		train(mgr,new ProgressNotifier() {
-			public boolean notifyProgress(int iPercent) {
+			public void notifyProgress(int iPercent) {
 				Lock("Training Dasher", iPercent);
-				return false; //do not allow aborts
 			}
 		});
 		Lock("Training Dasher", -1);
@@ -705,10 +752,10 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	
 	/** Interface by which an object may be notified of training progress (as a %age) */
 	public static interface ProgressNotifier {
-		/** Notify of current progress, and check whether an abort has been requested
+		/** Notify of current progress. May also request training be aborted.
 		 * @param percent Current %age progress; should be monotonic; 100% does not imply completion (but nearly!)
-		 * @return true if training should be aborted (note if this returns true once, all subsequent calls should do so too) */
-		boolean notifyProgress(int percent);
+		 * @throws AsynchronousCloseException if training should be aborted (note if this happens once, any subsequent calls should do the same) */
+		void notifyProgress(int percent) throws AsynchronousCloseException;
 	}
 	/**
 	 * Called to train the model with all available files of the specified name
@@ -733,6 +780,11 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		for (InputStream in : streams) {
 			try {
 				iRead = mgr.TrainStream(in, iTotalBytes, iRead, prog);
+			} catch (AsynchronousCloseException e) {
+				//thrown to indicate training aborted. In that case we don't
+				// want to cache the LM.
+				m_LMcache.remove(mgr.m_Alphabet);
+				break;
 			} catch (IOException e) {
 				Message("Error "+e+" in training - rest of text skipped", 1); // 1 = severity
 			}

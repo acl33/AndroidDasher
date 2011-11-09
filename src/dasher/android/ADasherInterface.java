@@ -8,6 +8,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.nio.channels.AsynchronousCloseException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -160,14 +161,12 @@ public class ADasherInterface extends CDasherInterfaceBase {
 				catch (InterruptedException e) {}
 		}
 		//called from Training thread
-		public boolean notifyProgress(int iPercent) {
-			boolean bRes;
+		public void notifyProgress(int iPercent) throws AsynchronousCloseException {
 			synchronized (this) {
 				percent=iPercent;
-				bRes=bAbortRequested;
+				if (bAbortRequested) throw new AsynchronousCloseException();
 			}
 			enqueue(this);
-			return bRes;
 		}
 	}
 	private Progress p;

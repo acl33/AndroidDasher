@@ -312,7 +312,8 @@ public class CAlphabetMap {
 						int iNPercent = (count.iTotalRead *100)/iTotalBytes;
 						if (iNPercent != iLastPercent) {
 							iLastPercent=iNPercent;
-							if (prog.notifyProgress(iNPercent)) break outer;
+							prog.notifyProgress(iNPercent);
+							//an AsynchronousCloseException exits trainStream().
 						}
 					}
 				}
