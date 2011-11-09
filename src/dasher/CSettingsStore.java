@@ -69,37 +69,31 @@ public class CSettingsStore extends Observable<EParameters> {
 		 */
 		Ebp_parameters[] bps = Ebp_parameters.values();
 		for(int i=0; i<bps.length; i++) {
-			if(bps[i].persistent) {
-				try {
-					boolParamValues[i] = LoadBoolSetting(bps[i].regName());
-				}
-				catch(CParameterNotFoundException e) {
-					SaveSetting(bps[i].regName(), boolParamValues[i]=bps[i].defaultVal);
-				}
-			} else boolParamValues[i] = bps[i].defaultVal;		            
+			try {
+				boolParamValues[i] = LoadBoolSetting(bps[i].regName());
+			}
+			catch(CParameterNotFoundException e) {
+				SaveSetting(bps[i].regName(), boolParamValues[i]=bps[i].defaultVal);
+			}
 		}
 		
 		Elp_parameters[] lps = Elp_parameters.values();
 		for(int i=0; i<lps.length; i++) {
-			if(lps[i].persistent) {
-				try {
-					longParamValues[i] = LoadLongSetting(lps[i].regName());
-				}
-				catch(CParameterNotFoundException e) {
-					SaveSetting(lps[i].regName(), longParamValues[i]=lps[i].defaultVal);
-				}
-			} else longParamValues[i] = lps[i].defaultVal;      
+			try {
+				longParamValues[i] = LoadLongSetting(lps[i].regName());
+			}
+			catch(CParameterNotFoundException e) {
+				SaveSetting(lps[i].regName(), longParamValues[i]=lps[i].defaultVal);
+			}
 		}
 		
 		Esp_parameters[] sps = Esp_parameters.values();
 		for (int i=0; i<sps.length; i++) {
-			if (sps[i].persistent) {
-				try {
-					stringParamValues[i] = LoadStringSetting(sps[i].regName());
-				} catch (CParameterNotFoundException e) {
-					SaveSetting(sps[i].regName(), stringParamValues[i] = sps[i].defaultVal);
-				}
-			} else stringParamValues[i] = sps[i].defaultVal;
+			try {
+				stringParamValues[i] = LoadStringSetting(sps[i].regName());
+			} catch (CParameterNotFoundException e) {
+				SaveSetting(sps[i].regName(), stringParamValues[i] = sps[i].defaultVal);
+			}
 		}
 		
 	}
@@ -125,8 +119,7 @@ public class CSettingsStore extends Observable<EParameters> {
 		InsertEvent(iParameter);
 		
 		// Write out to permanent storage
-		if(iParameter.persistent)
-			SaveSetting(iParameter.regName(), bValue);
+		SaveSetting(iParameter.regName(), bValue);
 	}
 	
 	/**
@@ -150,8 +143,7 @@ public class CSettingsStore extends Observable<EParameters> {
 		InsertEvent(iParameter);
 		
 		// Write out to permanent storage
-		if(iParameter.persistent)
-			SaveSetting(iParameter.regName(), lValue);
+		SaveSetting(iParameter.regName(), lValue);
 	}
 	
 	/**
@@ -193,8 +185,7 @@ public class CSettingsStore extends Observable<EParameters> {
 		InsertEvent(iParameter);
 		
 		// Write out to permanent storage
-		if(iParameter.persistent)
-			SaveSetting(iParameter.regName(), sValue);
+		SaveSetting(iParameter.regName(), sValue);
 	}
 	
 	/**

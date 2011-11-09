@@ -30,23 +30,22 @@ package dasher;
  * CParamTables for a list and definitions.
  */
 public enum Esp_parameters implements EParameters {
-			SP_ORIENTATION("Orientation", PERS, "", "Orientation (TB/BT/LR/RL) - anything else = use alphabet"),
-			  SP_ALPHABET_ID("AlphabetID", PERS, "", "AlphabetID"),
-			  SP_ALPHABET_1("Alphabet1", PERS, "", "Alphabet History 1"),
-			  SP_ALPHABET_2("Alphabet2", PERS, "", "Alphabet History 2"),
-			  SP_ALPHABET_3("Alphabet3", PERS, "", "Alphabet History 3"),
-			  SP_ALPHABET_4("Alphabet4", PERS, "", "Alphabet History 4"),
-			  SP_COLOUR_ID("ColourID", PERS, "", "ColourID"), 
-			  SP_DASHER_FONT("DasherFont", PERS, "", "DasherFont"),
-			  SP_SOCKET_INPUT_X_LABEL("SocketInputXLabel", PERS, "x", "Label preceding X values for network input"),
-			  SP_SOCKET_INPUT_Y_LABEL("SocketInputYLabel", PERS, "y", "Label preceding Y values for network input"),
-			  SP_INPUT_FILTER("InputFilter", PERS, "Stylus Control", "Input filter used to provide the current control mode"),
-			  SP_INPUT_DEVICE("InputDevice", PERS, "Mouse Input", "Driver for the input device"),
-			  SP_LM_HOST("LMHost", PERS, "", "Language Model Host");
+			SP_ORIENTATION("Orientation", "", "Orientation (TB/BT/LR/RL) - anything else = use alphabet"),
+			  SP_ALPHABET_ID("AlphabetID", "", "AlphabetID"),
+			  SP_ALPHABET_1("Alphabet1", "", "Alphabet History 1"),
+			  SP_ALPHABET_2("Alphabet2", "", "Alphabet History 2"),
+			  SP_ALPHABET_3("Alphabet3", "", "Alphabet History 3"),
+			  SP_ALPHABET_4("Alphabet4", "", "Alphabet History 4"),
+			  SP_COLOUR_ID("ColourID", "", "ColourID"), 
+			  SP_DASHER_FONT("DasherFont", "", "DasherFont"),
+			  SP_SOCKET_INPUT_X_LABEL("SocketInputXLabel", "x", "Label preceding X values for network input"),
+			  SP_SOCKET_INPUT_Y_LABEL("SocketInputYLabel", "y", "Label preceding Y values for network input"),
+			  SP_INPUT_FILTER("InputFilter", "Stylus Control", "Input filter used to provide the current control mode"),
+			  SP_INPUT_DEVICE("InputDevice", "Mouse Input", "Driver for the input device"),
+			  SP_LM_HOST("LMHost", "", "Language Model Host");
 			  
-			  private Esp_parameters(String rName, boolean pers, String def, String hr) {
+			  private Esp_parameters(String rName, String def, String hr) {
 					humanReadable = hr;
-					persistent = pers;
 					defaultVal = def;
 					regName = rName;
 					BY_NAME.put(regName,this);
@@ -58,7 +57,6 @@ public enum Esp_parameters implements EParameters {
 			  public void reset(CSettingsStore ss) {ss.SetStringParameter(this, defaultVal);}
 			  
 			private final String regName;
-			final boolean persistent;
 			final String defaultVal;
 			final String humanReadable;
 }
