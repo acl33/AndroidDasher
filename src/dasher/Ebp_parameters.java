@@ -43,7 +43,6 @@ public enum Ebp_parameters implements EParameters {
 			  BP_MOUSEPOS_MODE("StartOnMousePosition", PERS, false, "StartOnMousePosition"),
 			  BP_OUTLINE_MODE("OutlineBoxes", PERS, true, "OutlineBoxes"),
 			  BP_AUTOCALIBRATE("AutoAdjust", PERS, false, "Auto-adjust offset for eyetracker miscalibration"),
-			  BP_TRAINING("Training", !PERS, false, "Provides locking during training"),
 			  BP_LM_DICTIONARY("Dictionary", PERS, true, "Whether the word-based language model uses a dictionary"),
 			  BP_AUTO_SPEEDCONTROL("AutoSpeedControl", PERS, true, "AutoSpeedControl"),
 			  BP_LM_ADAPTIVE("LMAdaptive", PERS, true, "Whether language model should learn as you enter text"),

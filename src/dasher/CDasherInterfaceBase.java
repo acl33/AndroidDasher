@@ -345,9 +345,6 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 					&& !prevActs.equals(getControlActions()))
 				UpdateControlManager();
 			Redraw(false);
-		} else if (eParam == Ebp_parameters.BP_TRAINING) {
-			if (!GetBoolParameter(Ebp_parameters.BP_TRAINING))
-				forceRebuild();
 		} else if (eParam == Ebp_parameters.BP_CONTROL_MODE || eParam == Elp_parameters.LP_UNIFORM) {
 			UpdateControlManager();
 		}
@@ -363,12 +360,13 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	
 	public void Lock(String msg, int iPercent) {
 		// TODO: 'Reference counting' for locks?
-		SetBoolParameter(Ebp_parameters.BP_TRAINING,iPercent>=0);
 		if (iPercent>=0) {
 			m_sLockMsg = (msg==null) ? "Training" : msg;
 			if (iPercent!=0) m_sLockMsg+=" "+iPercent;
-		} else
+		} else {
 			m_sLockMsg = null;
+			forceRebuild();
+		}
 		Redraw(false); //assume %age or m_bLock has changed... 
 	}
 	
@@ -558,10 +556,10 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		//...or we have no graphics...
 		if (m_DasherView == null || m_DasherScreen==null) return;
 		
-		if(GetBoolParameter(Ebp_parameters.BP_TRAINING)) {
+		String msg = m_sLockMsg;
+		if(msg!=null) {
 			final int w = m_DasherScreen.GetWidth(), h=m_DasherScreen.GetHeight();
 			m_DasherScreen.DrawRectangle(0, 0, w, h, 0, 0, 0); //fill in colour 0 = white
-			String msg = m_sLockMsg==null ? "Please Wait" : m_sLockMsg;
 			CDasherView.Point p = m_DasherScreen.TextSize(msg, 14);
 			m_DasherScreen.DrawString(msg, (m_DasherScreen.GetWidth()-p.x)/2, (m_DasherScreen.GetHeight()-p.y)/2, 14);
 			return;
@@ -887,7 +885,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	 * @param iId Identifier of the pressed key
 	 */
 	public void KeyDown(long iTime, int iId) {
-		if(m_InputFilter != null && !GetBoolParameter(Ebp_parameters.BP_TRAINING)) {
+		if(m_InputFilter != null && m_sLockMsg==null) {
 			m_InputFilter.KeyDown(iTime, iId, m_DasherView, m_Input, m_DasherModel);
 		}
 	}
@@ -916,7 +914,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	 * @param iId Identifier of the pressed key
 	 */
 	public void KeyUp(long iTime, int iId) {
-		if(m_InputFilter != null && !GetBoolParameter(Ebp_parameters.BP_TRAINING)) {
+		if(m_InputFilter != null && m_sLockMsg==null) {
 			m_InputFilter.KeyUp(iTime, iId, m_DasherView, m_Input, m_DasherModel);
 		}
 	}
