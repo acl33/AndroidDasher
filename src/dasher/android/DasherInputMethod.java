@@ -15,6 +15,7 @@ import android.content.IntentFilter;
 import android.inputmethodservice.InputMethodService;
 import android.os.Handler;
 import android.preference.PreferenceManager;
+import android.text.InputType;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
@@ -112,6 +113,20 @@ public class DasherInputMethod extends InputMethodService {
 	public void onStartInput(EditorInfo attr, boolean restart) {
 		super.onStartInput(attr, restart);
 		Log.d("DasherIME",this +" onStartInput ("+InputTypes.getDesc(attr)+", "+restart+") with IC "+getCurrentInputConnection());
+		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidUseTeklaNav", false)) {
+			if (attr.inputType==InputType.TYPE_NULL) {
+				//Dasher is not useful here! Switch to Tekla...
+				if (isSoftIMEShowing()) {
+					bSwitch = true;
+					hideWindow();
+				} else //see if we're shown in a couple of seconds
+					handler.postDelayed(mSwitchRunnable,2000);
+			} else {
+				//be a bit more active in showing the window, user may be stuck without it
+				showWindow(true);
+				updateInputViewShown();
+			}
+		}
 	}
 	
 	@Override 
@@ -227,10 +242,24 @@ public class DasherInputMethod extends InputMethodService {
 	
 	@Override
 	public void onWindowHidden() {
+		Log.d("DasherIME","onWindowHidden shown="+bShown);
 		super.onWindowHidden();
 		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidUseTeklaNav", false)) {
 			if (bSwitch) switchToTekla();
+			else if (bShown && !(bShown=false))
+				handler.postDelayed(mSwitchRunnable, 2000);//or mShowSoftIMEWatchdog ?
 		}
+	}
+	private boolean bShown;
+	private final Runnable mSwitchRunnable = new Runnable() {
+		public void run() {
+			if (!isSoftIMEShowing())
+				switchToTekla();
+		}
+	};
+	/*package*/ void canvasStarted() {
+		handler.removeCallbacks(mSwitchRunnable);
+		bShown=true;
 	}
 	private void switchToTekla() {
 		InputMethodManager mgr = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);

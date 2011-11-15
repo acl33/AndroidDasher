@@ -20,6 +20,7 @@ import android.view.WindowManager;
 import android.view.SurfaceHolder.Callback;
 
 public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen {
+	private final DasherInputMethod dim;
 	private final ADasherInterface intf;
 	private final SurfaceHolder holder;
     private boolean bReady;
@@ -27,8 +28,9 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 	/** coordinates of last touch */
 	private int x,y;
     
-	public DasherCanvas(Context context, ADasherInterface intf) {
+	public DasherCanvas(DasherInputMethod context, ADasherInterface intf) {
 		super(context);
+		this.dim=context;
 		if (intf==null) throw new NullPointerException();//just do it now!
 		this.intf=intf;
 		holder = getHolder();
@@ -95,6 +97,7 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 			if (bReady) return;
 			bReady = true;
 		}
+		dim.canvasStarted();
 		intf.enqueue(new Runnable() {
 			public void run() {
 				intf.ChangeScreen(DasherCanvas.this);
