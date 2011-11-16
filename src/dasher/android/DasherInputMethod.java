@@ -16,8 +16,10 @@ import android.inputmethodservice.InputMethodService;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.text.InputType;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import ca.idi.tecla.sdk.SepManager;
@@ -45,8 +47,19 @@ public class DasherInputMethod extends InputMethodService {
 		if (isSoftIMEShowing()) {
 			Log.d("DasherIME", "Soft IME is already showing");
 		} else {
-			showWindow(true);
-			updateInputViewShown();
+			try {
+				showWindow(true);
+				updateInputViewShown();
+			} catch (WindowManager.BadTokenException e) {
+				if (!Settings.Secure.getString(getContentResolver(),
+Settings.Secure.DEFAULT_INPUT_METHOD).contains("Dasher")) {
+					//we are no longer the active input method;
+					// attempting to show our window throws above exception.
+					// don't do so! (TODO: deregister broadcast receiver on switch away?)
+					return;
+				}
+				Log.d("DasherIME","Couldn't show Soft IME",e);
+			}
 			// This call causes a looped intent call until the IME View is created
 			callShowSoftIMEWatchDog(500);
 		}
