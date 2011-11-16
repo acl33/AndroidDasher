@@ -9,11 +9,16 @@ import dasher.Ebp_parameters;
 import dasher.CControlManager.ControlAction;
 
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.inputmethodservice.InputMethodService;
 import android.os.Handler;
+import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
 import android.preference.PreferenceManager;
 import android.text.InputType;
 import android.provider.Settings;
@@ -28,7 +33,7 @@ import ca.idi.tecla.sdk.Switcher;
 import android.view.inputmethod.InputMethodInfo;
 import android.view.inputmethod.InputMethodManager;
 
-public class DasherInputMethod extends InputMethodService {
+public class DasherInputMethod extends InputMethodService implements ServiceConnection {
 	private DasherCanvas surf;
 	private ADasherInterface intf;
 	private InputConnectionDocument doc;
@@ -94,11 +99,15 @@ Settings.Secure.DEFAULT_INPUT_METHOD).contains("Dasher")) {
 		//load data (now), and start training in background
 		intf = new ADasherInterface(this, true);
 		registerReceiver(mReceiver, new IntentFilter(Switcher.ACTION_SHOW_IME));
+		bindService(new Intent(SepManager.SEP_SERVICE), this, Context.BIND_AUTO_CREATE);
 	}
 	
 	@Override public void onDestroy() {
 		Log.d("DasherIME",this+" onDestroy...");
 		unregisterReceiver(mReceiver);
+		onFinishInput(); //just to unregister from SEP Service
+		unbindService(this);
+		onServiceDisconnected(null); //note unbindService _doesn't_ call this (!!)
 		intf.StartShutdown();
 		intf=null;
 		super.onDestroy();
@@ -179,11 +188,11 @@ Settings.Secure.DEFAULT_INPUT_METHOD).contains("Dasher")) {
 		// Passwords???
 		
 		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidTeklaShield", false)) {
-			Log.d("DasherIME","Starting Tekla Service...");
-			registerReceiver(sepBroadcastReceiver, new IntentFilter(SwitchEvent.ACTION_SWITCH_EVENT_RECEIVED));
-			if (SepManager.start(this))
-				Log.d("DasherIME","Started Tekla");
-			else Log.d("DasherIME","Couldn't start Tekla");
+			try {
+				sepServiceMsngr.send(Message.obtain(null, SepManager.MSG_REGISTER, incomingMsngr));
+			} catch (Exception e) {//NullPtr or Remote
+				Log.w("DasherIME", "Could not start SEP: "+e.toString());
+			}
 		}
 	}
 
@@ -238,16 +247,12 @@ Settings.Secure.DEFAULT_INPUT_METHOD).contains("Dasher")) {
 		Log.d("DasherIME",this + " onFinishInput");
 		super.onFinishInput();
 		//if (surf!=null) surf.stopAnimating(); //yeah, we can get sent onFinishInput before/without onCreate...
-		tekla: if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidTeklaShield", false)) {
-			Log.d("DasherIME","Stopping Tekla Service...");
+		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidTeklaShield", false)) {
 			try {
-				unregisterReceiver(sepBroadcastReceiver);
-			} catch (IllegalArgumentException e) {
-				Log.d("DasherIME","Tekla service not running?");
-				break tekla;
+				sepServiceMsngr.send(Message.obtain(null, SepManager.MSG_UNREGISTER, incomingMsngr));
+			} catch (Exception e) {//NullPtr or Remote
+				Log.w("DasherIME", "Could not unregister: "+e.toString());
 			}
-			SepManager.stop(this);
-			Log.d("DasherIME","Stopped Tekla");
 		}
 	}
 	
@@ -339,51 +344,68 @@ Settings.Secure.DEFAULT_INPUT_METHOD).contains("Dasher")) {
 		}
 	}
 	
-	private final BroadcastReceiver sepBroadcastReceiver = new BroadcastReceiver() {
-	    @Override
-	    public void onReceive(Context context, Intent intent) {
-	    	final SwitchEvent e = new SwitchEvent(intent.getExtras());
-	    	android.util.Log.d("DasherIME","SwitchEvent changed "+e.getSwitchChanges()+" state "+e.getSwitchStates());
-    		intf.enqueue(new Runnable() {
-	    		public void run() {
-	    			for (int all=e.getSwitchChanges(); all!=0;) {
-	    	    		final int sw = (all & -all); //extract least-significant set bit
-	    	    		all &= ~sw; //next iter will process remainder
-	    	    		int keyId;
-	    	    		switch (sw) {
-	    	    			case SwitchEvent.SWITCH_J1: //case 10: //up
-	    	    				keyId = 4;
-	    	    				break;
-	    	    			case SwitchEvent.SWITCH_J2: //case 20: //down
-	    	    				keyId = 2;
-	    	    				break;
-	    	    			case SwitchEvent.SWITCH_J3: //case 40: //right
-	    	    				keyId = 4; // -> forward
-	    	    				break;
-	    	    			case SwitchEvent.SWITCH_J4: //case 80: //left
-	    	    				keyId = 1; // -> back
-	    	    				break;
-	    	    			case SwitchEvent.SWITCH_E1:
-	    	    				keyId = 4;
-	    	    				break;
-	    	    			case SwitchEvent.SWITCH_E2:
-	    	    				keyId = 2;
-	    	    				break;
-	        				default:
-	        					Log.d("DasherIME", "switch event received with change to switch ID "+sw);
-	        					continue;
-	    	    		}
-	    	    		final long time = System.currentTimeMillis();
-	    	    		if (e.isPressed(sw) == e.isReleased(sw))
-	    	    			throw new IllegalStateException(); //???
-	    	    		if (e.isPressed(sw))
-			    			intf.KeyDown(time, keyId);
-			    		else 
-							intf.KeyUp(time, keyId);
-	    			}
-	    		}
-	    	});
-	    }
-	};
+	private void handleSwitchEvent(final SwitchEvent e) {
+	    android.util.Log.d("DasherIME","SwitchEvent changed "+e.getSwitchChanges()+" state "+e.getSwitchStates());
+	    if (intf==null) return; //hmmm. unbindService can take longer than StartShutdown...?
+    	intf.enqueue(new Runnable() {
+	   		public void run() {
+	   			for (int all=e.getSwitchChanges(); all!=0;) {
+    	    		final int sw = (all & -all); //extract least-significant set bit
+    	    		all &= ~sw; //next iter will process remainder
+    	    		int keyId;
+    	    		switch (sw) {
+    	    			case SwitchEvent.SWITCH_J1: //case 10: //up
+    	    				keyId = 4;
+    	    				break;
+    	    			case SwitchEvent.SWITCH_J2: //case 20: //down
+    	    				keyId = 2;
+    	    				break;
+    	    			case SwitchEvent.SWITCH_J3: //case 40: //right
+    	    				keyId = 4; // -> forward
+    	    				break;
+    	    			case SwitchEvent.SWITCH_J4: //case 80: //left
+    	    				keyId = 1; // -> back
+    	    				break;
+    	    			case SwitchEvent.SWITCH_E1:
+    	    				keyId = 4;
+    	    				break;
+    	    			case SwitchEvent.SWITCH_E2:
+    	    				keyId = 2;
+    	    				break;
+        				default:
+        					Log.d("DasherIME", "switch event received with change to switch ID "+sw);
+        					continue;
+    	    		}
+    	    		final long time = System.currentTimeMillis();
+    	    		if (e.isPressed(sw) == e.isReleased(sw))
+    	    			throw new IllegalStateException(); //???
+    	    		if (e.isPressed(sw))
+		    			intf.KeyDown(time, keyId);
+		    		else 
+						intf.KeyUp(time, keyId);
+    			}
+    		}
+    	});
+    }
+
+	private Messenger sepServiceMsngr;
+	private final Messenger incomingMsngr = new Messenger(new Handler() {
+		@Override public void handleMessage(Message m) {
+			if (m.what == SwitchEvent.MSG_SWITCH_EVENT) {
+				handleSwitchEvent(new SwitchEvent(m));
+			}
+		}
+	});
+	//@Override
+	public void onServiceConnected(ComponentName name, IBinder service) {
+		Log.d("DasherIME","onServiceConnected");
+		sepServiceMsngr = new Messenger(service);
+	}
+
+	//@Override
+	public void onServiceDisconnected(ComponentName name) {
+		Log.d("DasherIME","onServiceDisconnected");
+		sepServiceMsngr=null;
+	}
 
 }
