@@ -35,6 +35,9 @@ public class CControlManager extends CDasherComponent {
 		public int expectedNumSuccs(CDasherNode node);
 		public CContNode make(CControlManager mgr, CDasherNode parent);
 	}
+	public static interface RebuildingAction extends ControlAction {
+		public CDasherNode rebuild(CControlManager mgr, CDasherNode node);
+	}
 
 	public static abstract class ControlActionBase implements ControlAction {
 		private final String desc;
@@ -131,16 +134,9 @@ public class CControlManager extends CDasherComponent {
 
 		@Override
 		public CDasherNode RebuildParent() {
-			//position as the control-node child of an alph root. Not ideal, but given
-			// most CContNode's rebuild anyway...
-			CDasherNode temp = m_pNCMgr.getAlphabetManager().GetRoot(m_Interface.getDocument(), getOffset(), true);
-			temp.PopulateChildren();
-			CContNode replace = (CContNode)temp.ChildAtIndex(temp.ChildCount()-1);
-			CDasherNode ret = m_pNCMgr.getAlphabetManager().GetRoot(m_Interface.getDocument(), getOffset(), true);
-			for (int i=0; i<temp.ChildCount()-1; i++)
-				temp.ChildAtIndex(i).Reparent(ret, temp.Lbnd(), temp.Hbnd());
-			Reparent(ret, replace.Lbnd(), replace.Hbnd());
-			return ret;
+			if (act instanceof RebuildingAction)
+				return ((RebuildingAction)act).rebuild(CControlManager.this, this);
+			return rebuildAlphNode(getOffset(), this);
 		}
 		
 		@Override
@@ -148,6 +144,26 @@ public class CControlManager extends CDasherComponent {
 			super.DeleteNode();
 			nodeCache.add(this);
 		}
+	}
+	/** Utility method, to build an appropriate alph-node parent (root) for a control
+	 * node which has lost its parent (i.e. is having {@link CDasherNode#RebuildParent()}
+	 * called on it). The supplied node will be spliced into the place of the
+	 * usual control-node child of the alphabet root.
+	 * @param offset Cursor position of alphabet root node to build
+	 * @param controlChild control node to put in place of the usual control node
+	 * @return
+	 */
+	protected CDasherNode rebuildAlphNode(int offset, CContNode controlChild) {
+		//position as the control-node child of an alph root. Not ideal, but given
+		// most CContNode's rebuild anyway...
+		CDasherNode temp = m_pNCMgr.getAlphabetManager().GetRoot(m_Interface.getDocument(), offset, true);
+		temp.PopulateChildren();
+		CContNode replace = (CContNode)temp.ChildAtIndex(temp.ChildCount()-1);
+		CDasherNode ret = m_pNCMgr.getAlphabetManager().GetRoot(m_Interface.getDocument(), offset, true);
+		for (int i=0; i<temp.ChildCount()-1; i++)
+			temp.ChildAtIndex(i).Reparent(ret, temp.Lbnd(), temp.Hbnd());
+		controlChild.Reparent(ret, replace.Lbnd(), replace.Hbnd());
+		return ret;
 	}
 	
 	private final List<CContNode> nodeCache = new ArrayList<CContNode>();
