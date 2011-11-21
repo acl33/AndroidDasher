@@ -62,11 +62,31 @@
 	
 	</PreferenceScreen>
 
-	<CheckBoxPreference
-	  android:key="ControlMode"
+	<PreferenceScreen
 	  android:title="@string/ControlMode_title"
-	  android:summary="@string/ControlMode_summary"/>
-
+	  android:summary="@string/ControlMode_summary">
+	  <CheckBoxPreference
+	    android:key="ControlMode"
+	    android:title="@string/ControlMode_title"
+	    android:summary="@string/ControlMode_summary"/>
+	  <CheckBoxPreference
+	    android:key="ControlModeHasMove"
+	    android:dependency="ControlMode"
+	    android:title="@string/ControlModeHasMove_title"
+	    android:summary="@string/ControlModeHasMove_summary"/>
+	  <CheckBoxPreference
+	    android:key="ControlMoveRebuild"
+	    android:dependency="ControlModeHasMove"
+	    android:title="@string/ControlMoveRebuild_title"
+	    android:summary="@string/ControlMoveRebuild_summary"/>
+	  <CheckBoxPreference
+	    android:key="ControlMoveRebuildImmed"
+	    android:dependency="ControlMoveRebuild"
+	    android:title="@string/ControlMoveRebuildImmed_title"
+	    android:summaryOn="@string/ControlMoveRebuildImmed_summaryOn"
+	    android:summaryOff="@string/ControlMoveRebuildImmed_summaryOff"/>
+	</PreferenceScreen>
+	
     <ListPreference
       android:key="AlphabetID"
       android:title="@string/AlphabetID_title"/>

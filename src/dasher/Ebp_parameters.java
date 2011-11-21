@@ -53,7 +53,10 @@ public enum Ebp_parameters implements EParameters {
 			  BP_LM_REMOTE("RemoteLM", PERS, false, "Language model is remote and responds asynchronously."),
 			  BP_CONNECT_LOCK("Connecting", !PERS, false, "Currently waiting for a connection to a remote LM; lock Dasher."),
 			  BP_ONE_DIMENSIONAL_MODE("OneDimensionalMode", PERS, false, "Remap x/y to radius / curve all around origin"),
-			  BP_ONE_BUTTON_RELEASE_TIME("OneButtonReleaseTime", PERS, false, "Use length of single push, not gap, for 1B-dynamic mode");
+			  BP_ONE_BUTTON_RELEASE_TIME("OneButtonReleaseTime", PERS, false, "Use length of single push, not gap, for 1B-dynamic mode"),
+			  BP_CONTROL_MODE_HAS_MOVE("ControlModeHasMove",PERS,true,"Include nodes to move cursor"),
+			  BP_MOVE_REBUILD("ControlMoveRebuild",PERS,true,"Rebuild behind cursor-move nodes with new context"),
+			  BP_MOVE_REBUILD_IMMED("ControlMoveRebuildImmed",PERS,false,"Rebuild move nodes immediately rather than on commit");
 
 			  private Ebp_parameters(String rName, boolean pers, boolean def, String hr) {
 				humanReadable = hr;

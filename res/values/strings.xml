@@ -31,7 +31,14 @@
 <string name="DisplayHeight_title">Display Height %</string>
 <string name="DisplayHeight_summary">Compress display vertically to take up less space</string>
 <string name="ControlMode_title">Commands</string>
-<string name="ControlMode_summary">Generate nodes for e.g. IME actions</string>
+<string name="ControlMode_summary">Generate nodes to perform various actions</string>
+<string name="ControlModeHasMove_title">Cursor Movement</string>
+<string name="ControlModeHasMove_summary">Include nodes to move cursor forwards/back</string>
+<string name="ControlMoveRebuild_title">Rebuild Behind Moves</string>
+<string name="ControlMoveRebuild_summary">Replace with letters to left of cursor after movement</string>
+<string name="ControlMoveRebuildImmed_title">Rebuild Immediately</string>
+<string name="ControlMoveRebuildImmed_summaryOn">Replacement occurs after every character moved</string>
+<string name="ControlMoveRebuildImmed_summaryOff">Replacement occurs after all movement finished</string>
 <string name="AlphabetID_title">Alphabet Name</string>
 <string name="AndroidInputMethod_title">Input Mode</string>
 <string name="AndroidInputMethod_summary">Choose how to control Dasher</string>

@@ -174,12 +174,30 @@ public class CControlManager extends CDasherComponent {
 		return node;
 	}
 	
-	private static abstract class MoveAction extends ControlActionBase {
+	protected static class CommitAction extends FixedSuccessorsAction {
+		CommitAction(ControlAction...actions) {super("",actions);}
+		@Override public void happen(CControlManager mgr, CDasherNode node) {
+			replace(mgr, node);
+		}
+	}
+	private static final ControlAction COMMIT_ALPH = new CommitAction((ControlAction)null);
+	
+	private static abstract class MoveAction extends ControlActionBase implements RebuildingAction {
 		MoveAction() {super(null);} //no title
 		public void happen(CControlManager mgr, CDasherNode node) {
 			mgr.m_Interface.getDocument().moveCursor(node.getOffset());
-			replace(mgr,node);
+			if (mgr.GetBoolParameter(Ebp_parameters.BP_MOVE_REBUILD)
+					&& mgr.GetBoolParameter(Ebp_parameters.BP_MOVE_REBUILD_IMMED))
+				replace(mgr,node);
 		}
+		public void undo(CControlManager mgr,CDasherNode node) {
+			mgr.m_Interface.getDocument().moveCursor(node.Parent()==null ? getParentOffset(node) : node.Parent().getOffset());
+		}
+		public CDasherNode rebuild(CControlManager mgr, CDasherNode node) {
+			return mgr.rebuildAlphNode(getParentOffset(node), (CContNode)node);
+		}
+		protected abstract int getParentOffset(CDasherNode node);
+		
 		public int expectedNumSuccs(CDasherNode node) {
 			int num=1; //escape
 			if (node.getOffset()>=0) num++;
@@ -203,7 +221,10 @@ public class CControlManager extends CDasherComponent {
 			int total=fwdSz+backSz+1, low=0;
 			if (back!=null)
 				back.Reparent(node, low, low+=(NORMALIZATION*backSz)/total);
-			mgr.m_pNCMgr.getAlphabetManager().GetRoot(node, node.getOffset(), false).Reparent(node, low, low+=NORMALIZATION/total);
+			CDasherNode alph =
+					(mgr.GetBoolParameter(Ebp_parameters.BP_MOVE_REBUILD) && !mgr.GetBoolParameter(Ebp_parameters.BP_MOVE_REBUILD_IMMED))
+					? COMMIT_ALPH.make(mgr, node) : mgr.m_pNCMgr.getAlphabetManager().GetRoot(node, node.getOffset(), false);
+			alph.Reparent(node, low, low+=NORMALIZATION/total);
 			if (fwd!=null)
 				fwd.Reparent(node, low, NORMALIZATION);
 		}
@@ -227,6 +248,10 @@ public class CControlManager extends CDasherComponent {
 			//sb.append('\u20D5'); //combining clockwise arrow above, but not in Android
 			return mgr.makeCont(this, nOffset, 11, ">"+text);
 		}
+		protected int getParentOffset(CDasherNode child) {
+			int chLength = child.m_strDisplayText.length()-1;
+			return child.getOffset()-chLength;
+		}
 	};
 	private static final MoveAction BACK = new MoveAction() {
 		private final List<Integer> tempList = new ArrayList<Integer>();
@@ -246,6 +271,10 @@ public class CControlManager extends CDasherComponent {
 			String text = (tempList.get(0)==0) ? nxChar : mgr.m_pNCMgr.getAlphabetManager().m_Alphabet.GetDisplayText(tempList.get(0));
 			//sb.append('\u20D4'); //combining anticlockwise arrow above, but not in Android
 			return mgr.makeCont(this, nOffset, 13, "<"+text);
+		}
+		protected int getParentOffset(CDasherNode child) {
+			int chLength = child.m_strDisplayText.length()-1;
+			return child.getOffset()+chLength;
 		}
 	};
 
