@@ -76,27 +76,27 @@ public class ADasherInterface extends CDasherInterfaceBase {
 		this.androidCtx = androidCtx;
 		taskThread = new Thread() {
 			public void run() {
-				try {
-					Queue<Runnable> frameTasks = new LinkedList<Runnable>();
-					while (true) {
-						if (m_DasherScreen!=null && doc!=null) {
-							tasks.drainTo(frameTasks);
-							((DasherCanvas)m_DasherScreen).renderFrame();
-							//that'll call round to Redraw(boolean) to schedule another frame
-							// if anything happened in this one.
-							while (!frameTasks.isEmpty())
-								frameTasks.remove().run();
-						} else {
-							try {
-								tasks.take().run();
-							} catch (InterruptedException e) {
-								//we are interrupted if ever BP_DASHER_PAUSED is cleared
-								// (to tell us to start rendering!)
-								// - so loop round
-							}
+				Queue<Runnable> frameTasks = new LinkedList<Runnable>();
+				while (true) {
+					if (m_DasherScreen!=null && doc!=null && !m_bShutdownLock) {
+						tasks.drainTo(frameTasks);
+						((DasherCanvas)m_DasherScreen).renderFrame();
+						//that'll call round to Redraw(boolean) to schedule another frame
+						// if anything happened in this one.
+						while (!frameTasks.isEmpty())
+							frameTasks.remove().run();
+					} else if (m_bShutdownLock && tasks.isEmpty())
+						break;
+					else {
+						try {
+							tasks.take().run();
+						} catch (InterruptedException e) {
+							//we are interrupted if ever BP_DASHER_PAUSED is cleared
+							// (to tell us to start rendering!)
+							// - so loop round
 						}
 					}
-				} catch (ThreadDeath d) {}//exit
+				}
 				//android.util.Log.d("DasherIME","Background thread for "+this+" exitting");
 			}
 		};
@@ -205,22 +205,18 @@ public class ADasherInterface extends CDasherInterfaceBase {
 	public void StartShutdown() {
 		if (Thread.currentThread()!=taskThread) {
 			//Log.d("DasherIME","StartShutdown...");
-			//We just want a holder for a boolean, don't actually need atomicity properties.
-			final java.util.concurrent.atomic.AtomicBoolean done 
-				=new java.util.concurrent.atomic.AtomicBoolean(false);
+			final Object lock = new Object();
 			enqueue(new Runnable() {
 				public void run() {
 					StartShutdown();
-					synchronized (done) {
-						done.set(true);
-						done.notifyAll();
+					synchronized (lock) {
+						lock.notifyAll();
 					}
-					throw new ThreadDeath();
 				}
 			});
-			synchronized(done) {
-				while (!done.get())
-					try {done.wait();}
+			synchronized(lock) {
+				while (!m_bShutdownLock)
+					try {lock.wait();}
 					catch (InterruptedException e) {}
 			}
 			return;
