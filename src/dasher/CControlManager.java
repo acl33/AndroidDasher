@@ -492,6 +492,14 @@ public class CControlManager extends CDasherComponent {
 			return BOUNDS.length-1;
 		}		
 	};
+	
+	public static final ControlAction PAUSE_ACTION = new FixedSuccessorsAction("Pause") {
+		public void happen(CControlManager mgr,CDasherNode node) {
+			mgr.SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
+			if (mgr.GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_REBUILD))
+				replace(mgr,node);
+		}
+	};
 
 	public static void main(String[] args) {
 		String[] s = AlphSwitcher.summarize(args);

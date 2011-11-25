@@ -1027,19 +1027,12 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	public List<CControlManager.ControlAction> getControlActions() {
 		if (!GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE)) return Collections.emptyList();
 		List<ControlAction> acts = new ArrayList<ControlAction>();
-		if (m_InputFilter!=null && m_InputFilter.supportsPause()) acts.add(PAUSE_ACTION);
+		if (m_InputFilter!=null && m_InputFilter.supportsPause()) acts.add(CControlManager.PAUSE_ACTION);
 		if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_HAS_MOVE)) acts.add(CControlManager.MOVE);
 		if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_ALPH_SWITCH)) acts.add(new CControlManager.AlphSwitcher(this));
 		if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_HAS_SPEED)) acts.add(CControlManager.SPEED_CHANGE);
 		return acts;
 	}
-	
-	public final CControlManager.ControlAction PAUSE_ACTION = new CControlManager.FixedSuccessorsAction("Pause") {
-		public void happen(CControlManager mgr,CDasherNode node) {
-			SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
-			replace(mgr,node);
-		}
-	};
 	
 	public CInputFilter GetActiveInputFilter() {return m_InputFilter;}
 
