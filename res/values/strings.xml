@@ -32,6 +32,8 @@
 <string name="DisplayHeight_summary">Compress display vertically to take up less space</string>
 <string name="ControlMode_title">Commands</string>
 <string name="ControlMode_summary">Generate nodes to perform various actions</string>
+<string name="AndroidSettingsNode_title">Settings</string>
+<string name="AndroidSettingsNode_summary">Include node for direct access to Dasher Settings</string>
 <string name="ControlModeHasMove_title">Cursor Movement</string>
 <string name="ControlModeHasMove_summary">Include nodes to move cursor forwards/back</string>
 <string name="ControlMoveRebuild_title">Rebuild Behind Moves</string>

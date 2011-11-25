@@ -82,12 +82,10 @@ public class DasherInputMethod extends InputMethodService {
 		//Log.d("DasherIME","cursor "+initCursorPos+" actionLabel "+attribute.actionLabel);
 		//Prevent learn-as-you-write when editing any field that is a password
 		List<ControlAction> acts = new ArrayList<ControlAction>();
-		class Hide extends CControlManager.FixedSuccessorsAction implements Runnable {
-			Hide() {super("Back");}//TODO internationalize...or icon?
-			public void happen(CControlManager mgr, CDasherNode node) {handler.post(this);}
-			public void run() {hideWindow();}
-		};
-		acts.add(new Hide());
+		acts.add(HIDE);
+		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidSettingsNode", false)) {
+			acts.add(SETTINGS);
+		}
 		ControlAction icAction=makeICAction(ic, attribute);
 		if (icAction!=null) acts.add(icAction);
 		doc=InputTypes.isPassword(attribute) ? new InputConnectionDocument(intf, ic, initCursorPos, initNumSel) {
@@ -113,6 +111,25 @@ public class DasherInputMethod extends InputMethodService {
 			else Log.d("DasherIME","Couldn't start Tekla");
 		}
 	}
+
+	private abstract class HandlerAction extends CControlManager.FixedSuccessorsAction implements Runnable {
+		HandlerAction(String s) {super(s);}
+		public void happen(CControlManager mgr, CDasherNode node) {handler.post(this);}
+		public void run() {hideWindow();}
+	};
+	
+	
+	private final ControlAction HIDE = new HandlerAction("Back") { //TODO internationalize, or icon?
+		public void run() {hideWindow();}
+	};
+	
+	private final ControlAction SETTINGS = new HandlerAction("Settings") { //TODO internationalize
+		public void run() {
+			Intent i = new Intent(DasherInputMethod.this,SettingsActivity.class);
+			i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+			startActivity(i);
+		}
+	};
 	
 	@Override public boolean onKeyUp(int keyCode, KeyEvent event) {
 		final int id = intf.convertAndroidKeycode(keyCode);

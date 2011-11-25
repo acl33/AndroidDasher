@@ -70,6 +70,10 @@
 	    android:title="@string/ControlMode_title"
 	    android:summary="@string/ControlMode_summary"/>
 	  <CheckBoxPreference
+	    android:key="AndroidSettingsNode"
+	    android:title="@string/AndroidSettingsNode_title"
+	    android:summary="@string/AndroidSettingsNode_summary"/>
+	  <CheckBoxPreference
 	    android:key="ControlModeHasMove"
 	    android:dependency="ControlMode"
 	    android:title="@string/ControlModeHasMove_title"
