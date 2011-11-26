@@ -19,6 +19,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
+import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.text.InputType;
 import android.provider.Settings;
@@ -99,15 +100,22 @@ Settings.Secure.DEFAULT_INPUT_METHOD).contains("Dasher")) {
 		//load data (now), and start training in background
 		intf = new ADasherInterface(this, true);
 		registerReceiver(mReceiver, new IntentFilter(Switcher.ACTION_SHOW_IME));
-		bindService(new Intent(SepManager.SEP_SERVICE), this, Context.BIND_AUTO_CREATE);
+		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidTeklaShield", false))
+			bindService(new Intent(SepManager.SEP_SERVICE), this, Context.BIND_AUTO_CREATE);
 	}
 	
 	@Override public void onDestroy() {
 		Log.d("DasherIME",this+" onDestroy...");
 		unregisterReceiver(mReceiver);
-		onFinishInput(); //just to unregister from SEP Service
-		unbindService(this);
-		onServiceDisconnected(null); //note unbindService _doesn't_ call this (!!)
+		if (sepServiceMsngr!=null) {
+			try {
+				sepServiceMsngr.send(Message.obtain(null, SepManager.MSG_UNREGISTER, incomingMsngr));
+			} catch (RemoteException e) {
+				Log.w("DasherIME", "Could not unregister: "+e.toString());
+			}
+			unbindService(this);
+			onServiceDisconnected(null); //note unbindService _doesn't_ call this (!!)
+		}
 		intf.StartShutdown();
 		intf=null;
 		super.onDestroy();
@@ -186,14 +194,6 @@ Settings.Secure.DEFAULT_INPUT_METHOD).contains("Dasher")) {
 		
 		//TODO, use EditorInfo to select appropriate...language? (e.g. numbers only!).
 		// Passwords???
-		
-		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidTeklaShield", false)) {
-			try {
-				sepServiceMsngr.send(Message.obtain(null, SepManager.MSG_REGISTER, incomingMsngr));
-			} catch (Exception e) {//NullPtr or Remote
-				Log.w("DasherIME", "Could not start SEP: "+e.toString());
-			}
-		}
 	}
 
 	private abstract class HandlerAction extends CControlManager.FixedSuccessorsAction implements Runnable {
@@ -247,13 +247,6 @@ Settings.Secure.DEFAULT_INPUT_METHOD).contains("Dasher")) {
 		Log.d("DasherIME",this + " onFinishInput");
 		super.onFinishInput();
 		//if (surf!=null) surf.stopAnimating(); //yeah, we can get sent onFinishInput before/without onCreate...
-		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidTeklaShield", false)) {
-			try {
-				sepServiceMsngr.send(Message.obtain(null, SepManager.MSG_UNREGISTER, incomingMsngr));
-			} catch (Exception e) {//NullPtr or Remote
-				Log.w("DasherIME", "Could not unregister: "+e.toString());
-			}
-		}
 	}
 	
 	private boolean bSwitch;
@@ -400,6 +393,12 @@ Settings.Secure.DEFAULT_INPUT_METHOD).contains("Dasher")) {
 	public void onServiceConnected(ComponentName name, IBinder service) {
 		Log.d("DasherIME","onServiceConnected");
 		sepServiceMsngr = new Messenger(service);
+		try {
+			sepServiceMsngr.send(Message.obtain(null, SepManager.MSG_REGISTER, incomingMsngr));
+		} catch (RemoteException e) {//NullPtr or Remote
+			Log.w("DasherIME", "Could not start SEP: "+e.toString());
+			sepServiceMsngr = null;
+		}
 	}
 
 	//@Override
