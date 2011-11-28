@@ -26,19 +26,14 @@
 package dasher;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
-
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
-import org.xml.sax.helpers.DefaultHandler;
 
 /**
  * 
@@ -59,11 +54,6 @@ public class CColourIO extends XMLFileParser {
 	protected HashMap<String, ColourInfo> Colours = new HashMap<String,ColourInfo>(); // map short names (file names) to descriptions
 		
 	/**
-	 * SAXParser used to read XML files.
-	 */
-	protected SAXParser parser;
-	
-	/**
 	 * Simple struct which represents a colour scheme.
 	 */
 	public static class ColourInfo {
@@ -73,11 +63,6 @@ public class CColourIO extends XMLFileParser {
 		 */
 	    String ColourID;
 	    
-	    /**
-	     * Can this scheme be modified?
-	     */
-	    boolean Mutable;               // If from user we may play. If from system defaults this is immutable. User should take a copy.
-
 	    // Complete description of the colour:
 	    /**
 	     * Array of scheme's defined colours' red values.
@@ -107,84 +92,41 @@ public class CColourIO extends XMLFileParser {
 	 */
 	public CColourIO(CDasherInterfaceBase dib) {
 		super(dib);
-		
-		SAXParserFactory factory = SAXParserFactory.newInstance();
-		try {
-			parser = factory.newSAXParser();
-		}
-		catch(Exception e) {
-			System.out.printf("Exception creating XML parser in CColourIO: %s%n", e);
-		}
-		
 		CreateDefault();
 	}
 	
-	/**
-	 * Parse a named XML file. Colour-schemes found, if any,
-	 * will be imported and may be enumerated with GetColours
-	 * or retrieved using GetInfo. If the specified XML file
-	 * cannot be read, the method prints the exception raised
-	 * but does not throw an exception.
-	 * <p>
-	 * This method will attempt to retrieve the file first by
-	 * ordinary file I/O, and then if this fails, will attempt
-	 * to retrieve a resource stream, allowing it to find XML
-	 * files stored in a JAR.
-	 * 
-	 * @param filename Relative or absolute path to the file to be parsed.
-	 * @throws IOException 
-	 * @throws SAXException 
-	 */
-	public void ParseFile(InputStream in, final boolean bLoadMutable) throws SAXException, IOException {
-		
-		InputSource XMLInput = new InputSource(in);
-		
-		DefaultHandler handler = new DefaultHandler() {
-			protected CColourIO.ColourInfo currentColour;
+	protected CColourIO.ColourInfo currentColour;
 				
-			public void startElement(String namespaceURI, String simpleName, String qualName, Attributes tagAttributes) throws SAXException {
-				
-				String tagName = (simpleName.equals("") ? qualName : simpleName);
-				
-				if(tagName.equals("palette")) {
-					currentColour = new CColourIO.ColourInfo();
-					currentColour.Mutable = bLoadMutable;
-					currentColour.ColourID = tagAttributes.getValue("name");
-				}
-				else if(tagName.equals("colour")) {
-					currentColour.Reds.add(Integer.parseInt(tagAttributes.getValue("r")));
-					currentColour.Greens.add(Integer.parseInt(tagAttributes.getValue("g")));
-					currentColour.Blues.add(Integer.parseInt(tagAttributes.getValue("b")));
-				}
-			}
-			
-			public void endElement(String namespaceURI, String simpleName, String qualName) {
-				String tagName = (simpleName.equals("") ? qualName : simpleName);
-				
-				if(tagName.equals("palette")) {
-					Colours.put(currentColour.ColourID, currentColour);
-				}
-			
-			}
-			
-			public InputSource resolveEntity(String publicName, String systemName) throws IOException, SAXException {
-				/* CSFS: This is here because SAX will by default look in a system location
-				 * first, which throws a security exception when running as an Applet.
-				 */
-				return systemName.contains("colour.dtd") ? getStream("colour.dtd") : null;
-			}
-			
-		};
+	@Override public void startElement(String namespaceURI, String simpleName, String qualName, Attributes tagAttributes) {
 		
-		//try {
-			parser.parse(XMLInput, handler);
-		//}
-		//catch (Exception e) {
-		//	System.out.printf("Exception reading %s: %s%n", filename, e.toString());
-		//	return; // Again, an invalid file should be treated as if it isn't there.
-		//}
+		String tagName = (simpleName.equals("") ? qualName : simpleName);
 		
+		if(tagName.equals("palette")) {
+			currentColour = new CColourIO.ColourInfo();
+			currentColour.ColourID = tagAttributes.getValue("name");
+		}
+		else if(tagName.equals("colour")) {
+			currentColour.Reds.add(Integer.parseInt(tagAttributes.getValue("r")));
+			currentColour.Greens.add(Integer.parseInt(tagAttributes.getValue("g")));
+			currentColour.Blues.add(Integer.parseInt(tagAttributes.getValue("b")));
+		}
 	}
+	
+	@Override public void endElement(String namespaceURI, String simpleName, String qualName) {
+		String tagName = (simpleName.equals("") ? qualName : simpleName);
+		
+		if(tagName.equals("palette")) {
+			Colours.put(currentColour.ColourID, currentColour);
+		}
+	
+	}
+	
+	@Override public InputSource resolveEntity(String publicName, String systemName) throws IOException, SAXException {
+		/* CSFS: This is here because SAX will by default look in a system location
+		 * first, which throws a security exception when running as an Applet.
+		 */
+		return systemName.contains("colour.dtd") ? getStream("colour.dtd") : null;
+	}		
 	
 	/**
 	 * Fills a given Collection with the names of all available
@@ -287,7 +229,6 @@ public class CColourIO extends XMLFileParser {
 		ColourInfo Default = new ColourInfo();
 		
 		Default.ColourID = "Default";
-		Default.Mutable = false;
 		Default.Reds.add(255);
 		Default.Greens.add(255);
 		Default.Blues.add(255);

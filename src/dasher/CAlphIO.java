@@ -32,12 +32,8 @@ import java.util.Stack;
 import java.io.*;
 
 import org.xml.sax.*;
-import org.xml.sax.helpers.DefaultHandler;
 
 import dasher.Opts.ScreenOrientations;
-
-import javax.xml.parsers.SAXParserFactory;
-import javax.xml.parsers.SAXParser;
 
 /**
  * 
@@ -54,11 +50,6 @@ public class CAlphIO extends XMLFileParser {
 
 	/** Map from {@link CAlphIO.AlphInfo#name} to AlphInfo object */
 	protected HashMap <String, AlphInfo> Alphabets = new HashMap<String, AlphInfo>(); 
-	
-	/**
-	 * Parser to be used to import XML data.
-	 */
-	protected SAXParser parser;
 	
 	/**
 	 * Simple struct representing an alphabet.
@@ -287,25 +278,11 @@ public class CAlphIO extends XMLFileParser {
 	 * files have been read and the object is ready to be queried
 	 * for alphabet names.
 	 *  
-	 * @param SysLoc System data location, for retrieval of DTD files. Optional; if not supplied, this location will not be considered for DTD location.
-	 * @param UserLoc User data location, for retrieval of DTD files. Optional; if not supplied, this location will not be considered for DTD location.
-	 * @param Fnames Filenames to parse; these may be relative or absolute.
 	 * @param Interface Reference to the InterfaceBase parent class for applet-style IO. Optional; if not supplied, applet-style IO will fail.
 	 */
 	public CAlphIO(CDasherInterfaceBase intf) {
 		super(intf);
-		CreateDefault();
-		
-		SAXParserFactory factory = SAXParserFactory.newInstance();
-		
-		try {
-			parser = factory.newSAXParser();
-		}
-		catch(Exception e) {
-			System.out.printf("Error creating SAX parser: %s%n", e);
-			return;
-		}
-		
+		CreateDefault();		
 	}
 	
 	private static String getLineSeparator() {
@@ -321,316 +298,294 @@ public class CAlphIO extends XMLFileParser {
 		}
 	}
 	
-	/**
-	 * Parse a given XML file for alphabets. Any resulting alphabets
-	 * will be added to the internal buffer ready for retrieval
-	 * using GetInfo or GetAlphabets.
-	 * 
-	 * @param filename File to parse
-	 * @param bLoadMutable ignored
-	 */
-	public void ParseFile(InputStream in, final boolean bLoadMutable) throws SAXException, IOException {
+	protected CAlphIO.AlphInfo currentAlph;
+	protected String currentTag;
+	protected SGroupInfo currentGroup;
+	private final Stack<SGroupInfo> groupStack = new Stack<SGroupInfo>();
+	
+	@Override public void startElement(String namespaceURI, String simpleName, String qualName, Attributes tagAttributes) throws SAXException {
 		
-		InputSource XMLInput = new InputSource(in);
+		String tagName = (simpleName.equals("") ? qualName : simpleName);
 		
-		DefaultHandler handler = new DefaultHandler() {
+		if(tagName.equals("alphabet")) {
+			/* A new alphabet is beginning. Find its name... */
+			String name=null; String ctxEscape="Â";
+		    for(int i = 0; i < tagAttributes.getLength(); i++) {
+		    	String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+		    	if(attributeName.equals("name")) {
+		    		name=tagAttributes.getValue(i);
+		    	} else if (attributeName.equals("escape")) {
+		    		ctxEscape = tagAttributes.getValue(i);
+		    	}
+		    }
 			
-			protected CAlphIO.AlphInfo currentAlph;
-			protected String currentTag;
-			protected SGroupInfo currentGroup;
-			protected boolean bFirstGroup;
-			private final Stack<SGroupInfo> groupStack = new Stack<SGroupInfo>();
+		    currentAlph = new AlphInfo(name);
+		    if (name==null) {
+				m_Interface.Message("Alphabet does not have a name, ignoring", 1);
+				//subtags etc. will be recorded in the AlphInfo object with null name anyway;
+				// but this will not be added to the list of available alphabets.
+			} else if (ctxEscape.length()!=1) {
+				m_Interface.Message("Alphabet "+name+" has invalid escape character, will not use context commands.", 1);
+				currentAlph.ctxChar = null;
+			} else {
+				currentAlph.ctxChar = ctxEscape.charAt(0);
+			}
+		}
+		
+		else if(tagName.equals("orientation")) {
+			for(int i = 0; i < tagAttributes.getLength(); i++) {
+				String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+				if(attributeName.equals("type")) {
+					ScreenOrientations spec = Opts.orientationFromString(tagAttributes.getValue(i));
+					currentAlph.m_Orientation = (spec==null) ? Opts.ScreenOrientations.LEFT_TO_RIGHT : spec;
+				}
+			}
+		}
+		
+		else if(tagName.equals("encoding")) {
+			/*We don't actually do anything with this, so...I don't think we need it?
+			 * for(int i = 0; i < tagAttributes.getLength(); i++) {
+			 *
+			 *	 String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+			 *	 if(attributeName == "type") {
+			 *		currentAlph.Encoding = StoT.get(tagAttributes.getValue(i));
+			 *	 }
+			 * }
+			 */
+		}
+		
+		else if(tagName.equals("palette")) {
+			currentTag = "palette"; // will be handled by characters routine
+		}
+		
+		else if(tagName.equals("train")) {
+			currentTag = "train"; // Likewise
+		}
+		
+		else if (tagName.equals("context")) {
+			for (int i=0; i<tagAttributes.getLength(); i++)
+				if (tagAttributes.getLocalName(i).equals("default"))
+					currentAlph.m_strDefaultContext = tagAttributes.getValue(i);
+		}
+		else if(tagName.equals("paragraph")) {
+			//note index of paragraph symbol in order to handle \n / \r\n special-casing...
+			currentAlph.m_ParagraphSymbol = currentAlph.m_Characters.size();
+			//Extract default text as the line separator...
+			//then read as any other character
+			readChar(getLineSeparator(),tagAttributes);
+		}
+		
+		else if(tagName.equals("space")) {
+			//note index of space symbol, it gets used occassionally...
+			currentAlph.m_SpaceSymbol = currentAlph.m_Characters.size();
+			readChar(null, tagAttributes);
+		}
+		
+		else if(tagName.equals("control")) {
+			//ACL Skip, as not implemented in Java. But we could read in display info, as follows...
+			/*for(int i = 0; i < tagAttributes.getLength(); i++) {
+				String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+				if(attributeName == "d") {
+					currentAlph.ControlCharacter.Display = tagAttributes.getValue(i);
+				}
+				if(attributeName == "t") {
+					currentAlph.ControlCharacter.Text = tagAttributes.getValue(i);
+				}
+				if(attributeName == "b") {
+					currentAlph.ControlCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
+				}
+				if(attributeName == "f") {
+					currentAlph.ControlCharacter.Foreground = tagAttributes.getValue(i);
+				}
+			}*/
+		}
+		
+		else if(tagName.equals("convert")) {
+			//ACL Skip, as not implemented in Java. But we could read in display info, as follows...
+			/*for(int i = 0; i < tagAttributes.getLength(); i++) {
+				String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+				if(attributeName == "d") {
+					currentAlph.StartConvertCharacter.Display = tagAttributes.getValue(i);
+				}
+				if(attributeName == "t") {
+					currentAlph.StartConvertCharacter.Text = tagAttributes.getValue(i);
+				}
+				if(attributeName == "b") {
+					currentAlph.StartConvertCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
+				}
+				if(attributeName == "f") {
+					currentAlph.StartConvertCharacter.Foreground = tagAttributes.getValue(i);
+				}
+			}*/
+		}
+		
+		else if(tagName.equals("protect")) {
+			//ACL Skip, as (conversion) not yet implemented in Java. But we could read in display info, as follows...
+			/*for(int i = 0; i < tagAttributes.getLength(); i++) {
+				String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+				if(attributeName == "d") {
+					currentAlph.EndConvertCharacter.Display = tagAttributes.getValue(i);
+				}
+				if(attributeName == "t") {
+					currentAlph.EndConvertCharacter.Text = tagAttributes.getValue(i);
+				}
+				if(attributeName == "b") {
+					currentAlph.EndConvertCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
+				}
+				if(attributeName == "f") {
+					currentAlph.EndConvertCharacter.Foreground = tagAttributes.getValue(i);
+				}
+			}*/
+		}
+		
+		else if(tagName.equals("group")) {
+			String label="";
+			boolean visible=currentAlph.m_BaseGroup!=null || !groupStack.isEmpty();
+			int col=0;
 			
-			public void startElement(String namespaceURI, String simpleName, String qualName, Attributes tagAttributes) throws SAXException {
-				
-				String tagName = (simpleName.equals("") ? qualName : simpleName);
-				
-				if(tagName.equals("alphabet")) {
-					/* A new alphabet is beginning. Find its name... */
-					String name=null; String ctxEscape="Â";
-				    for(int i = 0; i < tagAttributes.getLength(); i++) {
-				    	String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-				    	if(attributeName.equals("name")) {
-				    		name=tagAttributes.getValue(i);
-				    	} else if (attributeName.equals("escape")) {
-				    		ctxEscape = tagAttributes.getValue(i);
-				    	}
-				    }
-					
-				    currentAlph = new AlphInfo(name);
-				    if (name==null) {
-						m_Interface.Message("Alphabet does not have a name, ignoring", 1);
-						//subtags etc. will be recorded in the AlphInfo object with null name anyway;
-						// but this will not be added to the list of available alphabets.
-					} else if (ctxEscape.length()!=1) {
-						m_Interface.Message("Alphabet "+name+" has invalid escape character, will not use context commands.", 1);
-						currentAlph.ctxChar = null;
-					} else {
-						currentAlph.ctxChar = ctxEscape.charAt(0);
-					}
-					
-				    bFirstGroup = true;
+			for(int i = 0; i < tagAttributes.getLength(); i++) {
+				String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+				if(attributeName.equals("b")) {
+					col = Integer.parseInt(tagAttributes.getValue(i));
 				}
-				
-				else if(tagName.equals("orientation")) {
-					for(int i = 0; i < tagAttributes.getLength(); i++) {
-						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-						if(attributeName.equals("type")) {
-							ScreenOrientations spec = Opts.orientationFromString(tagAttributes.getValue(i));
-							currentAlph.m_Orientation = (spec==null) ? Opts.ScreenOrientations.LEFT_TO_RIGHT : spec;
-						}
+				if(attributeName.equals("visible")) {
+					if(tagAttributes.getValue(i).equals("yes") || tagAttributes.getValue(i).equals("on")) {
+						visible = true;
+					}
+					else if(tagAttributes.getValue(i).equals("no") || tagAttributes.getValue(i).equals("off")) {						
+						visible = false;
 					}
 				}
-				
-				else if(tagName.equals("encoding")) {
-					/*We don't actually do anything with this, so...I don't think we need it?
-					 * for(int i = 0; i < tagAttributes.getLength(); i++) {
-					 *
-					 *	 String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-					 *	 if(attributeName == "type") {
-					 *		currentAlph.Encoding = StoT.get(tagAttributes.getValue(i));
-					 *	 }
-					 * }
-					 */
+				if(attributeName.equals("label")) {
+					label = tagAttributes.getValue(i);
 				}
-				
-				else if(tagName.equals("palette")) {
-					currentTag = "palette"; // will be handled by characters routine
-				}
-				
-				else if(tagName.equals("train")) {
-					currentTag = "train"; // Likewise
-				}
-				
-				else if (tagName.equals("context")) {
-					for (int i=0; i<tagAttributes.getLength(); i++)
-						if (tagAttributes.getLocalName(i).equals("default"))
-							currentAlph.m_strDefaultContext = tagAttributes.getValue(i);
-				}
-				else if(tagName.equals("paragraph")) {
-					//note index of paragraph symbol in order to handle \n / \r\n special-casing...
-					currentAlph.m_ParagraphSymbol = currentAlph.m_Characters.size();
-					//Extract default text as the line separator...
-					//then read as any other character
-					readChar(getLineSeparator(),tagAttributes);
-				}
-				
-				else if(tagName.equals("space")) {
-					//note index of space symbol, it gets used occassionally...
-					currentAlph.m_SpaceSymbol = currentAlph.m_Characters.size();
-					readChar(null, tagAttributes);
-				}
-				
-				else if(tagName.equals("control")) {
-					//ACL Skip, as not implemented in Java. But we could read in display info, as follows...
-					/*for(int i = 0; i < tagAttributes.getLength(); i++) {
-						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-						if(attributeName == "d") {
-							currentAlph.ControlCharacter.Display = tagAttributes.getValue(i);
-						}
-						if(attributeName == "t") {
-							currentAlph.ControlCharacter.Text = tagAttributes.getValue(i);
-						}
-						if(attributeName == "b") {
-							currentAlph.ControlCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
-						}
-						if(attributeName == "f") {
-							currentAlph.ControlCharacter.Foreground = tagAttributes.getValue(i);
-						}
-					}*/
-				}
-				
-				else if(tagName.equals("convert")) {
-					//ACL Skip, as not implemented in Java. But we could read in display info, as follows...
-					/*for(int i = 0; i < tagAttributes.getLength(); i++) {
-						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-						if(attributeName == "d") {
-							currentAlph.StartConvertCharacter.Display = tagAttributes.getValue(i);
-						}
-						if(attributeName == "t") {
-							currentAlph.StartConvertCharacter.Text = tagAttributes.getValue(i);
-						}
-						if(attributeName == "b") {
-							currentAlph.StartConvertCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
-						}
-						if(attributeName == "f") {
-							currentAlph.StartConvertCharacter.Foreground = tagAttributes.getValue(i);
-						}
-					}*/
-				}
-				
-				else if(tagName.equals("protect")) {
-					//ACL Skip, as (conversion) not yet implemented in Java. But we could read in display info, as follows...
-					/*for(int i = 0; i < tagAttributes.getLength(); i++) {
-						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-						if(attributeName == "d") {
-							currentAlph.EndConvertCharacter.Display = tagAttributes.getValue(i);
-						}
-						if(attributeName == "t") {
-							currentAlph.EndConvertCharacter.Text = tagAttributes.getValue(i);
-						}
-						if(attributeName == "b") {
-							currentAlph.EndConvertCharacter.Colour = Integer.parseInt(tagAttributes.getValue(i));
-						}
-						if(attributeName == "f") {
-							currentAlph.EndConvertCharacter.Foreground = tagAttributes.getValue(i);
-						}
-					}*/
-				}
-				
-				else if(tagName.equals("group")) {
-					String label=""; boolean visible=!bFirstGroup; int col=0;
-					bFirstGroup=false;
-					
-					for(int i = 0; i < tagAttributes.getLength(); i++) {
-						String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-						if(attributeName.equals("b")) {
-							col = Integer.parseInt(tagAttributes.getValue(i));
-						}
-						if(attributeName.equals("visible")) {
-							if(tagAttributes.getValue(i).equals("yes") || tagAttributes.getValue(i).equals("on")) {
-								visible = true;
-							}
-							else if(tagAttributes.getValue(i).equals("no") || tagAttributes.getValue(i).equals("off")) {						
-								visible = false;
-							}
-						}
-						if(attributeName.equals("label")) {
-							label = tagAttributes.getValue(i);
-						}
-					}
-					
-					SGroupInfo currentGroup = new SGroupInfo(label,col,visible);
-					
-				    currentGroup.iStart = numOrderedCharacters(currentAlph);
+			}
+			
+			SGroupInfo currentGroup = new SGroupInfo(label,col,visible);
+			
+		    currentGroup.iStart = numOrderedCharacters(currentAlph);
 
-				    if(!groupStack.isEmpty()) {
-				    	SGroupInfo parent = groupStack.peek();
-				    	currentGroup.Next = parent.Child;
-				    	parent.Child = currentGroup;
-				    	parent.iNumChildNodes++;
-				    } else {
-				      currentGroup.Next = currentAlph.m_BaseGroup;
-				      currentAlph.m_BaseGroup = currentGroup;
-				      currentAlph.iNumChildNodes++;
-				    }
-				    
-				    groupStack.push(currentGroup);
-				}
-						
-				else if(tagName.equals("s")) {
-					readChar(null, tagAttributes);
-				}
-			}
-			
-			private void readChar(String text,Attributes tagAttributes) {
-				String display=null; //default: use text
-				int bgcol=-1, fgcol=4;
+		    if(!groupStack.isEmpty()) {
+		    	SGroupInfo parent = groupStack.peek();
+		    	currentGroup.Next = parent.Child;
+		    	parent.Child = currentGroup;
+		    	parent.iNumChildNodes++;
+		    } else {
+		      currentGroup.Next = currentAlph.m_BaseGroup;
+		      currentAlph.m_BaseGroup = currentGroup;
+		      currentAlph.iNumChildNodes++;
+		    }
+		    
+		    groupStack.push(currentGroup);
+		}
 				
-				for(int i = 0; i < tagAttributes.getLength(); i++) {
-					String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
-					if (attributeName.length()>1) continue;
-					switch (attributeName.charAt(0)) {
-					case 'd':
-						display = tagAttributes.getValue(i);
-						break;
-					case 't':
-						if (text==null) {
-							text = tagAttributes.getValue(i);
-							if (text.codePointCount(0, text.length())!=1) {
-								m_Interface.Message("Illegal character \""+text+"\" - should be exactly one unicode char. Skipping...", 1);
-								return;
-							}
-						}
-						else m_Interface.Message("Unnecessary or duplicate text for character '"+text+"'", 1);
-						break;
-					case 'b':
-						bgcol = Integer.parseInt(tagAttributes.getValue(i));
-						break;
-					case 'f':
-						fgcol = Integer.parseInt(tagAttributes.getValue(i));
-						break;
+		else if(tagName.equals("s")) {
+			readChar(null, tagAttributes);
+		}
+	}
+	
+	private void readChar(String text,Attributes tagAttributes) {
+		String display=null; //default: use text
+		int bgcol=-1, fgcol=4;
+		
+		for(int i = 0; i < tagAttributes.getLength(); i++) {
+			String attributeName = (tagAttributes.getLocalName(i).equals("") ? tagAttributes.getQName(i) : tagAttributes.getLocalName(i));
+			if (attributeName.length()>1) continue;
+			switch (attributeName.charAt(0)) {
+			case 'd':
+				display = tagAttributes.getValue(i);
+				break;
+			case 't':
+				if (text==null) {
+					text = tagAttributes.getValue(i);
+					if (text.codePointCount(0, text.length())!=1) {
+						m_Interface.Message("Illegal character \""+text+"\" - should be exactly one unicode char. Skipping...", 1);
+						return;
 					}
 				}
-				currentAlph.m_Characters.add(text);
-				currentAlph.m_Display.add(display == null ? text : display);
-				currentAlph.m_Colours.add(bgcol);
-				currentAlph.m_Foreground.add(fgcol);
-				if (groupStack.isEmpty())
-					currentAlph.iNumChildNodes++;
-				else
-					groupStack.peek().iNumChildNodes++;
-				
+				else m_Interface.Message("Unnecessary or duplicate text for character '"+text+"'", 1);
+				break;
+			case 'b':
+				bgcol = Integer.parseInt(tagAttributes.getValue(i));
+				break;
+			case 'f':
+				fgcol = Integer.parseInt(tagAttributes.getValue(i));
+				break;
 			}
-			
-			public void endElement(String namespaceURI, String simpleName, String qualName) {
-				String tagName = (simpleName.equals("") ? qualName : simpleName);
-				
-				if(tagName.equals("alphabet")) {
-					if (currentAlph.name == null) return; //we warned at start, now drop it.
-					//alphabet finished, i.e. all read in. Groups will have been stored in linked-list
-					// in reverse order to how they were in the file, so put them the right way round...
-					currentAlph.m_BaseGroup = Reverse(currentAlph.m_BaseGroup);
-					//Also to match old behaviour of Dasher, we put the paragraph & space symbols at the end
-					// (many alphabet files put paragraph/space tags at beginning of alphabet when this is not wanted.
-					// TODO, a better solution would be to fix the alphabet files, putting space/para last for the
-					// (presumed majority of) users who want that, so that people who do actually want space
-					// or paragraph anywhere else, could then do so...)
-					if (currentAlph.m_ParagraphSymbol!=CAlphabetMap.UNDEFINED) {
-						//if space symbol is after paragraph, it's about to be moved one earlier
-						if (currentAlph.m_SpaceSymbol > currentAlph.m_ParagraphSymbol) currentAlph.m_SpaceSymbol--;
-						currentAlph.m_ParagraphSymbol=moveCharToEnd(currentAlph,currentAlph.m_ParagraphSymbol);
-					}
-					if (currentAlph.m_SpaceSymbol!=CAlphabetMap.UNDEFINED) {
-						//if paragraph symbol is (now) after space (which it will be if it was defined, because of above),
-						// it'll get moved one earlier...
-						if (currentAlph.m_ParagraphSymbol > currentAlph.m_SpaceSymbol) currentAlph.m_ParagraphSymbol--;
-						currentAlph.m_SpaceSymbol = moveCharToEnd(currentAlph,currentAlph.m_SpaceSymbol);
-					}
-					Alphabets.put(currentAlph.name, currentAlph);
-				}
-				
-				else if(tagName.equals("palette")) {
-					currentTag = "";
-				}
-				
-				else if(tagName.equals("train")) {
-					currentTag = "";
-				}
-				// Both of these are to prevent the parser from dumping unwanted CDATA
-				// once the tags we're interested in have been closed.
+		}
+		currentAlph.m_Characters.add(text);
+		currentAlph.m_Display.add(display == null ? text : display);
+		currentAlph.m_Colours.add(bgcol);
+		currentAlph.m_Foreground.add(fgcol);
+		if (groupStack.isEmpty())
+			currentAlph.iNumChildNodes++;
+		else
+			groupStack.peek().iNumChildNodes++;
+		
+	}
+	
+	@Override public void endElement(String namespaceURI, String simpleName, String qualName) {
+		String tagName = (simpleName.equals("") ? qualName : simpleName);
+		
+		if(tagName.equals("alphabet")) {
+			if (currentAlph.name == null) return; //we warned at start, now drop it.
+			//alphabet finished, i.e. all read in. Groups will have been stored in linked-list
+			// in reverse order to how they were in the file, so put them the right way round...
+			currentAlph.m_BaseGroup = Reverse(currentAlph.m_BaseGroup);
+			//Also to match old behaviour of Dasher, we put the paragraph & space symbols at the end
+			// (many alphabet files put paragraph/space tags at beginning of alphabet when this is not wanted.
+			// TODO, a better solution would be to fix the alphabet files, putting space/para last for the
+			// (presumed majority of) users who want that, so that people who do actually want space
+			// or paragraph anywhere else, could then do so...)
+			if (currentAlph.m_ParagraphSymbol!=CAlphabetMap.UNDEFINED) {
+				//if space symbol is after paragraph, it's about to be moved one earlier
+				if (currentAlph.m_SpaceSymbol > currentAlph.m_ParagraphSymbol) currentAlph.m_SpaceSymbol--;
+				currentAlph.m_ParagraphSymbol=moveCharToEnd(currentAlph,currentAlph.m_ParagraphSymbol);
+			}
+			if (currentAlph.m_SpaceSymbol!=CAlphabetMap.UNDEFINED) {
+				//if paragraph symbol is (now) after space (which it will be if it was defined, because of above),
+				// it'll get moved one earlier...
+				if (currentAlph.m_ParagraphSymbol > currentAlph.m_SpaceSymbol) currentAlph.m_ParagraphSymbol--;
+				currentAlph.m_SpaceSymbol = moveCharToEnd(currentAlph,currentAlph.m_SpaceSymbol);
+			}
+			Alphabets.put(currentAlph.name, currentAlph);
+		}
+		
+		else if(tagName.equals("palette")) {
+			currentTag = "";
+		}
+		
+		else if(tagName.equals("train")) {
+			currentTag = "";
+		}
+		// Both of these are to prevent the parser from dumping unwanted CDATA
+		// once the tags we're interested in have been closed.
 
-				else if(tagName.equals("group")) {
-					SGroupInfo finish = groupStack.pop();
-					finish.iEnd = numOrderedCharacters(currentAlph);
-					finish.Child = Reverse(finish.Child);
-				}
-				
-			}
-			
-			public void characters(char[] chars, int start, int length) throws SAXException {
-				//pointer comparison ok, currentTag was set to a coded-in constant, so intern()d automatically.
-				if(currentTag == "palette") {
-					currentAlph.m_DefaultPalette = new String(chars, start, length);
-				}
-				
-				if(currentTag == "train") {
-					currentAlph.m_TrainingFile = new String(chars, start, length);
-				}
-				
-			}
+		else if(tagName.equals("group")) {
+			SGroupInfo finish = groupStack.pop();
+			finish.iEnd = numOrderedCharacters(currentAlph);
+			finish.Child = Reverse(finish.Child);
+		}
+		
+	}
+	
+	public void characters(char[] chars, int start, int length) throws SAXException {
+		//pointer comparison ok, currentTag was set to a coded-in constant, so intern()d automatically.
+		if(currentTag == "palette") {
+			currentAlph.m_DefaultPalette = new String(chars, start, length);
+		}
+		
+		if(currentTag == "train") {
+			currentAlph.m_TrainingFile = new String(chars, start, length);
+		}
+		
+	}
 
-			public InputSource resolveEntity(String publicName, String systemName) throws IOException, SAXException {
-				/* This is here because SAX will by default look in a system location first,
-				 * which throws a security exception when running as an Applet.
-				 */
-				return systemName.contains("alphabet.dtd") ? getStream("alphabet.dtd") : null;
-			}
-			
-		};
-		// Pass in the Alphabet HashMap so it can be modified
-
-		parser.parse(XMLInput, handler);
+	public InputSource resolveEntity(String publicName, String systemName) throws IOException, SAXException {
+		/* This is here because SAX will by default look in a system location first,
+		 * which throws a security exception when running as an Applet.
+		 */
+		return systemName.contains("alphabet.dtd") ? getStream("alphabet.dtd") : null;
 	}
 	
 	private static int moveCharToEnd(AlphInfo alph,int pos) {
