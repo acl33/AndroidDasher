@@ -34,16 +34,22 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import java.awt.datatransfer.Clipboard;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
 import javax.swing.*;
+
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
 
 import dasher.*;
 
@@ -91,6 +97,21 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	 */
 	private final Timer taskScheduler = new Timer();
 	
+	
+	/** Base URL from which alphabet+colour definitions loaded. Specified by DEFNS parameter,
+	 * or else the applet codebase + files.txt */
+	private URL defnBase;
+	
+	/** Base URL from which training files loaded. Specified by train parameter;
+	 * or else anything specified for the DEFNS parameter; else the applet codebase
+	 */
+	private URL trainBase;
+	
+	/** List of filenames of alphabet/colour definition files,
+	 * read from {@link #defnBase} (and to be interpreted as
+	 * URLs relative to {@link #defnBase}). */
+	private final List<String> webDefns = new ArrayList<String>();
+	
 	/**
 	 * Date of last build; appears in About box
 	 */
@@ -122,22 +143,47 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	 * Finally, we call constructMenus to produce our menu bar.
 	 */
 	public void init() {
-		Dasher = new JDasher() {
-			private final List<String> webFiles = new ArrayList<String>();
-			/**Constructor - look for file list over http...*/
-			{
-				try {
-					java.net.URLConnection conn = new URL(getCodeBase(),"files.txt").openConnection();
-					BufferedReader rdr = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-					for (String line; (line=rdr.readLine())!=null;)
-						webFiles.add(line);
-					Collections.sort(webFiles);
-				} catch (Exception e) {
-					System.out.println("Could not open file list:");
-					e.printStackTrace(System.out);
-				}
+		try { defnBase = new URL(getParameter("DEFNS")); }
+		catch (Exception e) {//MalformedURL, or NullPointer if no param!
+			System.err.println("DEFNS parameter not valid, using <codebase>/files.txt");
+			try {defnBase = new URL(getCodeBase(),"files.txt");}
+			catch (java.net.MalformedURLException e2) {throw new RuntimeException("Error in Hardcoded URL?",e2);}
+		}
+		
+		try {trainBase = new URL(getParameter("TRAIN"));}
+		catch (Exception e) {
+			if (getParameter("DEFNS")!=null) trainBase=defnBase;
+			else trainBase=getCodeBase();
+		}
+		//Look for definition files over HTTP
+		any: try {
+			BufferedReader rdr = new BufferedReader(new InputStreamReader(defnBase.openStream()));
+			String line = rdr.readLine();
+			if (line==null) break any;
+			if (line.toUpperCase().startsWith("<!DOCTYPE")) {
+				//HTML
+				Pattern p = Pattern.compile("<A\\s+HREF=(\"[^\"<>]*\"|[a-zA-Z0-9_\\.]*)>",Pattern.CASE_INSENSITIVE);
+				do
+					for (Matcher m = p.matcher(line); m.find(); ) {
+						String s = m.group(1);
+						if (s.startsWith("\"") && s.endsWith("\""))
+							s=s.substring(1, s.length()-1);
+						webDefns.add(s);
+					}
+				while ((line=rdr.readLine())!=null);
+			} else {
+				//plaintext: treat each line as a filename
+				do
+					webDefns.add(line);
+				while ((line=rdr.readLine())!=null);
 			}
-				
+		} catch (IOException e) {
+			System.err.println("Could not open file list:");
+			e.printStackTrace();
+		}
+		Collections.sort(webDefns);
+		Dasher = new JDasher() {
+			
 			@Override
 			protected void CreateModules() {
 				super.CreateModules();
@@ -211,17 +257,16 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 			 */
 		    @Override
 			protected void GetStreams(String fname, Collection<InputStream> into) {
-		    	try {
-		    		//System.out.println("Opening "+new URL(getCodeBase(),fname));
-		    		InputStream in = new URL(getCodeBase(),fname).openConnection().getInputStream();
-		    		if (in!=null) {
-		    			into.add(in);
-		    			return;
-		    		}
-		    	} catch (Exception e) {
-		    		System.out.println(e.toString());
-		    	}
-		    	System.out.println("Could not find "+fname+" over web");
+		    	if (!fname.endsWith(".dtd"))
+		    		try {
+			    		InputStream in = new URL(trainBase,fname).openConnection().getInputStream();
+			    		if (in!=null) {
+			    			into.add(in);
+			    			return;
+			    		}
+			    	} catch (Exception e) {
+			    		System.out.println("Trying to find "+fname+" via URL: "+e);
+			    	}
 		    	InputStream in = getClass().getResourceAsStream(fname);
 				if (in!=null) into.add(in);
 			}
@@ -253,14 +298,14 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 				//and _then_ look on the web: both AlphIO and ColourIO will replace
 				// any existing definitions of alphabets with the same name
 				// (and files on the latter location supercede the former)
-				int i = Collections.binarySearch(webFiles, prefix);
+				int i = Collections.binarySearch(webDefns, prefix);
 				if (i<0) i=-(i+1); //not found => start at first index after
-				for (String s; i < webFiles.size() && (s=webFiles.get(i)).startsWith(prefix); i++) {
+				for (String s; i < webDefns.size() && (s=webDefns.get(i)).startsWith(prefix); i++) {
 					if (!s.endsWith(".xml")) continue;
 					try {
-						parser.ParseFile(new URL(getCodeBase(),s).openConnection().getInputStream(), false);
+						parser.ParseFile(new URL(defnBase,s).openConnection().getInputStream(), false);
 					} catch (Exception e) {
-						System.out.println("Error trying to read URLConnection for "+s+": "+e.toString());
+						System.err.println("Error trying to read URLConnection for "+s+": "+e.toString());
 					}
 				}
 			}
