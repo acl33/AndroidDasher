@@ -26,6 +26,7 @@
 package dasher.applet;
 
 import java.awt.Font;
+import java.awt.Point;
 import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -76,10 +77,40 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	 */
 	private JDasherPanel panel;
 	
-	/**
-	 * Overlay to display when Dasher is locked
-	 */
+	/** Overlay to display when Dasher is locked during training,
+	 *  or loading all those data files over the "cloud"...*/
 	private ScreenOverlay ProgressMeter;
+
+	/** Show/hide the progress meter.
+	 * 
+	 * @param Message to display; null means to hide the progress meter (else show)
+	 * @param iPercent percent to completion to display; negative means to not show a progressbar
+	 */
+	private void ShowProgress(String msg, int iPercent) {
+		if(msg!=null) {
+			ProgressMeter.setVisible(true);
+			if (iPercent>=0) {
+				ProgressMeter.setProgressBarVisible(true);
+				ProgressMeter.setProgress(iPercent, 100);
+			} else ProgressMeter.setProgressBarVisible(false);
+			
+			ProgressMeter.setText(msg);
+			
+			Point twiceCenter;
+			try {
+				//compute window center
+				twiceCenter = getLocationOnScreen();
+				twiceCenter.x+=getWidth();
+				twiceCenter.y+=getHeight();
+			} catch (Exception e) {//=> we aren't visible
+				java.awt.Dimension d = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
+				twiceCenter = new Point(d.width,d.height);
+				ProgressMeter.setCenter(twiceCenter.x/2, twiceCenter.y/2);
+			}
+		} else {
+			ProgressMeter.setVisible(false);
+		}
+	}
 	
 	/**
 	 * Edit box in which typed text appears
@@ -115,7 +146,7 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	/**
 	 * Date of last build; appears in About box
 	 */
-	public final String buildDate = "22:17 08/10/2008";
+	public final String buildDate = "30/11/2011";
 	
 	//try to fill in resourceFiles...
 	{
@@ -226,25 +257,7 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 			}
 			
 			@Override public void Lock(String msg, int iPercent) {
-				if(iPercent>=0) {
-					ProgressMeter.setVisible(true);
-					ProgressMeter.setProgressBarVisible(true);
-					
-					try { 
-						java.awt.Point myloc = JDasherApplet.this.getLocationOnScreen();
-						ProgressMeter.setLocation(((myloc.x + getWidth()) / 2) - 100, ((myloc.y + getHeight()) / 2) - 50);
-					}
-					catch(Exception e) {
-						// ignore; this means we're not visible.
-					}
-								
-					ProgressMeter.setText(msg);
-					
-					ProgressMeter.setProgress(iPercent, 100);
-				}
-				else {
-					ProgressMeter.setVisible(false);
-				}
+				ShowProgress(iPercent>=0 ? msg : null, iPercent);
 			}
 
 			/** First looks for a file over http in the same location as our codebase;
@@ -302,7 +315,9 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 				if (i<0) i=-(i+1); //not found => start at first index after
 				for (String s; i < webDefns.size() && (s=webDefns.get(i)).startsWith(prefix); i++) {
 					if (!s.endsWith(".xml")) continue;
-					try {
+		    		try {
+		    			if (s.length() > prefix.length()+4)
+		    				ProgressMeter.setText("Loading " + s.substring(prefix.length()+1,s.length()-4));
 						parser.ParseFile(new URL(defnBase,s).openConnection().getInputStream(), false);
 					} catch (Exception e) {
 						System.err.println("Error trying to read URLConnection for "+s+": "+e.toString());
@@ -333,8 +348,13 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 		// background thread (taskqueue)
 		final Object realized = new Object();
 		taskScheduler.schedule(new TimerTask() {
+			private final String MESSAGE = "Loading Alphabets from Cloud...";
 			@Override public void run() {
+				ShowProgress(MESSAGE, -1);
 				Dasher.Realize();
+				//Don't hide the ProgressMeter, if training is in progress...
+				if (ProgressMeter.getText().equals(MESSAGE))
+					ShowProgress(null, -1);
 				synchronized(realized) {
 					realized.notifyAll();
 				}
