@@ -129,9 +129,6 @@ Settings.Secure.DEFAULT_INPUT_METHOD).contains("Dasher")) {
 		return surf;
 	}
 	
-	private final Intent sepIntent = new Intent("ca.idi.tekla.sep.SEPService");
-	{sepIntent.putExtra("ca.idi.tekla.sep.extra.SHIELD_ADDRESS", (String)null);}
-	
 	@Override public void onUnbindInput() {
 		super.onUnbindInput();
 		Log.d("DasherIME",this+" onUnbindInput - intf "+intf+" doc was "+doc);
