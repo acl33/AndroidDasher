@@ -493,7 +493,7 @@ public class CControlManager extends CDasherComponent {
 		}		
 	};
 	
-	public static final ControlAction PAUSE_ACTION = new FixedSuccessorsAction("Pause") {
+	public static final ControlAction PAUSE_ACTION = new FixedSuccessorsAction("Pause",(ControlAction)null) {
 		public void happen(CControlManager mgr,CDasherNode node) {
 			mgr.m_Interface.GetActiveInputFilter().pause();
 			if (mgr.GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_REBUILD))
