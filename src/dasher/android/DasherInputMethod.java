@@ -8,13 +8,10 @@ import dasher.CDasherNode;
 import dasher.Ebp_parameters;
 import dasher.CControlManager.ControlAction;
 
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.inputmethodservice.InputMethodService;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -22,91 +19,31 @@ import android.os.Messenger;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.text.InputType;
-import android.provider.Settings;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import ca.idi.tecla.sdk.SepManager;
 import ca.idi.tecla.sdk.SwitchEvent;
-import ca.idi.tecla.sdk.Switcher;
+import ca.idi.tecla.sdk.MultiInputMethod;
 import android.view.inputmethod.InputMethodInfo;
 import android.view.inputmethod.InputMethodManager;
 
-public class DasherInputMethod extends InputMethodService implements ServiceConnection {
-	private DasherCanvas surf;
+public class DasherInputMethod extends MultiInputMethod implements ServiceConnection {
 	private ADasherInterface intf;
 	private InputConnectionDocument doc;
-	private Handler handler;
-	
-	private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
 		
-		@Override
-		public void onReceive(Context context, Intent intent) {
-			if (intent.getAction().equals(Switcher.ACTION_SHOW_IME))
-				showSoftIME();
-		}
-	};
-	
-	private void showSoftIME() {
-		if (isSoftIMEShowing()) {
-			Log.d("DasherIME", "Soft IME is already showing");
-		} else {
-			try {
-				showWindow(true);
-				updateInputViewShown();
-			} catch (WindowManager.BadTokenException e) {
-				if (!Settings.Secure.getString(getContentResolver(),
-Settings.Secure.DEFAULT_INPUT_METHOD).contains("Dasher")) {
-					//we are no longer the active input method;
-					// attempting to show our window throws above exception.
-					// don't do so! (TODO: deregister broadcast receiver on switch away?)
-					return;
-				}
-				Log.d("DasherIME","Couldn't show Soft IME",e);
-			}
-			// This call causes a looped intent call until the IME View is created
-			callShowSoftIMEWatchDog(500);
-		}
-	}
-	
-	private void callShowSoftIMEWatchDog(int delay) {
-		handler.removeCallbacks(mShowSoftIMEWatchdog);
-		handler.postDelayed(mShowSoftIMEWatchdog, delay);
-	}
-	
-	private Runnable mShowSoftIMEWatchdog = new Runnable () {
-
-		public void run() {
-			if (!isSoftIMEShowing()) {
-				// If IME View still not showing...
-				// We are force-openning the soft IME through an intent since
-				//it seems to be the only way to make it work
-				sendBroadcast(new Intent(Switcher.ACTION_SHOW_IME));
-			}
-		}
-		
-	};
-	
-	private boolean isSoftIMEShowing() {
-		return surf!=null && surf.isShown();
-	}
-	
 	@Override public void onCreate() {
 		super.onCreate();
 		android.util.Log.d("DasherIME","onCreate "+this);
-		handler = new Handler();
 		//load data (now), and start training in background
 		intf = new ADasherInterface(this, true);
-		registerReceiver(mReceiver, new IntentFilter(Switcher.ACTION_SHOW_IME));
 		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidTeklaShield", false))
 			bindService(new Intent(SepManager.SEP_SERVICE), this, Context.BIND_AUTO_CREATE);
 	}
 	
 	@Override public void onDestroy() {
 		Log.d("DasherIME",this+" onDestroy...");
-		unregisterReceiver(mReceiver);
 		if (sepServiceMsngr!=null) {
 			try {
 				sepServiceMsngr.send(Message.obtain(null, SepManager.MSG_UNREGISTER, incomingMsngr));
@@ -122,10 +59,9 @@ Settings.Secure.DEFAULT_INPUT_METHOD).contains("Dasher")) {
 		Log.d("DasherIME",this+" onDestroyed");
 	}
 	
-	@Override public DasherCanvas onCreateInputView() {
-		surf = new DasherCanvas(DasherInputMethod.this, intf);
+	@Override public View createInputView() {
+		DasherCanvas surf = new DasherCanvas(DasherInputMethod.this, intf);
 		Log.d("DasherIME", this+" onCreateInputView creating surface "+surf);
-		Switcher.notifyIMECreated(this);
 		return surf;
 	}
 	
@@ -140,13 +76,12 @@ Settings.Secure.DEFAULT_INPUT_METHOD).contains("Dasher")) {
 	public void onStartInput(EditorInfo attr, boolean restart) {
 		super.onStartInput(attr, restart);
 		Log.d("DasherIME",this +" onStartInput ("+InputTypes.getDesc(attr)+", "+restart+") with IC "+getCurrentInputConnection());
-		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidUseTeklaNav", false)) {
+		if (useTeklaNav()) {
 			if (attr.inputType==InputType.TYPE_NULL) {
 				//Dasher is not useful here! Switch to Tekla...
 				if (isSoftIMEShowing()) {
-					bSwitch = true;
-					hideWindow();
-				} else //see if we're shown in a couple of seconds
+					switchToTekla();
+				} else //see if we're shown (with a useful inputtype) in a couple of seconds
 					handler.postDelayed(mSwitchRunnable,2000);
 			} else {
 				//be a bit more active in showing the window, user may be stuck without it
@@ -202,8 +137,7 @@ Settings.Secure.DEFAULT_INPUT_METHOD).contains("Dasher")) {
 	
 	private final ControlAction HIDE = new HandlerAction("Back") { //TODO internationalize, or icon?
 		public void run() {
-			bSwitch=true;
-			hideWindow();
+			if (useTeklaNav()) switchToTekla(); else hideWindow();
 		}
 	};
 	
@@ -246,16 +180,18 @@ Settings.Secure.DEFAULT_INPUT_METHOD).contains("Dasher")) {
 		//if (surf!=null) surf.stopAnimating(); //yeah, we can get sent onFinishInput before/without onCreate...
 	}
 	
-	private boolean bSwitch;
+	private boolean useTeklaNav() {
+		return PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidUseTeklaNav", false);
+	}
 	
 	@Override
-	public void onWindowHidden() {
-		Log.d("DasherIME","onWindowHidden shown="+bShown);
-		super.onWindowHidden();
-		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidUseTeklaNav", false)) {
-			if (bSwitch) switchToTekla();
-			else if (bShown && !(bShown=false))
-				handler.postDelayed(mSwitchRunnable, 2000);//or mShowSoftIMEWatchdog ?
+	protected void onWindowHidden(boolean bSwitching) {
+		Log.d("DasherIME","onWindowHidden("+bSwitching+") shown="+bShown);
+		if (!bSwitching 
+				&& useTeklaNav()
+				&& bShown) {
+			bShown=false;
+			handler.postDelayed(mSwitchRunnable, 2000);//or mShowSoftIMEWatchdog ?
 		}
 	}
 	private boolean bShown;
@@ -274,15 +210,11 @@ Settings.Secure.DEFAULT_INPUT_METHOD).contains("Dasher")) {
 		for (InputMethodInfo info : mgr.getEnabledInputMethodList()) {
 			if (info.getId().indexOf("Tecla")!=-1) {
 				android.util.Log.d("DasherIME",this+" switching to "+info.getId());
-				getWindow().dismiss();
-				Switcher.switchTo(this,info.getId());
-				stopSelf();
-				Log.d("DasherIME",this+" switched");
+				switchTo(info);
 				return;
 			}
 		}
 		//couldn't find tekla!
-		bSwitch=false;
 	}
 
 	@Override
