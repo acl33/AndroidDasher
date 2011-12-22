@@ -8,51 +8,41 @@ import dasher.CDasherNode;
 import dasher.Ebp_parameters;
 import dasher.CControlManager.ControlAction;
 
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
-import android.os.Handler;
-import android.os.IBinder;
-import android.os.Message;
-import android.os.Messenger;
-import android.os.RemoteException;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.preference.PreferenceManager;
 import android.text.InputType;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
-import ca.idi.tecla.sdk.SepManager;
 import ca.idi.tecla.sdk.SwitchEvent;
-import ca.idi.tecla.sdk.MultiInputMethod;
+import ca.idi.tecla.sdk.SwitchInputMethod;
 import android.view.inputmethod.InputMethodInfo;
 import android.view.inputmethod.InputMethodManager;
 
-public class DasherInputMethod extends MultiInputMethod implements ServiceConnection {
+public class DasherInputMethod extends SwitchInputMethod implements OnSharedPreferenceChangeListener {
 	private ADasherInterface intf;
 	private InputConnectionDocument doc;
-		
+	
+	private static final String USE_TECLA_SHIELD = "AndroidTeklaShield";
+	
 	@Override public void onCreate() {
 		super.onCreate();
 		android.util.Log.d("DasherIME","onCreate "+this);
 		//load data (now), and start training in background
 		intf = new ADasherInterface(this, true);
-		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidTeklaShield", false))
-			bindService(new Intent(SepManager.SEP_SERVICE), this, Context.BIND_AUTO_CREATE);
+		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+		prefs.registerOnSharedPreferenceChangeListener(this);
+		onSharedPreferenceChanged(prefs, USE_TECLA_SHIELD);
 	}
 	
 	@Override public void onDestroy() {
 		Log.d("DasherIME",this+" onDestroy...");
-		if (sepServiceMsngr!=null) {
-			try {
-				sepServiceMsngr.send(Message.obtain(null, SepManager.MSG_UNREGISTER, incomingMsngr));
-			} catch (RemoteException e) {
-				Log.w("DasherIME", "Could not unregister: "+e.toString());
-			}
-			unbindService(this);
-			onServiceDisconnected(null); //note unbindService _doesn't_ call this (!!)
-		}
+		PreferenceManager.getDefaultSharedPreferences(this).unregisterOnSharedPreferenceChangeListener(this);
+		connectToSEP(false);
 		intf.StartShutdown();
 		intf=null;
 		super.onDestroy();
@@ -266,7 +256,8 @@ public class DasherInputMethod extends MultiInputMethod implements ServiceConnec
 		}
 	}
 	
-	private void handleSwitchEvent(final SwitchEvent e) {
+	@Override
+	protected void handleSwitchEvent(final SwitchEvent e) {
 	    android.util.Log.d("DasherIME","SwitchEvent changed "+e.getSwitchChanges()+" state "+e.getSwitchStates());
 	    if (intf==null) return; //hmmm. unbindService can take longer than StartShutdown...?
     	intf.enqueue(new Runnable() {
@@ -310,30 +301,10 @@ public class DasherInputMethod extends MultiInputMethod implements ServiceConnec
     	});
     }
 
-	private Messenger sepServiceMsngr;
-	private final Messenger incomingMsngr = new Messenger(new Handler() {
-		@Override public void handleMessage(Message m) {
-			if (m.what == SwitchEvent.MSG_SWITCH_EVENT) {
-				handleSwitchEvent(new SwitchEvent(m));
-			}
-		}
-	});
-	//@Override
-	public void onServiceConnected(ComponentName name, IBinder service) {
-		Log.d("DasherIME","onServiceConnected");
-		sepServiceMsngr = new Messenger(service);
-		try {
-			sepServiceMsngr.send(Message.obtain(null, SepManager.MSG_REGISTER, incomingMsngr));
-		} catch (RemoteException e) {//NullPtr or Remote
-			Log.w("DasherIME", "Could not start SEP: "+e.toString());
-			sepServiceMsngr = null;
-		}
-	}
-
-	//@Override
-	public void onServiceDisconnected(ComponentName name) {
-		Log.d("DasherIME","onServiceDisconnected");
-		sepServiceMsngr=null;
+	public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
+			String key) {
+		if (key.equals(USE_TECLA_SHIELD))
+			connectToSEP(sharedPreferences.getBoolean(key,  false));
 	}
 
 }
