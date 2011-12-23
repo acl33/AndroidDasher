@@ -27,11 +27,15 @@ package dasher;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Collection;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.io.*;
+import java.lang.ref.WeakReference;
+import java.nio.channels.AsynchronousCloseException;
 
 import org.xml.sax.SAXException;
 
@@ -137,7 +141,9 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	
 	/**
 	 * Lock engaged when we're in the process of connecting
-	 * to a remote language model
+	 * to a remote language model. TODO: no subclass ever sets this
+	 * (and there is no synchronization protocol for doing so);
+	 * remove, or implement?
 	 */
 	protected boolean m_bConnectLock; // Connecting to server.
 	
@@ -268,8 +274,6 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	 * <p>
 	 * <i>BP_OUTLINE_MODE</i>: Redraws the display.
 	 * <p>
-	 * <i>BP_CONNECT_LOCK</i>: Sets the internal m_bConnectLock variable.
-	 * <p>
 	 * <i>LP_ORIENTATION</i>: Sets the LP_REAL_ORIENTATION parameter either
 	 * to the value of LP_ORIENTATION, or if the latter is -2 (a special sentinel value)
 	 * queries the current alphabet for its preferred orientation, and
@@ -310,8 +314,6 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 			Redraw(true);
 		} else if(eParam ==  Ebp_parameters.BP_OUTLINE_MODE) {
 			Redraw(true);
-		} else if(eParam == Ebp_parameters.BP_CONNECT_LOCK) {
-			m_bConnectLock = GetBoolParameter(Ebp_parameters.BP_CONNECT_LOCK);
 		} else if(eParam ==  Esp_parameters.SP_ALPHABET_ID) {
 			ChangeAlphabet();
 			Redraw(true);
@@ -321,6 +323,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 			Redraw(true);
 		} else if(eParam == Elp_parameters.LP_LANGUAGE_MODEL_ID
 				|| (eParam == Esp_parameters.SP_LM_HOST && GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)==5)) {
+			m_LMcache.clear(); //All existing LMs use old param values
 			CreateNCManager();
 			Redraw(true);
 		} else if(eParam == Elp_parameters.LP_LINE_WIDTH) {
@@ -340,9 +343,6 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 					&& !prevActs.equals(getControlActions()))
 				UpdateControlManager();
 			Redraw(false);
-		} else if (eParam == Ebp_parameters.BP_TRAINING) {
-			if (!GetBoolParameter(Ebp_parameters.BP_TRAINING))
-				forceRebuild();
 		} else if (eParam == Ebp_parameters.BP_CONTROL_MODE || eParam == Elp_parameters.LP_UNIFORM) {
 			UpdateControlManager();
 		}
@@ -358,12 +358,13 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	
 	public void Lock(String msg, int iPercent) {
 		// TODO: 'Reference counting' for locks?
-		SetBoolParameter(Ebp_parameters.BP_TRAINING,iPercent>=0);
 		if (iPercent>=0) {
 			m_sLockMsg = (msg==null) ? "Training" : msg;
 			if (iPercent!=0) m_sLockMsg+=" "+iPercent;
-		} else
+		} else {
 			m_sLockMsg = null;
+			forceRebuild();
+		}
 		Redraw(false); //assume %age or m_bLock has changed... 
 	}
 	
@@ -374,6 +375,8 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	 */
 	public abstract void Message(String msg, int severity);
 	
+	private final Map<CAlphIO.AlphInfo,WeakReference<CLanguageModel<?>>> m_LMcache
+		= new HashMap<CAlphIO.AlphInfo, WeakReference<CLanguageModel<?>>>();
 	/**
 	 * Creates a new DasherModel, deleting any previously existing
 	 * one if necessary.
@@ -389,12 +392,10 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		if(m_AlphIO == null)
 			throw new IllegalStateException("Not yet constructed?");
 		
-		// TODO: Move training into AlphabetManager?
-		
-		//Not for now - we don't want train the LM too soon, i.e. until
-		// the old LM can first be GC'd, as that'll be using memory for both...
+		//Memory is a big issue here - we don't want train the LM too soon, i.e. until
+		// the old LM can first be GC'd, as that'd need memory for both simultaneously...
 
-		//So, first we make the old NCMgr & LM unreachable (the event handler has only weakrefs)
+		//(1) So, first we make the old NCMgr & LM unreachable (the event handler has only weakrefs)
 		CControlManager cont;
 		if (m_pNCManager!=null) {
 			//since the AlphabetManager is about to be deleted, better write out anything unsaved...
@@ -403,8 +404,54 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		} else 
 			cont = makeControlManager();
 		
-		//Then we construct a new NCMgr and (untrained) LM...
-		m_pNCManager = new CNodeCreationManager(this, CAlphabetManager.makeAlphMgr(this), cont);
+		//(2)Then we construct a new NCMgr and (untrained) LM...
+		
+		//(2a) Get the alphabet...TODO: if the alphabet we ask for doesn't exist,
+		// We might get a different/fallback one instead. Should we update the
+		// parameter value to reflect this? ATM I'm thinking not, the user's
+		// request stands?
+		CAlphIO.AlphInfo cAlphabet = m_AlphIO.GetInfo(GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
+		
+		//(2b) LanguageModel
+		CLanguageModel<?> lm=null;
+		WeakReference<CLanguageModel<?>> ref = m_LMcache.get(cAlphabet);
+		if (ref!=null) {lm = ref.get(); if (lm==null) m_LMcache.remove(cAlphabet);}
+		boolean bTrain;
+		if (lm==null) {
+			bTrain=true;
+			switch ((int)GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)) {
+			/* CSFS: Commented out the other language models for the time being as they are not
+			 * implemented yet.
+			 */
+			default:
+				// If there is a bogus value for the language model ID, we'll default
+				// to our trusty old PPM language model.
+			case 0:
+				SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, false);
+				lm= new CPPMLanguageModel(this, cAlphabet);
+				break;
+			/* case 2:
+				lm = new CWordLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
+				break;
+			case 3:
+				lm = new CMixtureLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
+				break;  
+				#ifdef JAPANESE
+			case 4:
+				lm = new CJapaneseLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
+				break;
+				#endif
+			case 5:
+				throw new UnsupportedOperationException("(ACL) Remote LM currently unimplemented");
+				//lm = new CRemotePPM(m_EventHandler, m_SettingsStore, alphabet);
+				//SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, true);
+				//break;
+			*/
+			}
+		} else
+			bTrain=false;
+		
+		m_pNCManager = new CNodeCreationManager(this, CAlphabetManager.makeAlphMgr(this,lm), cont);
 		if (m_ColourIO.getByName(GetStringParameter(Esp_parameters.SP_COLOUR_ID))==null)
 			ChangeColours(); //we must have been using the alphabet palette, which may have changed
 		
@@ -414,7 +461,13 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		System.gc(); //the old LM should now be collectable, so just a hint...
 		
 		//At last we (hopefully) have enough memory to train the new LM...
-		train(m_pNCManager.getAlphabetManager());
+		//TODO, can we train in the background, on another thread?
+		if (bTrain) {
+			//Put it in cache pre-emptively: we are going to train it! :)
+			// If train(AlphabetManager, ProgressNotifier) is aborted, that will remove from map.
+			m_LMcache.put(cAlphabet,new WeakReference<CLanguageModel<?>>(lm));
+			train(m_pNCManager.getAlphabetManager());
+		}
 		
 		//Finally we rebuild the tree _again_ :-(, so as to get probabilities from the trained LM...
 		forceRebuild();
@@ -436,39 +489,6 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	
 	/*package*/ CDasherNode getLastOutputNode() {
 		return m_DasherModel.getLastOutputNode();
-	}
-	
-	
-	/**
-	 * Pauses Dasher at a given mouse location, and schedules
-	 * a full redraw of the nodes at the next frame.
-	 * <p>
-	 * Also generates a StopEvent to notify other components.
-	 * 
-	 * @param MouseX Mouse x co-ordinate at the time of stopping
-	 * @param MouseY Mouse y co-ordinate at the time of stopping
-	 */
-	public void PauseAt(int MouseX, int MouseY) {
-		SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
-		m_DasherModel.clearScheduledSteps();
-		// Request a full redraw at the next time step.
-		Redraw(true);
-
-		if (m_UserLog != null)
-			m_UserLog.StopWriting((float) GetNats());
-	}
-	
-	/**
-	 * Unpause Dasher. This will send a StartEvent to all
-	 * components.
-	 * 
-	 * @param Time System time as a UNIX timestamp at which Dasher was restarted.
-	 */
-	public void Unpause(long Time) { // CSFS: Formerly unsigned.
-		SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, false);
-
-		if (m_UserLog != null)
-			m_UserLog.StartWriting();
 	}
 	
 	/**
@@ -510,6 +530,8 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	 */
 	private boolean m_bForceRedrawNodes;
 	
+	private boolean m_bLastPaused=true;
+	
 	/**
 	 * Encapsulates the entire process of drawing a
 	 * new frame of the Dasher world.
@@ -532,10 +554,10 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		//...or we have no graphics...
 		if (m_DasherView == null || m_DasherScreen==null) return;
 		
-		if(GetBoolParameter(Ebp_parameters.BP_TRAINING)) {
+		String msg = m_sLockMsg;
+		if(msg!=null) {
 			final int w = m_DasherScreen.GetWidth(), h=m_DasherScreen.GetHeight();
 			m_DasherScreen.DrawRectangle(0, 0, w, h, 0, 0, 0); //fill in colour 0 = white
-			String msg = m_sLockMsg==null ? "Please Wait" : m_sLockMsg;
 			CDasherView.Point p = m_DasherScreen.TextSize(msg, 14);
 			m_DasherScreen.DrawString(msg, (m_DasherScreen.GetWidth()-p.x)/2, (m_DasherScreen.GetHeight()-p.y)/2, 14);
 			return;
@@ -544,7 +566,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		//ok, we want to render some nodes...if there are any...
 		if (m_DasherModel == null) throw new IllegalStateException("Not yet constructed?");
 		
-		boolean bMoved = (m_InputFilter!=null) && m_InputFilter.Timer(iTime, m_DasherView, m_Input, m_DasherModel); 
+		if (m_InputFilter!=null) m_InputFilter.Timer(iTime, m_DasherView, m_Input, m_DasherModel); 
 					
 		/*Logging code. TODO: capture int iNumDeleted / Vector<CSymbolProb>
 		 * from information passed to outputText/deleteText, then:
@@ -553,17 +575,23 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		 *    if (vAdded.size() > 0)
 		 *        m_UserLog.AddSymbols(vAdded);
 		 */
+		final boolean bMoved = m_DasherModel.nextScheduledStep(iTime);
+		if (bMoved) {
+			if (m_bLastPaused) {onUnpause(); m_bLastPaused=false;}
+		} else if (!m_bLastPaused) {onPause(); m_bLastPaused=true;}
 		
-	
-		boolean bRedraw = false; //do we need another frame after this?
+		boolean bRedraw = false; //did nodes change (move, expand, collapse)?
 		renderModel: {
 			if (m_MarkerScreen!=null) {
 				if (bMoved || m_bForceRedrawNodes)
 					m_MarkerScreen.SendMarker(0);
 				else break renderModel;
 			}
+			m_bForceRedrawNodes=false;
+			m_DasherModel.CountFrame(iTime);
 			bRedraw = m_DasherModel.RenderToView(m_DasherView) || bMoved;
 		}
+		
 		if (m_MarkerScreen!=null)
 			m_MarkerScreen.SendMarker(1);
 		
@@ -582,6 +610,21 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		for (int i=0; i<endOfFrameTasks.size(); i++)
 			endOfFrameTasks.get(i).run();
 		endOfFrameTasks.clear();
+	}
+	
+	protected void onUnpause() {
+		if (m_UserLog != null)
+			m_UserLog.StartWriting();
+		m_DasherModel.ResetFramecount();
+		Redraw(true); //kick the render thread
+	}
+	
+	protected void onPause() {
+		// Request a full redraw at the next time step.
+		Redraw(true);
+
+		if (m_UserLog != null) //Hmmm. Really? between zooms of click mode?
+			m_UserLog.StopWriting((float) GetNats());
 	}
 	
 	public void doAtFrameEnd(Runnable r) {endOfFrameTasks.add(r);}
@@ -686,15 +729,6 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		Redraw(true);
 	}
 	
-	/**
-	 * Deferred to m_AlphIO
-	 * 
-	 * @see CAlphIO
-	 */
-	public CAlphIO.AlphInfo GetInfo(String AlphID) {
-		return m_AlphIO.GetInfo(AlphID);
-	}
-	
 	/** Called to train the model. This method creates and broadcasts
 	 * a CLockEvent, then calls {@link #train(String, CLockEvent)},
 	 * then clears the event's {@link CLockEvent#m_bLock} and broadcasts it again.
@@ -705,9 +739,8 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		// Train the new language model
 		Lock("Training Dasher", 0); 
 		train(mgr,new ProgressNotifier() {
-			public boolean notifyProgress(int iPercent) {
+			public void notifyProgress(int iPercent) {
 				Lock("Training Dasher", iPercent);
-				return false; //do not allow aborts
 			}
 		});
 		Lock("Training Dasher", -1);
@@ -715,10 +748,10 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	
 	/** Interface by which an object may be notified of training progress (as a %age) */
 	public static interface ProgressNotifier {
-		/** Notify of current progress, and check whether an abort has been requested
+		/** Notify of current progress. May also request training be aborted.
 		 * @param percent Current %age progress; should be monotonic; 100% does not imply completion (but nearly!)
-		 * @return true if training should be aborted (note if this returns true once, all subsequent calls should do so too) */
-		boolean notifyProgress(int percent);
+		 * @throws AsynchronousCloseException if training should be aborted (note if this happens once, any subsequent calls should do the same) */
+		void notifyProgress(int percent) throws AsynchronousCloseException;
 	}
 	/**
 	 * Called to train the model with all available files of the specified name
@@ -743,6 +776,11 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 		for (InputStream in : streams) {
 			try {
 				iRead = mgr.TrainStream(in, iTotalBytes, iRead, prog);
+			} catch (AsynchronousCloseException e) {
+				//thrown to indicate training aborted. In that case we don't
+				// want to cache the LM.
+				m_LMcache.remove(mgr.m_Alphabet);
+				break;
 			} catch (IOException e) {
 				Message("Error "+e+" in training - rest of text skipped", 1); // 1 = severity
 			}
@@ -782,14 +820,6 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	}
 	
 	/**
-	 * ACL TODO - was "not yet implemented", so trying returning the model's
-	 * {@link CDasherModel#Framerate()}.
-	 */
-	public double GetCurFPS() {
-		return m_DasherModel.Framerate();
-	}
-	
-	/**
 	 * Deferred to CDasherModel
 	 * 
 	 * @see CDasherModel
@@ -812,7 +842,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	public void setOffset(int iOffset, boolean bForce) {
 		if (m_DasherModel==null) throw new IllegalStateException("Not yet constructed?");
 		if (iOffset == m_DasherModel.GetOffset() && !bForce) return;
-		PauseAt(0,0);
+		m_InputFilter.pause();
 		
 		m_DasherModel.SetNode(m_pNCManager.getAlphabetManager().GetRoot(getDocument(), iOffset, true));
 		
@@ -853,7 +883,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	 * @param iId Identifier of the pressed key
 	 */
 	public void KeyDown(long iTime, int iId) {
-		if(m_InputFilter != null && !GetBoolParameter(Ebp_parameters.BP_TRAINING)) {
+		if(m_InputFilter != null && m_sLockMsg==null) {
 			m_InputFilter.KeyDown(iTime, iId, m_DasherView, m_Input, m_DasherModel);
 		}
 	}
@@ -882,7 +912,7 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	 * @param iId Identifier of the pressed key
 	 */
 	public void KeyUp(long iTime, int iId) {
-		if(m_InputFilter != null && !GetBoolParameter(Ebp_parameters.BP_TRAINING)) {
+		if(m_InputFilter != null && m_sLockMsg==null) {
 			m_InputFilter.KeyUp(iTime, iId, m_DasherView, m_Input, m_DasherModel);
 		}
 	}
@@ -1034,19 +1064,12 @@ abstract public class CDasherInterfaceBase extends CDasherComponent {
 	public List<CControlManager.ControlAction> getControlActions() {
 		if (!GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE)) return Collections.emptyList();
 		List<ControlAction> acts = new ArrayList<ControlAction>();
-		if (m_InputFilter!=null && m_InputFilter.supportsPause()) acts.add(PAUSE_ACTION);
+		if (m_InputFilter!=null && m_InputFilter.supportsPause()) acts.add(CControlManager.PAUSE_ACTION);
 		if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_HAS_MOVE)) acts.add(CControlManager.MOVE);
 		if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_ALPH_SWITCH)) acts.add(new CControlManager.AlphSwitcher(this));
 		if (GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_HAS_SPEED)) acts.add(CControlManager.SPEED_CHANGE);
 		return acts;
 	}
-	
-	public final CControlManager.ControlAction PAUSE_ACTION = new CControlManager.FixedSuccessorsAction("Pause") {
-		public void happen(CControlManager mgr,CDasherNode node) {
-			SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
-			replace(mgr,node);
-		}
-	};
 	
 	public CInputFilter GetActiveInputFilter() {return m_InputFilter;}
 

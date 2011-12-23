@@ -116,9 +116,9 @@ public abstract class ExpansionPolicy {
 			if (nExp.m_dCost <= collapseCost) break; 
 			if (CDasherNode.currentNumNodeObjects()+nExp.ExpectedNumChildren() < m_iNodeBudget)
 			{
-		    	model.Expand(nExp);
+				model.Expand(nExp);
 		    	nextExp--;
-		    	bReturnValue = true;
+		    	if (nExp.ChildCount()>0) bReturnValue = true;
 		    	//...and loop.
 		    } else if (collapseIdx<nextCol
 		               && collapsible[collapseIdx].m_dCost< nExp.m_dCost)

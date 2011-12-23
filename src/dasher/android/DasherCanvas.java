@@ -3,6 +3,7 @@ package dasher.android;
 import dasher.CCustomColours;
 import dasher.CDasherInput;
 import dasher.CDasherScreen;
+import dasher.CDasherView.MutablePoint;
 import dasher.CInputFilter;
 import dasher.CDasherView.Point;
 import android.content.Context;
@@ -149,11 +150,9 @@ public class DasherCanvas extends SurfaceView implements Callback, CDasherScreen
 	}
 	
 	/* Gets (screen/pixel) x,y coordinates of last touch event*/
-	public boolean GetCoordinates(long[] coords) {
-		if (coords.length!=2) throw new IllegalArgumentException("Coordinate array must have exactly two elements");
+	public boolean GetCoordinates(MutablePoint coordinates) {
 		if (x==-1) return false;
-		coords[0]=x;
-		coords[1]=y;
+		coordinates.init(x,y);
 		return true;
 	}
 	

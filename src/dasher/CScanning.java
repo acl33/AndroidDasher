@@ -1,5 +1,6 @@
 package dasher;
 
+import dasher.CDasherView.MutablePoint;
 import dasher.Opts.ScreenOrientations;
 
 public abstract class CScanning extends CDasherButtons {
@@ -17,7 +18,7 @@ public abstract class CScanning extends CDasherButtons {
 	@Override public void KeyDown(long iTime, int iId, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
 		if (iId==100) {
 			pInput.GetScreenCoords(pView, coords);
-			iId = (coords[1]<pView.Screen().GetHeight()/2)
+			iId = (coords.y<pView.Screen().GetHeight()/2)
 				? 1 //scan
 				: 2; //select
 			
@@ -36,15 +37,15 @@ public abstract class CScanning extends CDasherButtons {
 		case 2:
 		case 3:
 			m_bDecorationChanged = true;			
-			pModel.ScheduleZoom(m_pBoxes[m_iActiveBox].iX, m_pBoxes[m_iActiveBox].iY);
+			scheduleZoom(pModel, m_pBoxes[m_iActiveBox].iX, m_pBoxes[m_iActiveBox].iY);
 			if(m_iActiveBox != m_pBoxes.length-1)
 				m_iActiveBox = 0;
 			break;
 		}
 	}
-	private final long coords[]=new long[2]; 
+	private final MutablePoint coords=new MutablePoint(); 
 	
-	@Override public boolean Timer(long Time, CDasherView m_pDasherView, CDasherInput pInput, CDasherModel pModel) {
+	@Override public void Timer(long Time, CDasherView m_pDasherView, CDasherInput pInput, CDasherModel pModel) {
 		if (GetLongParameter(Elp_parameters.LP_BUTTON_SCAN_TIME)>0) {
 			m_bDecorationChanged = true; //pretend - so the screen repaints!!
 			if (Time > m_iScanTime) {
@@ -54,7 +55,6 @@ public abstract class CScanning extends CDasherButtons {
 					m_iActiveBox = 0;
 			}
 		}
-		return pModel.nextScheduledStep(Time);
 	}
 
 }

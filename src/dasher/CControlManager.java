@@ -116,7 +116,11 @@ public class CControlManager extends CDasherComponent {
 			super.initNode(iOffset, iColour, desc);
 			this.act=act;
 		}
-		
+
+		@Override public float getViscosity() {
+			return 0.5f;
+		}
+
 		@Override
 		public int ExpectedNumChildren() {
 			return act.expectedNumSuccs(this); 
@@ -487,6 +491,14 @@ public class CControlManager extends CDasherComponent {
 		public int expectedNumSuccs(CDasherNode node) {
 			return BOUNDS.length-1;
 		}		
+	};
+	
+	public static final ControlAction PAUSE_ACTION = new FixedSuccessorsAction("Pause",(ControlAction)null) {
+		public void happen(CControlManager mgr,CDasherNode node) {
+			mgr.m_Interface.GetActiveInputFilter().pause();
+			if (mgr.GetBoolParameter(Ebp_parameters.BP_CONTROL_MODE_REBUILD))
+				replace(mgr,node);
+		}
 	};
 
 	public static void main(String[] args) {

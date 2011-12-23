@@ -33,7 +33,7 @@
 <string name="DisplayHeight_title">Display Height %</string>
 <string name="DisplayHeight_summary">Compress display vertically to take up less space</string>
 <string name="ControlMode_title">Commands</string>
-<string name="ControlMode_summary">Generate nodes to perform various actions</string>
+<string name="ControlMode_summary">Generate nodes to perform various actions from within Dasher</string>
 <string name="AndroidSettingsNode_title">Settings</string>
 <string name="AndroidSettingsNode_summary">Include node for direct access to Dasher Settings</string>
 <string name="ControlModeRebuild_title">Rebuild Behind Nodes</string>
@@ -94,8 +94,8 @@
 <string name="AndroidDoubleX_summary">As if finger were twice as far to the right</string>
 <string name="SlowStartTime_title">Slow Startup Time</string>
 <string name="SlowStartTime_summary">Time to reach full speed (0=straightaway)</string>
-<string name="ReverseBoost_title">Reverse Faster</string>
-<string name="ReverseBoost_summary">Boost speed of reversing (0=don\'t)</string>
+<string name="XLimitSpeed_title">Horiz Speed Limit</string>
+<string name="XLimitSpeed_summary">Distance from RHS at which you reach maximum speed</string>
 <string name="ColourID_title">Colour Scheme</string>
 <string name="AndroidTwoButtonDynamic_title">Two-btn Dynamic Mode</string>
 <string name="AndroidTwoButtonDynamic_summary">Tap top/bottom or use volume control</string>

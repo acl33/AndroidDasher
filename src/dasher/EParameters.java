@@ -53,7 +53,6 @@ import java.util.Map;
  */
 public interface EParameters {
 
-	public static final boolean PERS=true;
 	public int key();
 	public String regName();
 	public void reset(CSettingsStore ss);

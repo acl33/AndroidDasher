@@ -149,10 +149,10 @@
 	          android:summary="@string/SlowStartTime_summary"
 	          android:max="5000" min="0" android:text="ms"/>
 	        <dasher.android.SeekBarPreference
-	          android:key="ReverseBoost"
-	          android:title="@string/ReverseBoost_title"
-	          android:summary="@string/ReverseBoost_summary"
-	          android:max="10" min="0"/>
+	          android:key="XLimitSpeed"
+	          android:title="@string/XLimitSpeed_title"
+	          android:summary="@string/XLimitSpeed_summary"
+	          android:max="1024" min="1"/>
 	    </PreferenceScreen>
 	
 	    <PreferenceScreen
@@ -188,10 +188,10 @@
 	          android:summary="@string/SlowStartTime_summary"
 	          android:max="5000" min="0" android:text="ms"/>
 	    	<dasher.android.SeekBarPreference
-	          android:key="ReverseBoost"
-	          android:title="@string/ReverseBoost_title"
-	          android:summary="@string/ReverseBoost_summary"
-	          android:max="10" min="0"/>
+	          android:key="XLimitSpeed"
+	          android:title="@string/XLimitSpeed_title"
+	          android:summary="@string/XLimitSpeed_summary"
+	          android:max="1024" min="1"/>
 	        <dasher.android.SeekBarPreference
 	          android:key="TapTime"
 	          android:title="@string/TapTime_title"
@@ -290,10 +290,10 @@
 	          android:summary="@string/SlowStartTime_summary"
 	          android:max="5000" min="0" android:text="ms"/>
 	        <dasher.android.SeekBarPreference
-	          android:key="ReverseBoost"
-	          android:title="@string/ReverseBoost_title"
-	          android:summary="@string/ReverseBoost_summary"
-	          android:max="10" min="0"/>
+	          android:key="XLimitSpeed"
+	          android:title="@string/XLimitSpeed_title"
+	          android:summary="@string/XLimitSpeed_summary"
+	          android:max="1024" min="1"/>
 	    </PreferenceScreen>
 	
 		<PreferenceScreen
@@ -322,10 +322,10 @@
 	          android:summary="@string/SlowStartTime_summary"
 	          android:max="5000" min="0" android:text="ms"/>
 	        <dasher.android.SeekBarPreference
-	          android:key="ReverseBoost"
-	          android:title="@string/ReverseBoost_title"
-	          android:summary="@string/ReverseBoost_summary"
-	          android:max="10" min="0"/>
+	          android:key="XLimitSpeed"
+	          android:title="@string/XLimitSpeed_title"
+	          android:summary="@string/XLimitSpeed_summary"
+	          android:max="1024" min="1"/>
 		</PreferenceScreen>
 		
  	</PreferenceScreen>

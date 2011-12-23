@@ -8,6 +8,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.nio.channels.AsynchronousCloseException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -28,6 +29,7 @@ import android.util.Log;
 import dasher.*;
 import dasher.CControlManager.ControlAction;
 import dasher.android.AndroidSettings.SettingsOverride;
+import dasher.CDasherView.MutablePoint;
 
 public class ADasherInterface extends CDasherInterfaceBase {
 	/** SettingsStore in use. We keep a reference so we can override
@@ -39,7 +41,6 @@ public class ADasherInterface extends CDasherInterfaceBase {
 	protected final Context androidCtx;
 	private final BlockingQueue<Runnable> tasks = supportsLinkedBlockingQueue ? new LinkedBlockingQueue<Runnable>() : new ArrayBlockingQueue<Runnable>(5);
 	private final Thread taskThread;
-	private boolean m_bRedrawRequested;
 	private static final boolean supportsLinkedBlockingQueue;
 	private TiltInput tilt;
 	
@@ -76,26 +77,27 @@ public class ADasherInterface extends CDasherInterfaceBase {
 		this.androidCtx = androidCtx;
 		taskThread = new Thread() {
 			public void run() {
-				try {
-					Queue<Runnable> frameTasks = new LinkedList<Runnable>();
-					while (true) {
-						if (m_DasherScreen!=null && doc!=null && (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) || m_bRedrawRequested)) {
-							m_bRedrawRequested = false;
-							((DasherCanvas)m_DasherScreen).renderFrame();
-							tasks.drainTo(frameTasks);
-							while (!frameTasks.isEmpty())
-								frameTasks.remove().run();
-						} else {
-							try {
-								tasks.take().run();
-							} catch (InterruptedException e) {
-								//we are interrupted if ever BP_DASHER_PAUSED is cleared
-								// (to tell us to start rendering!)
-								// - so loop round
-							}
+				Queue<Runnable> frameTasks = new LinkedList<Runnable>();
+				while (true) {
+					if (m_DasherScreen!=null && doc!=null && !m_bShutdownLock) {
+						tasks.drainTo(frameTasks);
+						((DasherCanvas)m_DasherScreen).renderFrame();
+						//that'll call round to Redraw(boolean) to schedule another frame
+						// if anything happened in this one.
+						while (!frameTasks.isEmpty())
+							frameTasks.remove().run();
+					} else if (m_bShutdownLock && tasks.isEmpty())
+						break;
+					else {
+						try {
+							tasks.take().run();
+						} catch (InterruptedException e) {
+							//we are interrupted if ever BP_DASHER_PAUSED is cleared
+							// (to tell us to start rendering!)
+							// - so loop round
 						}
 					}
-				} catch (ThreadDeath d) {}//exit
+				}
 				//android.util.Log.d("DasherIME","Background thread for "+this+" exitting");
 			}
 		};
@@ -111,25 +113,16 @@ public class ADasherInterface extends CDasherInterfaceBase {
 	
 	@Override
 	public void Redraw(final boolean bChanged) {
-		if (Thread.currentThread()==taskThread) {
+		if (Thread.currentThread()==taskThread)
 			super.Redraw(bChanged);
-			m_bRedrawRequested=true;
-		} else
+		else
 			enqueue(new Runnable() {
 				public void run() {
 					Redraw(bChanged);
 				}
-			});
+			}); //enqueue-ing, will unblock the taskThread waiting in tasks.take()...
 	}
-	
-	@Override
-	public void HandleEvent(EParameters eParam) {
-		super.HandleEvent(eParam);
-		if (eParam == Ebp_parameters.BP_DASHER_PAUSED
-				&& !GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
-			taskThread.interrupt();
-	}
-	
+
 	@Override public void Message(String msg, int iSeverity) {
 		switch (iSeverity) {
 		case 0:
@@ -168,14 +161,12 @@ public class ADasherInterface extends CDasherInterfaceBase {
 				catch (InterruptedException e) {}
 		}
 		//called from Training thread
-		public boolean notifyProgress(int iPercent) {
-			boolean bRes;
+		public void notifyProgress(int iPercent) throws AsynchronousCloseException {
 			synchronized (this) {
 				percent=iPercent;
-				bRes=bAbortRequested;
+				if (bAbortRequested) throw new AsynchronousCloseException();
 			}
 			enqueue(this);
-			return bRes;
 		}
 	}
 	private Progress p;
@@ -213,22 +204,18 @@ public class ADasherInterface extends CDasherInterfaceBase {
 	public void StartShutdown() {
 		if (Thread.currentThread()!=taskThread) {
 			//Log.d("DasherIME","StartShutdown...");
-			//We just want a holder for a boolean, don't actually need atomicity properties.
-			final java.util.concurrent.atomic.AtomicBoolean done 
-				=new java.util.concurrent.atomic.AtomicBoolean(false);
+			final Object lock = new Object();
 			enqueue(new Runnable() {
 				public void run() {
 					StartShutdown();
-					synchronized (done) {
-						done.set(true);
-						done.notifyAll();
+					synchronized (lock) {
+						lock.notifyAll();
 					}
-					throw new ThreadDeath();
 				}
 			});
-			synchronized(done) {
-				while (!done.get())
-					try {done.wait();}
+			synchronized(lock) {
+				while (!m_bShutdownLock)
+					try {lock.wait();}
 					catch (InterruptedException e) {}
 			}
 			return;
@@ -242,22 +229,22 @@ public class ADasherInterface extends CDasherInterfaceBase {
 		final SharedPreferences prefs=PreferenceManager.getDefaultSharedPreferences(androidCtx);
 		final CDasherInput touch =new CDasherInput("Touch Input") {
 			@Override
-			public boolean GetScreenCoords(CDasherView pView,long[] Coordinates) {
+			public boolean GetScreenCoords(CDasherView pView, MutablePoint Coordinates) {
 				DasherCanvas surf = (DasherCanvas)m_DasherScreen;
 				if (!surf.GetCoordinates(Coordinates)) return false;
 				if (prefs.getBoolean("AndroidDoubleX", false)) {
 					switch (pView.getOrientation()) {
 					case LEFT_TO_RIGHT:
-						Coordinates[0] = Math.min(Coordinates[0]*2,surf.getWidth());
+						Coordinates.x = Math.min(Coordinates.x*2,surf.getWidth());
 						break;
 					case RIGHT_TO_LEFT:
-						Coordinates[0] = Math.max(0, 2*Coordinates[0]-surf.getWidth());
+						Coordinates.x = Math.max(0, 2*Coordinates.x-surf.getWidth());
 						break;
 					case TOP_TO_BOTTOM:
-						Coordinates[1] = Math.min(Coordinates[1]*2,surf.getHeight());
+						Coordinates.y = Math.min(Coordinates.y*2,surf.getHeight());
 						break;
 					case BOTTOM_TO_TOP:
-						Coordinates[1] = Math.max(0,2*Coordinates[1]-surf.getHeight());
+						Coordinates.y = Math.max(0,2*Coordinates.y-surf.getHeight());
 						break;
 					default:
 						throw new AssertionError();
@@ -275,14 +262,14 @@ public class ADasherInterface extends CDasherInterfaceBase {
 			RegisterModule(tilt);
 			RegisterModule(new CDasherInput("Touch with tilt X") {
 				long lastTouch;
-				@Override public boolean GetScreenCoords(CDasherView pView, long[] coords) {
+				@Override public boolean GetScreenCoords(CDasherView pView, MutablePoint coords) {
 					if (!tilt.GetScreenCoords(pView, coords)) return false;
 					boolean horiz = pView.getOrientation().isHorizontal;
-					long tiltC = (horiz) ? coords[0] : coords[1];
+					long tiltC = (horiz) ? coords.x : coords.y;
 					if (touch.GetScreenCoords(pView, coords))
-						lastTouch = (horiz) ? coords[1] : coords[0];
-					else coords[horiz ? 1 : 0] = lastTouch;
-					coords[horiz ? 0 : 1] = tiltC;
+						lastTouch = (horiz) ? coords.y : coords.x;
+					else if (horiz) coords.y=lastTouch; else coords.x=lastTouch;
+					if (horiz) coords.x=tiltC; else coords.y=tiltC;
 					return true;
 				}
 				@Override public void Activate() {tilt.Activate();}
@@ -296,7 +283,7 @@ public class ADasherInterface extends CDasherInterfaceBase {
 			 * is true, nor get its X coordinate from tilting. (Used for clicks, as opposed to drags)
 			 */
 			private final CDasherInput undoubledTouch = new CDasherInput("Unregistered Input Device") {
-				@Override public boolean GetScreenCoords(CDasherView pView, long[] coords) {
+				@Override public boolean GetScreenCoords(CDasherView pView, MutablePoint coords) {
 					return ((DasherCanvas)pView.Screen()).GetCoordinates(coords);
 				}
 			};
@@ -312,42 +299,39 @@ public class ADasherInterface extends CDasherInterfaceBase {
 			@Override public boolean supportsPause() {
 				return !prefs.getBoolean("AndroidTiltHoldToGo",false);
 			}
-			@Override public void ApplyTransform(CDasherView pView, long[] coords) {
+			@Override public void ApplyTransform(CDasherView pView, MutablePoint coords) {
 				if (prefs.getBoolean("AndroidTiltHoldToGo", false) && prefs.getBoolean("AndroidTiltUsesTouchX", false)) {
-					long iDasherY=coords[1];
+					long iDasherY=coords.y;
 					touch.GetDasherCoords(pView, coords);
-					coords[1]=iDasherY;
+					coords.y=iDasherY;
 				}
 				super.ApplyTransform(pView, coords);
 			}
 			
 			/** Override to disable offset for tilting. */
-			@Override public void ApplyOffset(CDasherView pView, long[] coords) {
+			@Override public void ApplyOffset(CDasherView pView, MutablePoint coords) {
 				//do nothing
 			}
 			
 			@Override public void KeyDown(long iTime, int iID, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
 				if (iID==100 && prefs.getBoolean("AndroidTiltHoldToGo", false)) {
-					m_Interface.Unpause(iTime);
+					unpause(iTime);
 				} else
 					super.KeyDown(iTime, iID, pView, pInput, pModel);
 			}
 			
-			@Override public void HandleEvent(EParameters eParam) {
-				super.HandleEvent(eParam);
-				if (m_Interface.GetActiveInputFilter()==this && eParam == Ebp_parameters.BP_DASHER_PAUSED &&
-						!prefs.getBoolean("AndroidTiltHoldToGo", false)) {
-					if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
-						if (!wl.isHeld()) wl.acquire();
-					} else {
-						if (wl.isHeld()) wl.release();
-					}
-				}
+			@Override public void pause() {
+				if (wl.isHeld()) wl.release();
+				super.pause();
+			}
+			@Override protected void unpause(long iTime) {
+				if (!wl.isHeld()) wl.acquire();
+				super.unpause(iTime);
 			}
 			
 			@Override public void KeyUp(long iTime, int iID, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
 				if (iID==100 && prefs.getBoolean("AndroidTiltHoldToGo", false))
-					m_Interface.PauseAt(0,0);
+					pause();
 				else
 					super.KeyUp(iTime, iID, pView, pInput, pModel);
 			}
@@ -357,6 +341,22 @@ public class ADasherInterface extends CDasherInterfaceBase {
 		RegisterModule(new AndroidCompass(this,this));
 		RegisterModule(new Android1BDynamic(this, this));
 		RegisterModule(new Android2BDynamic(this, this));
+	}
+	
+	@Override public void KeyDown(final long iTime, final int iId) {
+		if (Thread.currentThread()==taskThread)
+			super.KeyDown(iTime, iId);
+		else enqueue(new Runnable() {
+			public void run() {KeyDown(iTime,iId);}
+		});
+	}
+	
+	@Override public void KeyUp(final long iTime, final int iId) {
+		if (Thread.currentThread()==taskThread)
+			super.KeyUp(iTime, iId);
+		else enqueue(new Runnable() {
+			public void run() {KeyUp(iTime,iId);}
+		});
 	}
 	
 	@Override public void ChangeScreen(CDasherScreen surf) {

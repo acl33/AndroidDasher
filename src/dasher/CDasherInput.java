@@ -25,6 +25,8 @@
 
 package dasher;
 
+import dasher.CDasherView.MutablePoint;
+
 /**
  * DasherInput is the base class for all modules which provide
  * some sort of co-ordinate input.
@@ -52,15 +54,15 @@ abstract public class CDasherInput implements CDasherModule {
 	
 	/**
 	 * Gets the current position of the input in Dasher coordinates.
-	 * Default implementation is to call {@link #GetScreenCoords(CDasherView, long[])}, and then
-	 * transform the coordinates using {@link CDasherView#Screen2Dasher(long[])}; subclasses <em>must</em>
-	 * override at least one of this and {@link #GetScreenCoords(CDasherView, long[])}.
+	 * Default implementation is to call {@link #GetScreenCoords(CDasherView, MutablePoint)}, and then
+	 * transform the coordinates using {@link CDasherView#Screen2Dasher(MutablePoint)}; subclasses <em>must</em>
+	 * override at least one of this and {@link #GetScreenCoords(CDasherView, MutablePoint)}.
 	 * @param pView View which may be used for coordinate transforms
 	 * @param coords 2-element array into which to write coordinates
 	 * (for 1-dimensional inputs, suggest fixing x=0).
 	 * @return true iff coordinates were available 
 	 */
-	public boolean GetDasherCoords(CDasherView pView, long[] coords) {
+	public boolean GetDasherCoords(CDasherView pView, MutablePoint coords) {
 		if (!GetScreenCoords(pView, coords)) return false;
 		pView.Screen2Dasher(coords);
 		return true;
@@ -68,15 +70,15 @@ abstract public class CDasherInput implements CDasherModule {
 	
 	/**
 	 * Gets the current position of the input in screen coordinates.
-	 * Default implementation is to call {@link #GetDasherCoords(CDasherView, long[])}, and then
-	 * transform the coordinates using {@link CDasherView#Dasher2Screen(long[])}; subclasses <em>must</em>
-	 * override at least one of this and {@link #GetDasherCoords(CDasherView, long[])}.
+	 * Default implementation is to call {@link #GetDasherCoords(CDasherView, MutablePoint)}, and then
+	 * transform the coordinates using {@link CDasherView#Dasher2Screen(MutablePoint)}; subclasses <em>must</em>
+	 * override at least one of this and {@link #GetDasherCoords(CDasherView, MutablePoint)}.
 	 * @param pView View which may be used for coordinate transforms
 	 * @param coords 2-element array into which to write coordinates
 	 * (for 1-dimensional inputs, suggest fixing x=0).
 	 * @return true iff coordinates were available 
 	 */
-	public boolean GetScreenCoords(CDasherView pView, long[] coords) {
+	public boolean GetScreenCoords(CDasherView pView, MutablePoint coords) {
 		if (!GetDasherCoords(pView, coords)) return false;
 		pView.Dasher2Screen(coords);
 		return true;

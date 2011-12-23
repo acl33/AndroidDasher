@@ -285,14 +285,12 @@ public class CDasherViewSquare extends CDasherView {
 			//ok, render the node...
 			long iDasherSize = (y2 - y1);
 			{
-				temp[0]=Math.min(iDasherSize,visreg.maxX);
-				temp[1]=Math.min(y2,visreg.maxY);
+				temp.init(Math.min(iDasherSize,visreg.maxX),Math.min(y2,visreg.maxY));
 				Dasher2Screen(temp);
-				int left=(int)temp[0], bottom=(int)temp[1];
-				temp[0] = 0;
-				temp[1] = Math.max(y1, visreg.minY);
+				int left=(int)temp.x, bottom=(int)temp.y;
+				temp.init(0,Math.max(y1, visreg.minY));
 				Dasher2Screen(temp);
-				int right=(int)temp[0], top=(int)temp[1];
+				int right=(int)temp.x, top=(int)temp.y;
 				switch (getOrientation()) {
 				case TOP_TO_BOTTOM:
 					{int temp = top; top = bottom; bottom = temp;}
@@ -452,7 +450,7 @@ public class CDasherViewSquare extends CDasherView {
 			return lpFontSize*11;
 	}
 	
-	private final long[] temp=new long[2];
+	private final MutablePoint temp=new MutablePoint(), temp2=new MutablePoint();
 	/**
 	 * Determines whether a node falls within our current visible
 	 * region. This is determined by the simple expedient of calling
@@ -481,7 +479,7 @@ public class CDasherViewSquare extends CDasherView {
 	 * @return Point in Dasher space equivalent to the given Screen point
 	 */	
 	@Override
-	public void Screen2Dasher(long[] coords) {
+	public void Screen2Dasher(MutablePoint coords) {
 		
 		// Things we're likely to need:
 		
@@ -491,27 +489,26 @@ public class CDasherViewSquare extends CDasherView {
 		long rx,ry;
 		switch(getOrientation()) {
 		case LEFT_TO_RIGHT:
-			rx = m_iCenterX - ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor / m_iScaleFactorX;
-			ry = MAX_Y / 2 + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor / m_iScaleFactorY;
+			rx = m_iCenterX - ( coords.x - iScreenWidth / 2 ) * m_iScalingFactor / m_iScaleFactorX;
+			ry = MAX_Y / 2 + ( coords.y - iScreenHeight / 2 ) * m_iScalingFactor / m_iScaleFactorY;
 		break;
 		case RIGHT_TO_LEFT:
-			rx = (m_iCenterX + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
-			ry = (MAX_Y / 2 + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
+			rx = (m_iCenterX + ( coords.x - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
+			ry = (MAX_Y / 2 + ( coords.y - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
 		break;
 		case TOP_TO_BOTTOM:
-			rx = (m_iCenterX - ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
-			ry = (MAX_Y / 2 + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
+			rx = (m_iCenterX - ( coords.y - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
+			ry = (MAX_Y / 2 + ( coords.x - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
 		break;
 		case BOTTOM_TO_TOP:
-			rx = (m_iCenterX + ( coords[1] - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
-			ry = (MAX_Y / 2 + ( coords[0] - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
+			rx = (m_iCenterX + ( coords.y - iScreenHeight / 2 ) * m_iScalingFactor/ m_iScaleFactorY);
+			ry = (MAX_Y / 2 + ( coords.x - iScreenWidth / 2 ) * m_iScalingFactor/ m_iScaleFactorX);
 		break;
 		default:
 			throw new AssertionError();
 		}
 		
-		coords[0] = unapplyXMapping(rx);
-		coords[1] = yunmap(ry);
+		coords.init(unapplyXMapping(rx),yunmap(ry));
 	}
 	
 	/**
@@ -608,14 +605,12 @@ public class CDasherViewSquare extends CDasherView {
 	 * @param iDasherY Dasher y co-ordinate
 	 * @return Screen point corresponding to this location
 	 */
-	public void Dasher2Screen(long[] coords) {
+	public void Dasher2Screen(MutablePoint coords) {
 		
 		// Apply the nonlinearities
 		
 		
-		// FIXME
-		coords[0] = applyXMapping(coords[0]);
-		coords[1] = ymap(coords[1]);
+		coords.init(applyXMapping(coords.x),ymap(coords.y));
 		
 		
 		// Things we're likely to need:
@@ -625,23 +620,21 @@ public class CDasherViewSquare extends CDasherView {
 
 		switch( getOrientation() ) {
 		case LEFT_TO_RIGHT:
-			coords[0] = (int)(iScreenWidth / 2 - ( coords[0] - m_iCenterX ) * m_iScaleFactorX / m_iScalingFactor);
-			coords[1] = (int)(iScreenHeight / 2 + ( coords[1] - MAX_Y / 2 ) * m_iScaleFactorY / m_iScalingFactor);
+			coords.init((iScreenWidth / 2 - ( coords.x - m_iCenterX ) * m_iScaleFactorX / m_iScalingFactor),
+						(iScreenHeight / 2 + ( coords.y - MAX_Y / 2 ) * m_iScaleFactorY / m_iScalingFactor));
 		break;
 		case RIGHT_TO_LEFT:
-			coords[0] = (int)(iScreenWidth / 2 + ( coords[0] - m_iCenterX ) * m_iScaleFactorX / m_iScalingFactor);
-			coords[1] = (int)(iScreenHeight / 2 + ( coords[1] - MAX_Y / 2 ) * m_iScaleFactorY / m_iScalingFactor);
+			coords.init((iScreenWidth / 2 + ( coords.x - m_iCenterX ) * m_iScaleFactorX / m_iScalingFactor),
+						(iScreenHeight / 2 + ( coords.y - MAX_Y / 2 ) * m_iScaleFactorY / m_iScalingFactor));
 		break;
 		case TOP_TO_BOTTOM: {
-			long temp = (int)(iScreenWidth / 2 + ( coords[1] - MAX_Y / 2 ) * m_iScaleFactorX / m_iScalingFactor);
-			coords[1] = (int)(iScreenHeight / 2 - ( coords[0] - m_iCenterX ) * m_iScaleFactorY / m_iScalingFactor);
-			coords[0] = temp;
+			coords.init((iScreenWidth / 2 + ( coords.y - MAX_Y / 2 ) * m_iScaleFactorX / m_iScalingFactor),
+						(iScreenHeight / 2 - ( coords.x - m_iCenterX ) * m_iScaleFactorY / m_iScalingFactor));
 			break;
 		}
 		case BOTTOM_TO_TOP: {
-			long temp = (int)(iScreenWidth / 2 + ( coords[1] - MAX_Y / 2 ) * m_iScaleFactorX / m_iScalingFactor);
-			coords[1] = (int)(iScreenHeight / 2 + ( coords[0] - m_iCenterX ) * m_iScaleFactorY / m_iScalingFactor);
-			coords[0] = temp;
+			coords.init((iScreenWidth / 2 + ( coords.y - MAX_Y / 2 ) * m_iScaleFactorX / m_iScalingFactor),
+						(iScreenHeight / 2 + ( coords.x - m_iCenterX ) * m_iScaleFactorY / m_iScalingFactor));
 			break;
 		}
 		default:
@@ -665,30 +658,27 @@ public class CDasherViewSquare extends CDasherView {
 	public CDasherView.DRect VisibleRegion() {
 		
 		if(visibleRegion==null) {
-			DPoint m_iDasherMin,m_iDasherMax;		
+			final MutablePoint min=temp,max=temp2;
 			switch( getOrientation() ) {
 			case LEFT_TO_RIGHT:
-				m_iDasherMin = Screen2Dasher(Screen().GetWidth(),0);
-				m_iDasherMax = Screen2Dasher(0,Screen().GetHeight());
+				min.init(Screen().GetWidth(),0);
+				max.init(0,Screen().GetHeight());
 			break;
 			case RIGHT_TO_LEFT:
-				m_iDasherMin = Screen2Dasher(0,0);
-				m_iDasherMax = Screen2Dasher(Screen().GetWidth(),Screen().GetHeight());
+			case BOTTOM_TO_TOP:
+				min.init(0,0);
+				max.init(Screen().GetWidth(),Screen().GetHeight());
 			break;
 			case TOP_TO_BOTTOM:
-				m_iDasherMin = Screen2Dasher(0,Screen().GetHeight());
-				m_iDasherMax = Screen2Dasher(Screen().GetWidth(),0);
-			break;
-			case BOTTOM_TO_TOP:
-				m_iDasherMin = Screen2Dasher(0,0);
-				m_iDasherMax = Screen2Dasher(Screen().GetWidth(),Screen().GetHeight());
+				min.init(0,Screen().GetHeight());
+				max.init(Screen().GetWidth(),0);
 			break;
 			default:
 				throw new IllegalArgumentException("Unknown Orientation "+getOrientation());
 			}
-			
-			visibleRegion = new CDasherView.DRect(m_iDasherMin.x, m_iDasherMin.y,
-					m_iDasherMax.x, m_iDasherMax.y);
+			Screen2Dasher(min);
+			Screen2Dasher(max);
+			visibleRegion = new CDasherView.DRect(min.x, min.y, max.x, max.y);
 		}
 		
 		return visibleRegion; 

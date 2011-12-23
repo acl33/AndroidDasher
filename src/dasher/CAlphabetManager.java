@@ -383,7 +383,7 @@ public class CAlphabetManager<C> {
 		public void Enter() {
 			//Make damn sure the user notices something funny is going on by
 			// stopping him in his tracks. He can continue by unpausing...
-			m_Interface.PauseAt(0, 0);
+			m_Interface.GetActiveInputFilter().pause();
 		}
 	}
 
@@ -687,51 +687,8 @@ public class CAlphabetManager<C> {
     	return node;
     }
 
-    static CAlphabetManager<?> makeAlphMgr(CDasherInterfaceBase intf) {
-		//Convert the full alphabet to a symbolic representation for use in the language model
-		
-		// -- put all this in a separate method
-		// TODO: Think about having 'prefered' values here, which get
-		// retrieved by DasherInterfaceBase and used to set parameters
-		
-		// TODO: We might get a different alphabet to the one we asked for -
-		// if this is the case then the parameter value should be updated,
-		// but not in such a way that it causes everything to be rebuilt.
-		
-		CAlphIO.AlphInfo cAlphabet = intf.GetInfo(intf.GetStringParameter(Esp_parameters.SP_ALPHABET_ID));
-		
-		// Create an appropriate language model;
-		
-		switch ((int)intf.GetLongParameter(Elp_parameters.LP_LANGUAGE_MODEL_ID)) {
-		default:
-			// If there is a bogus value for the language model ID, we'll default
-			// to our trusty old PPM language model.
-		case 0:
-			intf.SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, false);
-			return /*ACL (langMod.isRemote())
-		        ? new CRemoteAlphabetManager( this, langMod)
-		        :*/ new CAlphabetManager<CPPMLanguageModel.CPPMnode>(intf, new CPPMLanguageModel(intf, cAlphabet));
-		/* case 2:
-			m_pLanguageModel = new CWordLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
-			break;
-		case 3:
-			m_pLanguageModel = new CMixtureLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
-			break;  
-			#ifdef JAPANESE
-		case 4:
-			m_pLanguageModel = new CJapaneseLanguageModel(m_pEventHandler, m_pSettingsStore, alphabet);
-			break;
-			#endif */
-			
-		case 5:
-			throw new UnsupportedOperationException("(ACL) Remote LM currently unimplemented");
-			//langMod = new CRemotePPM(m_EventHandler, m_SettingsStore, alphabet);
-			//SetBoolParameter(Ebp_parameters.BP_LM_REMOTE, true);
-		
-			//break;
-		/* CSFS: Commented out the other language models for the time being as they are not
-		 * implemented yet.
-		 */
-		}
-	}    
+    static <T> CAlphabetManager<T> makeAlphMgr(CDasherInterfaceBase intf, CLanguageModel<T> lm) {
+    	return new CAlphabetManager<T>(intf, lm);
+    }
+    
 }

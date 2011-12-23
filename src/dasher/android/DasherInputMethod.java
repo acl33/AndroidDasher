@@ -95,8 +95,8 @@ public class DasherInputMethod extends SwitchInputMethod implements OnSharedPref
 			initNumSel=Math.abs(attribute.initialSelEnd-attribute.initialSelStart);
 		//Log.d("DasherIME","cursor "+initCursorPos+" actionLabel "+attribute.actionLabel);
 		//Prevent learn-as-you-write when editing any field that is a password
-		List<ControlAction> acts = new ArrayList<ControlAction>();
-		acts.add(HIDE);
+		final List<ControlAction> acts = new ArrayList<ControlAction>();
+		acts.add(HIDE);	acts.add(HOME);
 		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("AndroidSettingsNode", false)) {
 			acts.add(SETTINGS);
 		}
@@ -128,6 +128,16 @@ public class DasherInputMethod extends SwitchInputMethod implements OnSharedPref
 	private final ControlAction HIDE = new HandlerAction("Back") { //TODO internationalize, or icon?
 		public void run() {
 			if (useTeklaNav()) switchToTekla(); else hideWindow();
+		}
+	};
+	
+	private final ControlAction HOME = new HandlerAction("Home") { //TODO internationalize, or icon
+		public void run() {
+			hideWindow();
+			Intent home = new Intent(Intent.ACTION_MAIN);
+			home.addCategory(Intent.CATEGORY_HOME);
+			home.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+			startActivity(home);
 		}
 	};
 	

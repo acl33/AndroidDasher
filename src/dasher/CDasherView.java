@@ -68,19 +68,16 @@ public abstract class CDasherView extends CDasherComponent {
 		public final int y;
 	}
 
-	/*
-	 * Class representing a point in Dasher space
-	 */
-	static public class DPoint {
-		public DPoint(long x, long y) {this.x=x; this.y=y;}
-		/**
-		 * X co-ord
-		 */
-		public final long x;
-		/**
-		 * Y co-ord
-		 */
-		public final long y;
+	/** Class for mutable points. Capable of representing points in Dasher-space
+	 * as well as screen space. */
+	static public class MutablePoint {
+		public final void init(long x,long y) {this.x=x; this.y=y;}
+		public final void init(MutablePoint other) {init(other.x,other.y);}
+		public final void init(Point other) {init(other.x,other.y);}
+		/** X co-ord */
+		public long x;
+		/** Y co-ord */
+		public long y;
 	}
 
 	/**
@@ -230,13 +227,12 @@ public abstract class CDasherView extends CDasherComponent {
 	 * @param iColour Colour index (-1 means default colour)
 	 */
 	public void Dasherline(long x0, long y0, long x1, long y1, int iWidth, int iColour) {
-		temp1[0]=x0; temp1[1]=y0;
+		temp1.init(x0,y0);
 		Dasher2Screen(temp1);
-		final int ix0=(int)temp1[0], iy0=(int)temp1[1];
 		
-		temp1[0]=x1; temp1[1]=y1;
-		Dasher2Screen(temp1);
-		Screen().drawLine(ix0, iy0, (int)temp1[0], (int)temp1[1], iWidth, iColour);
+		temp2.init(x1,y1);
+		Dasher2Screen(temp2);
+		Screen().drawLine((int)temp1.x, (int)temp1.y, (int)temp2.x, (int)temp2.y, iWidth, iColour);
 	}
 	
 	/**
@@ -283,16 +279,16 @@ public abstract class CDasherView extends CDasherComponent {
 	 */	
 	public void DasherDrawRectangle(long iLeft, long iMinY, long iRight, long iMaxY, int Color, int iOutlineColour, int iThickness) {
 		
-		temp1[0] = iLeft; temp1[1] = iMinY;
+		temp1.init(iLeft, iMinY);
 		Dasher2Screen(temp1);
 		
-		temp2[0] = iRight; temp2[1] = iMaxY;
+		temp2.init(iRight, iMaxY);
 		Dasher2Screen(temp2);
 		
-		Screen().DrawRectangle((int)temp1[0], (int)temp1[1], (int)temp2[0], (int)temp2[1], Color, iOutlineColour, iThickness);
+		Screen().DrawRectangle((int)temp1.x, (int)temp1.y, (int)temp2.x, (int)temp2.y, Color, iOutlineColour, iThickness);
 	}
 	
-	private final long[] temp1=new long[2], temp2 = new long[2];
+	private final MutablePoint temp1=new MutablePoint(), temp2=new MutablePoint();
 	/**
 	 * Draws a given string inside a box specified in screen coordinates.
 	 * <p>
@@ -349,33 +345,19 @@ public abstract class CDasherView extends CDasherComponent {
 	public abstract CDasherNode Render(CDasherNode Root, long iRootMin, long iRootMax, ExpansionPolicy pol, CDasherModel model);
 			
 	/**
-	 * Convert a given screen co-ordinate to dasher co-ordinates. 
-	 * (Wraps {@link #Screen2Dasher(long[])}).
-	 * @param iInputX Screen x co-ordinate  
-	 * @param iInputY Screen y co-ordinate
-	 * @return Dasher co-ordinates
-	 */
-	public CDasherView.DPoint Screen2Dasher(int iInputX, int iInputY) {
-		long[] temp = new long[] {iInputX, iInputY};
-		Screen2Dasher(temp);
-		return new DPoint(temp[0],temp[1]);
-	}
-	
-	/**
 	 * Convert a given screen coordinate into dasher co-ordinates.
 	 * @param coords on entry, contains screen coordinates; on exit, contains dasher coordinates.
-	 * (Must have at least 2 elements; any beyond first two are ignored.)
 	 */
-	public abstract void Screen2Dasher(long[] coords);
+	public abstract void Screen2Dasher(MutablePoint coords);
 	
 	/**
 	 * Should convert a given Dasher co-ordinate to its equivalent
 	 * screen co-ordinates.
 	 * 
-	 * @param coords array of (x,y) coordinates - on entry, will contain Dasher coordinates;
-	 * on exit, should contain corresponding screen coordinates.
+	 * @param coords on entry, should contain Dasher coordinates;
+	 * on exit, contains corresponding screen coordinates.
 	 */
-	public abstract void Dasher2Screen(long[] coords);
+	public abstract void Dasher2Screen(MutablePoint coords);
 
 	/**
 	 * Convert a Dasher co-ordinate to the equivalent screen co-ordinates
@@ -385,9 +367,9 @@ public abstract class CDasherView extends CDasherComponent {
 	 * @return screen coordinates
 	 */
 	public final CDasherView.Point Dasher2Screen(long iDasherX, long iDasherY) {
-		long[] temp = new long[] {iDasherX, iDasherY};
-		Dasher2Screen(temp);
-		return new Point((int)temp[0],(int)temp[1]);
+		temp1.init(iDasherX, iDasherY);
+		Dasher2Screen(temp1);
+		return new Point((int)temp1.x,(int)temp1.y);
 	}
 	/**
 	 * Gets our current screen

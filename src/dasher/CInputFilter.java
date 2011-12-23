@@ -130,22 +130,24 @@ public abstract class CInputFilter extends CDasherComponent implements CDasherMo
 	public void KeyUp(long Time, int iId, CDasherView pView, CDasherInput pInput, CDasherModel Model) {};
 	
 	/**
-	 * Requests that the input filter should modify the indicated Model.
+	 * Called every frame; the filter may use this opportunity to schedule
+	 * further (per-frame) movement if desired.
+	 * <p>
 	 * The View is passed so that input co-ordinates can be resolved
-	 * to Dasher co-ordinates prior to interacting with the Model.
+	 * to Dasher co-ordinates prior to interacting with the Model;
+	 * drawing should not be done at this stage but should take place
+	 *  during the call to DecorateView.
 	 * <p>
-	 * Nothing should be drawn at this stage in spite of the availability
-	 * of the View; drawing should take place during the call to DecorateView.
-	 * <p>
-	 * See DefaultFilter for a typical example of a Timer method.
+	 * The default implementation does nothing, which is appropriate for 
+	 * filters which operate by scheduling zooms in response to user
+	 * input events, rather than in response to timer callbacks
 	 * 
 	 * @param Time System time as a unix timestamp
 	 * @param pView View in which co-ordinates may be transformed
 	 * @param pInput Current input device from which coordinates may be obtained
 	 * @param pModel Model which we may manipulate in response to this event
-	 * @return True if the model was changed, false otherwise.
 	 */
-	public abstract boolean Timer(long Time, CDasherView pView, CDasherInput pInput, CDasherModel pModel);
+	public void Timer(long Time, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {}
 	
 	/**
 	 * Activates this filter; now is the time to start helper threads,
@@ -161,6 +163,26 @@ public abstract class CInputFilter extends CDasherComponent implements CDasherMo
 	 */
 	public void Deactivate() {}
 
-	public boolean supportsPause() {return false;}	
+	public boolean supportsPause() {return false;}
+	
+	public void pause() {}
+	
+}
+
+class CStaticFilter extends CInputFilter {
+	CStaticFilter(CDasherComponent creator, CDasherInterfaceBase iface, String szName) {
+		super(creator, iface, szName);
+	}
+	
+	private CDasherModel model;
+	
+	protected void scheduleZoom(CDasherModel model, long x, long y) {
+		(this.model=model).ScheduleZoom(x, y);
+		m_Interface.Redraw(false);
+	}
+	
+	@Override public void pause() {
+		if (model!=null) model.clearScheduledSteps();
+	}
 	
 }

@@ -27,6 +27,7 @@ package dasher;
 
 import static dasher.CDasherModel.CROSS_X;
 import static dasher.CDasherModel.CROSS_Y;
+import dasher.CDasherView.MutablePoint;
 
 public class CCircleStartHandler extends CDefaultFilter.CStartHandler{
 	
@@ -49,8 +50,8 @@ public class CCircleStartHandler extends CDefaultFilter.CStartHandler{
 	 * @param SettingsStore
 	 * @param Interface
 	 */
-	public CCircleStartHandler(CDefaultFilter filt) { 
-    	filt.super();
+	public CCircleStartHandler(CDefaultFilter filter) { 
+    	super(filter);
 	}
 	
 	private CDasherView.Point screenCircleCenter;
@@ -80,7 +81,7 @@ public class CCircleStartHandler extends CDefaultFilter.CStartHandler{
 		int rad = getScreenRadius(View);
 		boolean bAboutToChange = inCircle && m_iEnterTime!=Integer.MAX_VALUE;
 		int fillColor, lineColor, lineWidth;
-		if (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
+		if (filter.isPaused()) {
 			lineColor = 2;
 			lineWidth = 1;
 			fillColor = bAboutToChange ? 241 : 242;
@@ -108,23 +109,23 @@ public class CCircleStartHandler extends CDefaultFilter.CStartHandler{
 	 * @param m_DasherView View against which co-ordinate transforms should be performed.
 	 * @param m_DasherModel Model to which commands should be passed.
 	 */
-	@Override public void Timer(long iTime, long[] lastInputCoords, CDasherView pView) {
+	@Override public void Timer(long iTime, MutablePoint lastInputCoords, CDasherView pView) {
 
-		coords[0] = lastInputCoords[0]; coords[1] = lastInputCoords[1];
+		coords.init(lastInputCoords);
 		pView.Dasher2Screen(coords);
 		CDasherView.Point ctr = getScreenCenter(pView);
-		long xdist = ctr.x - coords[0], ydist = ctr.y - coords[1], rad=getScreenRadius(pView);
+		long xdist = ctr.x - coords.x, ydist = ctr.y - coords.y, rad=getScreenRadius(pView);
 		boolean inCircleNow = (xdist*xdist + ydist*ydist) < rad*rad; 
 		if (inCircleNow) {
 			if (inCircle) {
 				//still in circle. Note test against MAX_VALUE here because overflow not doing what I expect (?!)
 				if (m_iEnterTime!=Integer.MAX_VALUE && iTime-m_iEnterTime > 1000) {
 					//activate!
-					if (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
-						start(iTime);
+					if (filter.isPaused())
+						filter.unpause(iTime);
 					else
-						stop(iTime);
-					//note BP_DASHER_PAUSED event handler sets 
+						filter.pause();
+					//note this'll call back to onUnpause / onPause, which set 
 					// m_iEnterTime = Integer.MAX_VALUE;
 					//meaning we will not trigger again, until we leave the circle and then enter again
 				}
@@ -139,22 +140,26 @@ public class CCircleStartHandler extends CDefaultFilter.CStartHandler{
 		}
 	}
 	
-	private final long[] coords = new long[2];
+	private final MutablePoint coords = new MutablePoint();
 	
 	/**
-	 * Responds to events:
-	 * <p>
-	 * BP_DASHER_PAUSED changes: Updates start handler state
-	 * so that we don't try to stop when already stopped, etc.
+	 * Responds to change in LP_CIRCLE_PERCENT, as
+	 * the screen radius will need recomputing.
 	 */
 	public void observe(EParameters eChangedParam) {
-		if (eChangedParam == Elp_parameters.LP_CIRCLE_PERCENT) {
+		if (eChangedParam == Elp_parameters.LP_CIRCLE_PERCENT)
 			m_iScreenRadius=-1;
-		} else if(eChangedParam == Ebp_parameters.BP_DASHER_PAUSED) {
-			//if we're in the circle, reset our entry time - so the circle won't
-			// be triggered (again) unless we leave the circle then enter again.
-			m_iEnterTime = Integer.MAX_VALUE;
-		}
+	}
+	
+	@Override void onPause() {
+		//if we're in the circle, reset our entry time - so the circle won't
+		// be triggered (again) unless we leave the circle then enter again.
+		m_iEnterTime = Integer.MAX_VALUE;
+	}
+	@Override void onUnpause() {
+		//if we're in the circle, reset our entry time - so the circle won't
+		// be triggered (again) unless we leave the circle then enter again.
+		m_iEnterTime = Integer.MAX_VALUE;
 	}
 	
 }

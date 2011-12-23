@@ -29,6 +29,7 @@ import javax.swing.JFrame;
 import javax.swing.JProgressBar;
 import javax.swing.JLabel;
 import javax.swing.BoxLayout;
+import javax.swing.JTextArea;
 
 /**
  * Small JFrame containing a label and progress bar which is shown
@@ -52,7 +53,7 @@ public class ScreenOverlay extends JFrame {
 	/**
 	 * Our label
 	 */
-	private JLabel m_Label;
+	private JTextArea m_Label;
 	
 	/**
 	 * Creates the frame with a size of 200x100 and currently invisible.
@@ -62,7 +63,10 @@ public class ScreenOverlay extends JFrame {
 		
 		this.setLayout(new BoxLayout(this.getContentPane(), BoxLayout.Y_AXIS));
 		
-		m_Label = new JLabel("JDasher");
+		m_Label = new JTextArea("JDasher");
+		m_Label.setLineWrap(true); m_Label.setWrapStyleWord(true);
+		m_Label.setEditable(false);
+		
 		m_ProgressBar = new JProgressBar();
 		
 		m_ProgressBar.setVisible(false);
@@ -71,16 +75,23 @@ public class ScreenOverlay extends JFrame {
 		
 		this.add(m_Label);
 		this.add(m_ProgressBar);
-		
 	}
 	
 	/**
-	 * Sets the Frame's label
+	 * Sets the text in the central label (not the titlebar)
 	 * 
 	 * @param newMessage Message to show the user
 	 */
 	public void setText(String newMessage) {
 		m_Label.setText(newMessage);
+	}
+	
+	public String getText() {
+		return m_Label.getText();
+	}
+	
+	public void setCenter(int x, int y) {
+		setLocation(x - getWidth()/2, y - getHeight()/2);
 	}
 	
 	/**

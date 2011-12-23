@@ -26,6 +26,8 @@
 package dasher;
 
 import java.util.LinkedList;
+
+import dasher.CDasherView.MutablePoint;
 import static dasher.CDasherModel.CROSS_X;
 import static dasher.CDasherModel.CROSS_Y;
 /**
@@ -91,7 +93,7 @@ public class CAutoSpeedControl extends CDasherComponent {
 	 * @param dFrameRate Initial frame rate, in FPS.
 	 */
 	
-	public CAutoSpeedControl(CDasherComponent creator, double dFrameRate)	  {
+	public CAutoSpeedControl(CDasherComponent creator)	  {
 	
 	super(creator);
 	  
@@ -119,7 +121,7 @@ public class CAutoSpeedControl extends CDasherComponent {
 	m_nSpeedCounter = 0;
 
 	  UpdateMinRadius();
-	  UpdateSampleSize(dFrameRate); 
+	  UpdateSampleSize(GetLongParameter(Elp_parameters.LP_FRAMERATE)/100.0); 
 	}
 
 	  ////////////////////////////////////////////////
@@ -265,17 +267,18 @@ public class CAutoSpeedControl extends CDasherComponent {
  * @param View Current DasherView, used to ascertain the user's true
  *             mouse position.
  */
-	public void SpeedControl(long iDasherX, long iDasherY, double dFrameRate, CDasherView View) {
+	public void SpeedControl(long iDasherX, long iDasherY, CDasherView View) {
+		double dFrameRate = GetLongParameter(Elp_parameters.LP_FRAMERATE)/100.0;
 		//We'll do all calculations in screen coordinates, as these are linear.
-	    coords[0] = iDasherX; coords[1] = iDasherY;
+	    coords.init(iDasherX,iDasherY);
 	    View.Dasher2Screen(coords);
-	    final long px=coords[0],py=coords[1]; //pointer coords
+	    final long px=coords.x,py=coords.y; //pointer coords
 	    
 	    //compute screen coords of crosshair. TODO, should cache these - but will wait
 	    // for notifications re screen-geometry changing.
-	    coords[0]=CROSS_X; coords[1]=CROSS_Y;
+	    coords.init(CROSS_X,CROSS_Y);
 	    View.Dasher2Screen(coords);
-	    final long iOX = coords[0], iOY=coords[1];
+	    final long iOX = coords.x, iOY=coords.y;
 
 	    double x = (px - iOX) / (double)iOX; //Use normalised coords so min r works 
 	    double y = (iOY - py) / (double)iOY; 
@@ -330,6 +333,6 @@ public class CAutoSpeedControl extends CDasherComponent {
 		    return dC;
 	  }
 
-	private final long[] coords = new long[2];
+	private final MutablePoint coords = new MutablePoint();
 	
 }

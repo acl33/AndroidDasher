@@ -1,6 +1,8 @@
 package dasher;
 
-public abstract class CDasherButtons extends CInputFilter {
+import dasher.CDasherView.MutablePoint;
+
+public abstract class CDasherButtons extends CStaticFilter {
 	protected int m_iActiveBox;
 	protected SBox m_pBoxes[];
 	protected boolean m_bDecorationChanged;
@@ -38,7 +40,7 @@ public abstract class CDasherButtons extends CInputFilter {
 	
 	protected abstract SBox[] SetupBoxes();
 
-	private final long[] mouseCoords = new long[2];
+	private final MutablePoint mouseCoords = new MutablePoint();
 	private long m_iLastTime;
 	
 	@Override public void KeyDown(long iTime, int iId, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
@@ -47,7 +49,7 @@ public abstract class CDasherButtons extends CInputFilter {
 			m_iActiveBox=-1;
 			pInput.GetDasherCoords(pView, mouseCoords);
 			for (int i = 0; i < m_pBoxes.length; i++) {
-				if (isInBox(mouseCoords[0],mouseCoords[1],m_pBoxes[i])) {
+				if (isInBox(mouseCoords.x,mouseCoords.y,m_pBoxes[i])) {
 					m_iActiveBox=i;
 					break;
 				}
@@ -59,7 +61,7 @@ public abstract class CDasherButtons extends CInputFilter {
 			m_iActiveBox = iId-2;
 		else
 			m_iActiveBox = m_pBoxes.length-2;
-		pModel.ScheduleZoom(m_pBoxes[m_iActiveBox].iX, m_pBoxes[m_iActiveBox].iY);
+		scheduleZoom(pModel, m_pBoxes[m_iActiveBox].iX, m_pBoxes[m_iActiveBox].iY);
 		m_iLastTime = iTime;
 		m_bDecorationChanged = true; //we set m_iActiveBox and m_iLastTime, so it'll be highlighted for awhile
 	}
@@ -71,13 +73,12 @@ public abstract class CDasherButtons extends CInputFilter {
 				//(iDasherX < box.iDisplayBottom - box.iDisplayTop || box == m_pBoxes[m_pBoxes.length-1]);
 	}
 
-	@Override public boolean Timer(long Time, CDasherView m_pDasherView, CDasherInput pInput, CDasherModel pModel) {
+	@Override public void Timer(long Time, CDasherView m_pDasherView, CDasherInput pInput, CDasherModel pModel) {
 		if ((Time - m_iLastTime) > 200) {
 			//end any highlight
 			if (m_iActiveBox!=-1) m_bDecorationChanged = true;
 			m_iActiveBox = -1;
 		}
-		return pModel.nextScheduledStep(Time);
 	}
 
 	@Override public boolean DecorateView(CDasherView pView, CDasherInput pInput) {

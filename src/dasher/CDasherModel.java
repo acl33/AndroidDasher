@@ -97,28 +97,21 @@ public class CDasherModel extends CFrameRate {
 	 */
 	protected double total_nats;            // Information entered so far
 	
+	protected double m_dLastNats;
+	protected long m_iLastMinSize = MAX_Y;
+	
 	/* CSFS: Converted a struct in the original C into this class */
 	
 	/**
 	 * List of points which we are to go (i.e. intermediate points,
-	 * interpolated between previous location and user-supplied dest)
+	 * interpolated between previous location and user-supplied dest),
+	 * in reverse order i.e. such that element 0 should arrive at
+	 * the destination.
 	 */
-	protected final LinkedList<SGotoItem> m_deGotoQueue = new LinkedList<SGotoItem>();	
-	
-	/**
-	 * Simple struct recording a point to which we are scheduled
-	 * to zoom.
-	 */
-	class SGotoItem {
-		/**
-		 * Co-ordinate 1
-		 */
-		public long iN1;
-		/**
-		 * Co-ordinate 2
-		 */
-		public long iN2;
-	}
+	private long[] m_gotoMin=new long[1], m_gotoMax=new long[1];	
+
+	/** The next element of m_gotoMin/Max to use (-1 = nothing scheduled) */
+	private int m_iGotoNext=-1; 
 	
 	private CDasherNode m_pLastOutput;
 	
@@ -145,13 +138,7 @@ public class CDasherModel extends CFrameRate {
 	 */	
 	public void HandleEvent(EParameters eParam) {
 		super.HandleEvent(eParam); //framerate watches LP_MAX_BITRATE
-		if (eParam == Ebp_parameters.BP_DASHER_PAUSED) {
-			if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED)) {
-				//just unpaused
-				ResetFramecount();
-				total_nats = 0.0;
-			}
-		} else if (eParam == Elp_parameters.LP_NODE_BUDGET) {
+		if (eParam == Elp_parameters.LP_NODE_BUDGET) {
 			pol = new AmortizedPolicy((int)GetLongParameter(Elp_parameters.LP_NODE_BUDGET));
 		}
 	}
@@ -210,16 +197,16 @@ public class CDasherModel extends CFrameRate {
 		m_Rootmax = m_Rootmin + (range * m_Root.Hbnd()) / NORMALIZATION;
 		m_Rootmin = m_Rootmin + (range * m_Root.Lbnd()) / NORMALIZATION;
 		
-		for (SGotoItem sgi : m_deGotoQueue) {
+		for (int i = m_iGotoNext; i>=0; i--) {
 			//sgi contains pairs of coordinates for the _old_ root; we need to update it to contain the corresponding
 			// coordinates for the _new_ root, which will be somewhat closer together.
 			// However, it's possible that the existing coordinate pairs may be bigger than would actually be allowed
-			// for a root node (and hence, when we try to NewGoTo them, we'll forcibly reparent); this means that we
-			// may have difficulty working with them...
-			final long r = sgi.iN2 - sgi.iN1;
-			sgi.iN2 = sgi.iN1 + //r * m_Root.Hbnd() / iNorm; //rewrite to ensure no overflow:
+			// for a root node (and hence, when we try to use them in nextScheduledStep, we'll forcibly reparent);
+			// this means that we may have difficulty working with them...
+			final long r = m_gotoMax[i] - m_gotoMin[i];
+			m_gotoMax[i] = m_gotoMin[i] + //r * m_Root.Hbnd() / iNorm; //rewrite to ensure no overflow:
 				(r / NORMALIZATION) * m_Root.Hbnd() + ((r % NORMALIZATION) * m_Root.Hbnd())/NORMALIZATION;
-		    sgi.iN1 += // r * m_Root.Lbnd() / iNorm;
+		    m_gotoMin[i] += // r * m_Root.Lbnd() / iNorm;
 		    	(r/NORMALIZATION) * m_Root.Lbnd() + ((r % NORMALIZATION) * m_Root.Lbnd())/NORMALIZATION;
 		}
 	}
@@ -297,10 +284,10 @@ public class CDasherModel extends CFrameRate {
 	
 		m_Rootmin -= lower * iRootWidth / iWidth;
 	
-		for (SGotoItem it : m_deGotoQueue) {
-			iRootWidth = it.iN2 - it.iN1;
-			it.iN2 += (NORMALIZATION - upper) * iRootWidth / iWidth;
-			it.iN1 -= lower * iRootWidth / iWidth;
+		for (int i=m_iGotoNext; i>=0; i--) {
+			iRootWidth = m_gotoMax[i] - m_gotoMin[i];
+			m_gotoMax[i] += (NORMALIZATION - upper) * iRootWidth / iWidth;
+			m_gotoMin[i] -= lower * iRootWidth / iWidth;
 		}
 		return true; //success!
 	}
@@ -316,9 +303,7 @@ public class CDasherModel extends CFrameRate {
 	public void SetNode(CDasherNode node) {
 		
 		//a not-in-place op, will destroy the old co-ordinate system!
-		m_deGotoQueue.clear();
-		AbortOffset();
-		
+		AbortOffset(); clearScheduledSteps();
 			
 		DeleteRoot();
 
@@ -405,14 +390,30 @@ public class CDasherModel extends CFrameRate {
 		return m_pLastOutput==null ? -1 : m_pLastOutput.getOffset();
 	}
 	
+	public float getViscosity() {
+		return m_pLastOutput==null ? 1.0f : m_pLastOutput.getViscosity();
+	}
+	
+	private static final boolean EXACT_DYNAMICS=false;
+	private static long mysq(long in) {
+		//1. Find greatest i satisfying 1<<(i<<1) < in; let rt = 1<<i be first approx
+		// but find by binary chop: at first double each time..
+		long i=1;
+		while (1l<<4*i < in) i*=2;
+		//then try successively smaller bits.
+		for (long test=i; (test/=2)!=0;)
+		    if (1l<<2*(i+test) < in) i+=test;
+		//so, first approx:
+		long rt = 1<<i;
+		rt = (rt+in/rt)/2;//better
+		return (rt+in/rt)/2;//better still
+	}
+	
 	/**
-	 * Updates the model to move one step towards a specified mouse position.
-	 * The distance moved is based on the current frame rate
+	 * Schedules one frame of continuous/steady motion towards a specified
+	 * mouse position. The distance moved is based on the current frame rate
 	 * and a speed multiplier passed in (this can be used to implement slow start,
 	 * etc.)
-	 * 
-	 * Internally, this computes the new boundaries of the current root node,
-	 * and then calls {@link #NewGoTo(long, long)} to take us there.
 	 * 
 	 * @param miMousex Current mouse X co-ordinate
 	 * @param miMousey Current mouse Y co-ordinate
@@ -420,11 +421,10 @@ public class CDasherModel extends CFrameRate {
 	 * controls rate of advance per frame)
 	 * @param dSpeedMul Multiplier to apply to the current speed (i.e. 0.0 = don't move, 10.0 = go 10* as fast)
 	 */
-	public void oneStepTowards(long miMousex,
+	public void ScheduleOneStep(long miMousex,
 			long miMousey, 
 			long Time, 
 			float dSpeedMul)	{
-		CountFrame(Time);
 		if (dSpeedMul <= 0.0) return;
 			
 		//ACL I've inlined Get_new_root_coords here, so we don't have to allocate a temporary object to return two values...
@@ -437,13 +437,9 @@ public class CDasherModel extends CFrameRate {
 		// probably do it a little more scientifically)
 		if(miMousex > 60000000) miMousex = 60000000;
 
-		// Calculate what the extremes of the viewport will be when the
-		// point under the cursor is at the cross-hair. This is where 
-		// we want to be in iSteps updates
-		long iTargetMin = (miMousey - (MAX_Y * miMousex) / (2 * CROSS_X));
-		long iTargetMax = (miMousey + (MAX_Y * miMousex) / (2 * CROSS_Y));
-		//back these up, we may want them later
-		long origMin=iTargetMin,origMax=iTargetMax;
+		long y1= (miMousey - (MAX_Y * miMousex) / (2 * CROSS_X));
+		long y2 = (miMousey + (MAX_Y * miMousex) / (2 * CROSS_Y));
+		long targetRange = y2-y1;
 		
 		// iSteps is the number of update steps we need to get the point
 		// under the cursor over to the cross hair. Calculated in order to
@@ -451,109 +447,78 @@ public class CDasherModel extends CFrameRate {
 
 		final int iSteps = Math.max(1,(int)(Steps()/dSpeedMul));
 		
-		// Calculate the new values of iTargetMin and iTargetMax required to
-		// perform a single update step. Note the awkward equations
-		// interpolating between (iTargetMin,iTargetMax), with weight lpMaxY,
-		// and (0,iMaxY), with weight iOldWeight; in the olg algorithm, the latter was
-		// (iSteps-1)*(iTargetMax-iTargetMin), but people wanted to reverse faster!
-		// (TODO: should this be a parameter? I'm resisting "too many user settings" atm, but maybe...)
-		final long iOldWeight = (iSteps-1) * Math.min(iTargetMax - iTargetMin, MAX_Y+(iTargetMax-iTargetMin)>>>GetLongParameter(Elp_parameters.LP_REVERSE_BOOST));
-		long iDenom = MAX_Y + iOldWeight;
-		long iNewTargetMin = (iTargetMin * MAX_Y) / iDenom;
-		long iNewTargetMax = (iTargetMax+iOldWeight) * MAX_Y / iDenom;
-		iTargetMin = iNewTargetMin;
-		iTargetMax = iNewTargetMax;
-
-		// Calculate the minimum size of the viewport corresponding to the
-		// maximum zoom.
-		long iMinSize = (long)(MAX_Y/(dSpeedMul==1.0 ? maxZoom() : Math.pow(maxZoom(), dSpeedMul)));
-
-		if((iTargetMax - iTargetMin) < iMinSize) {
-			iNewTargetMin = iTargetMin * (MAX_Y - iMinSize) / (MAX_Y - (iTargetMax - iTargetMin));
-		    iNewTargetMax = iNewTargetMin + iMinSize;
-
-		    iTargetMin = iNewTargetMin;
-		    iTargetMax = iNewTargetMax;
+		//root node bounds for final destination:
+		final long r1 = MAX_Y*(m_Rootmin-y1)/targetRange,
+				r2 = MAX_Y*(m_Rootmax-y1)/targetRange;
+		
+		long m1=(r1-m_Rootmin), m2=(r2-m_Rootmax);
+		
+		//Any interpolation (m_Rootmin,m_Rootmax) + alpha*(m1,m2) moves along the correct path.
+		// Just have to decide how far, i.e. what alpha.
+		
+		if (targetRange < 2*GetLongParameter(Elp_parameters.LP_X_LIMIT_SPEED)) {
+			//atm we have Rw=R2-R1, rw=r2-r1 = Rw*MAX_Y/targetRange, (m1,m2) to take us there
+		    
+			long limRange = 2*GetLongParameter(Elp_parameters.LP_X_LIMIT_SPEED);
+			//if targetRange were = limRange, we'd have rw' = Rw*MAX_Y/limRange < rw
+		    //the movement necessary to take us to rw', rather than rw, is thus:
+		    // (m1',m2') = (m1,m2) * (rw' - Rw) / (rw-Rw) => scale m1,m2 by (rw'-Rw)/(rw-Rw)
+		    // = (Rw*MAX_Y/(limRange) - Rw)/(Rw*MAX_Y/targetRange-Rw)
+		    // = (MAX_Y/(limRange)-1) / (MAX_Y/targetRange-1)
+		    // = (MAX_Y-(limRange))/(limRange) / ((MAX_Y-targetRange)/targetRange)
+		    // = (MAX_Y-(limRange)) / (limRange) * targetRange / (MAX_Y-targetRange)
+		    m1 = (m1*targetRange*(MAX_Y-limRange))/(MAX_Y-targetRange)/(limRange);
+		    m2 = (m2*targetRange*(MAX_Y-limRange))/(MAX_Y-targetRange)/(limRange);
+		    //then make the stepping function, which follows, behave as if we were at limX:
+		    targetRange=limRange;
 		}
 		
-		//Now calculate the bounds of the root node, that put (y1,y2) at the screen edges...
-		// If |(0,Y2)| = |(y1,y2)|, the "zoom factor" is 1, so we just translate.
-		if (MAX_Y == iTargetMax - iTargetMin) {
-		    m_Rootmin -= iTargetMin;
-		    m_Rootmax -= iTargetMin;
-		    return;
-	    }
-		
-		// There is a point C on the y-axis such the ratios (y1-C):(0-C) and
-		// (y2-C):(iMaxY-C) are equal - iow that divides the "target" region y1-y2
-		// into the same proportions as it divides the screen (0-iMaxY). I.e., this
-		// is the center of expansion - the point on the y-axis which everything
-		// moves away from (or towards, if reversing).
-		  
-		//We prefer to compute C from the _original_ (y1,y2) pair, as this is more
-		// accurate (and avoids drifting up/down when heading straight along the
-		// x-axis in dynamic button modes). However...
-		if ((iTargetMax-iTargetMin) < MAX_Y ^ (origMax-origMin) < MAX_Y) {
-		    //Sometimes (very occasionally), the calculation of a single-step above
-		    // can turn a zoom-in into a zoom-out, or vice versa, when the movement
-		    // is mostly translation. In which case, must compute C consistently with
-		    // the (scaled, single-step) movement we are going to perform, or else we
-		    // will end up suddenly going the wrong way along the y-axis (i.e., the
-		    // sense of translation will be reversed) !
-		    origMin=iTargetMin; origMax=iTargetMax;
-		}
-		final long C = (origMin * MAX_Y) / (origMin + MAX_Y - origMax);
+		if (EXACT_DYNAMICS) {
+			double frac;
+			if (targetRange == MAX_Y) 
+				frac = 1.0/iSteps;
+			else {
+				double tr=targetRange;
+				//expansion factor (of root node) for one step, post-speed-limit
+				double eFac = Math.pow(MAX_Y/tr,1.0/iSteps);
+			    //fraction of way along linear interpolation Rw->rw that yields that width:
+			    // = (Rw*eFac - Rw) / (rw-Rw)
+			    // = Rw * (eFac-1.0) / (Rw*MAX_Y/tr-Rw)
+			    // = (eFac - 1.0) / (MAX_Y/tr - 1.0)
+			    frac = (eFac-1.0) /  (MAX_Y/tr - 1.0);
+			}
+			m1*=frac; m2*=frac;
+		} else {
+			//approximate dynamics: interpolate
+		    // apsq parts rw to 64*(nSteps-1) parts Rw
+		    // (no need to compute target width)
+		    long apsq = mysq(targetRange);
+		    long denom = 64*(iSteps-1) + apsq;
 
-		//finally, update the rootnode bounds to put iTargetMin/iTargetMax at (0,LP_MAX_Y).
-		NewGoTo( ((m_Rootmin - C) * MAX_Y) / (iTargetMax - iTargetMin) + C,
-				 ((m_Rootmax - C) * MAX_Y) / (iTargetMax - iTargetMin) + C);
-	}
-	
-	public boolean nextScheduledStep(long time) {
-		if (m_deGotoQueue.size() == 0) return false;
-		SGotoItem next = m_deGotoQueue.removeFirst();
-		NewGoTo(next.iN1, next.iN2);
-		if (ScheduledSteps()==0) {
-            //just finished. Pause (mouse not held down, or schedule
-            //would have been cleared already)
-            SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, true);
-        }
-		return true;
+		    // so new width nw = (64*(nSteps-1)*Rw + apsq*rw)/denom
+		    // = Rw*(64*(nSteps-1) + apsq*MAX_Y/targetRange)/denom
+		    m1 = (m1*apsq)/denom; m2=(m2*apsq)/denom;
+		}
+
+		m_gotoMin[0] = m_Rootmin + m1;
+		m_gotoMax[0] = m_Rootmax + m2;
+		m_iGotoNext=0;
 	}
 	
 	/**
-	 * Changes the state of the Model updating the values of
-	 * m_RootMax and m_RootMin, which has the effect of making
-	 * us appear to move around. Also pushes the node we're moving
-	 * into, and cues output handling.
-	 * <p>
-	 * Both values are checked for sanity and truncated if necessary.
-	 * <p>
-	 * m_iTargetMax and Min are also updated according to the
-	 * new values of RootMax/Min.
-	 * <p>
-	 * For the purpose of output handling, the node under the
-	 * crosshair is noted before and after enacting the move,
-	 * and HandleOutput invoked upon this pair.
-	 * <p>
-	 * At present, this function takes no action if the proposed
-	 * new values are not allowable; it returns without making
-	 * any changes which has the effect of causing Dasher to
-	 * freeze.
-	 * 
-	 * @param newRootmin Desired new value of m_RootMin
-	 * @param newRootmax Desired new value of m_RootMax
+	 * Applies the next scheduled step of movement, if any, updating
+	 * m_RootMax and m_RootMin. Does not perform output - that's done
+	 * by RenderToView.
 	 */
-	protected void NewGoTo(long newRootmin, long newRootmax) {
-		
-		total_nats += Math.log((newRootmax-newRootmin) / (double)(m_Rootmax - m_Rootmin));
+	public boolean nextScheduledStep(long time) {
+		if (m_iGotoNext==-1) return false;
 		m_iDisplayOffset = offsetQueue[nextOffset];
 		offsetQueue[nextOffset]=0;
 		if (++nextOffset==offsetQueue.length) nextOffset=0;
 		
 		//Now actually move to the new location...
 		
-		while (newRootmax >= ROOTMAX_MAX || newRootmin <= ROOTMIN_MIN) {
+		while (m_gotoMax[m_iGotoNext] >= ROOTMAX_MAX || m_gotoMin[m_iGotoNext] <= ROOTMIN_MIN) {
 			//can't make existing root any bigger because of overflow. So force a new root
 			//to be chosen (so that Dasher doesn't just stop!)...
 			
@@ -571,21 +536,17 @@ public class CDasherModel extends CFrameRate {
 					//first we're gonna have to force it to be output, as a non-output root won't work...
 					if (!ch.isSeen()) Output(ch); //(parent=old root has already been seen)
 					m_Root.DeleteNephews(ch);
-					//we need to update the target coords (newRootmin,newRootmax)
-					// to reflect the new coordinate system based upon pChild as root.
-					//Make_root automatically updates any such pairs stored in m_deGotoQueue, so:
-					SGotoItem temp=new SGotoItem(); temp.iN1 = newRootmin; temp.iN2 = newRootmax;
-					m_deGotoQueue.add(temp);
-					//...when we make pChild the root...
+					//Make_root automatically updates all target coords at indices 0-m_iGotoNext...
+					// to reflect the new coordinate system with pChild as root
 					Make_root(ch);
-					//...we can retrieve new, equivalent, coordinates for it
-					newRootmin = temp.iN1; newRootmax = temp.iN2;
-					m_deGotoQueue.removeLast();
 					// (note that the next check below will make sure these coords do cover (0, LP_OY))
 					break;
 			    }
 			}
 		}
+		
+		long newRootmin = m_gotoMin[m_iGotoNext], newRootmax = m_gotoMax[m_iGotoNext];
+		m_iGotoNext--;
 		
 		// Check that we haven't drifted too far. The rule is that we're not
 		// allowed to let the root max and min cross the midpoint of the
@@ -600,12 +561,15 @@ public class CDasherModel extends CFrameRate {
 		// (as is trying to go back beyond the earliest char in the current
 		// alphabet, if there are preceding characters not in that alphabet)
 		if ((newRootmax - newRootmin) > MAX_Y / 4) {
+		    total_nats += Math.log((newRootmax-newRootmin) / (double)(m_Rootmax - m_Rootmin));
+		    
 		    m_Rootmax = newRootmax;
 		    m_Rootmin = newRootmin;
 		    
 		    // This may have moved us around a bit...output will happen when the frame is rendered
 		} //else, we just stop - this prevents the user from zooming too far back
 		//outside the root node (when we can't generate an older root).
+		return true;
 	}
 	
 	/**
@@ -746,47 +710,52 @@ public class CDasherModel extends CFrameRate {
 		// Takes dasher co-ordinates and 'schedules' a zoom to that location
 		// by storing a sequence of moves in 'm_deGotoQueue'
 		
-		m_deGotoQueue.clear();
-		
 		if (dasherx < 1) dasherx = 1;
 		
 		final int iSteps = (int)(GetLongParameter(Elp_parameters.LP_ZOOMSTEPS));
-			
+
 		final long y1 = dashery - dasherx, y2 = dashery + dasherx;
-		long targetRootMin,targetRootMax;
+
+		long targetRootMin = MAX_Y*(m_Rootmin-y1)/(y2-y1),
+			 targetRootMax = MAX_Y*(m_Rootmax-y1)/(y2-y1);
+
+		//We're going to interpolate in steps whose size starts at nsteps
+		// and decreases by one each time - so cumulatively: 
+		// <nsteps> <2*nsteps-1> <3*nsteps-3> <4*nsteps-6>
+		// (until the next value is the same as the previous)
+		//These will sum to / reach (triangular number formula):
+		final int max = (iSteps*(iSteps+1))/2;
 		
-		if (y2-y1 == MAX_Y) {
-			//just translate
-			targetRootMin = m_Rootmin + y1;
-			targetRootMax = m_Rootmax + y1;
-		} else {
-			//find the center of expansion / contraction - this divides interval
-			// (iTarget1,iTarget2) into the same proportions as it divides (0,maxY),
-			// i.e. (C-iTarget1)/(C-0) == (C-iTarget2)/(C-iMaxY)
-			final long C = (y1 * MAX_Y) / (y1 + MAX_Y - y2);
-			if (y1 != C) {
-		          targetRootMin = ((m_Rootmin - C) * (0 - C)) / (y1 - C) + C;
-		          targetRootMax = ((m_Rootmax - C) * (0 - C)) / (y1 - C) + C;
-		      } else if (y2 != C) {
-		          targetRootMin = ((m_Rootmin - C) * (MAX_Y - C)) / (y2 - C) + C;
-		          targetRootMax = ((m_Rootmax - C) * (MAX_Y - C)) / (y2 - C) + C;
-		      } else { // implies y1 = y2
-		          throw new AssertionError("Impossible geometry in CDasherModel.ScheduleZoom");
-		      }
+		//heights:
+		final long oh = m_Rootmax - m_Rootmin, nh = targetRootMax-targetRootMin;
+		
+		//log(the amount by which we wish to multiply the height):
+		final double logHeightMul = (nh==oh) ? 0 : Math.log(nh/(double)oh);
+		
+		//make space for interpolation
+		if (m_gotoMin.length < iSteps) {
+			m_gotoMin = new long[iSteps];
+			m_gotoMax = new long[iSteps];
 		}
 		
-		//now a simple linear interpolation from m_Root{min,max} to targetRoot{Min,Max}
-		
-		for(int s = iSteps-1; s >= 0; --s) {
-			SGotoItem sNewItem = new SGotoItem();
-			
-			sNewItem.iN1 = targetRootMin - (s * (targetRootMin - m_Rootmin))/iSteps;
-			sNewItem.iN2 = targetRootMax - (s * (targetRootMax - m_Rootmax))/iSteps;
-			
-			m_deGotoQueue.addLast(sNewItem);
-		} 
-		
-		SetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED, false);
+		//note element 0 arrives at destination.
+		for (int s=iSteps, t=iSteps; s>1; t+=s) {
+		    double dFrac; //(linear) fraction of way from oh to nh...
+			if (nh==oh)
+				dFrac = t/(double)max;
+			else {
+				//interpolate expansion logarithmically to get new height:
+				double h = oh*Math.exp((logHeightMul*t)/max);
+				//then treat that as a fraction of the way between oh to nh linearly
+				dFrac = (h-oh)/(nh-oh);
+			}
+		    //and use that fraction to interpolate from R to r
+		    m_gotoMin[--s]=(long)(m_Rootmin+dFrac*(targetRootMin-m_Rootmin));
+		    m_gotoMax[s]=(long)(m_Rootmax+dFrac*(targetRootMax-m_Rootmax));
+		}
+		//final point, done accurately/simply:
+		m_gotoMin[0]=targetRootMin; m_gotoMax[0]=targetRootMax;
+		m_iGotoNext=iSteps-1;
 	}
 	
 	/**
@@ -825,19 +794,19 @@ public class CDasherModel extends CFrameRate {
 	}
 	
 	/**
-	 * Retrieves the number of points currently in the m_deGotoQueue.
-	 * 
+	 * Retrieves the number of steps currently scheduled
+	 * and yet-to-be executed
 	 * @return Number of scheduled steps.
 	 */
 	public int ScheduledSteps() {
-		return m_deGotoQueue.size();
+		return m_iGotoNext+1;
 	}
 	
 	/**
 	 * Clears any currently-in-progress zoom (scheduled via {@link #ScheduleZoom})
 	 */
 	public void clearScheduledSteps() {
-		m_deGotoQueue.clear();
+		m_iGotoNext=-1;
 	}
 	
 	public void shutdown() {

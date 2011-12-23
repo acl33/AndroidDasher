@@ -26,6 +26,7 @@
 package dasher.applet;
 
 import java.awt.Font;
+import java.awt.Point;
 import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,16 +35,22 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import java.awt.datatransfer.Clipboard;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
 import javax.swing.*;
+
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
 
 import dasher.*;
 
@@ -70,10 +77,40 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	 */
 	private JDasherPanel panel;
 	
-	/**
-	 * Overlay to display when Dasher is locked
-	 */
+	/** Overlay to display when Dasher is locked during training,
+	 *  or loading all those data files over the "cloud"...*/
 	private ScreenOverlay ProgressMeter;
+
+	/** Show/hide the progress meter.
+	 * 
+	 * @param Message to display; null means to hide the progress meter (else show)
+	 * @param iPercent percent to completion to display; negative means to not show a progressbar
+	 */
+	private void ShowProgress(String msg, int iPercent) {
+		if(msg!=null) {
+			ProgressMeter.setVisible(true);
+			if (iPercent>=0) {
+				ProgressMeter.setProgressBarVisible(true);
+				ProgressMeter.setProgress(iPercent, 100);
+			} else ProgressMeter.setProgressBarVisible(false);
+			
+			ProgressMeter.setText(msg);
+			
+			Point twiceCenter;
+			try {
+				//compute window center
+				twiceCenter = getLocationOnScreen();
+				twiceCenter.x+=getWidth();
+				twiceCenter.y+=getHeight();
+			} catch (Exception e) {//=> we aren't visible
+				java.awt.Dimension d = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
+				twiceCenter = new Point(d.width,d.height);
+				ProgressMeter.setCenter(twiceCenter.x/2, twiceCenter.y/2);
+			}
+		} else {
+			ProgressMeter.setVisible(false);
+		}
+	}
 	
 	/**
 	 * Edit box in which typed text appears
@@ -91,10 +128,25 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	 */
 	private final Timer taskScheduler = new Timer();
 	
+	
+	/** Base URL from which alphabet+colour definitions loaded. Specified by DEFNS parameter,
+	 * or else the applet codebase + files.txt */
+	private URL defnBase;
+	
+	/** Base URL from which training files loaded. Specified by train parameter;
+	 * or else anything specified for the DEFNS parameter; else the applet codebase
+	 */
+	private URL trainBase;
+	
+	/** List of filenames of alphabet/colour definition files,
+	 * read from {@link #defnBase} (and to be interpreted as
+	 * URLs relative to {@link #defnBase}). */
+	private final List<String> webDefns = new ArrayList<String>();
+	
 	/**
 	 * Date of last build; appears in About box
 	 */
-	public final String buildDate = "22:17 08/10/2008";
+	public final String buildDate = "30/11/2011";
 	
 	//try to fill in resourceFiles...
 	{
@@ -122,22 +174,47 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 	 * Finally, we call constructMenus to produce our menu bar.
 	 */
 	public void init() {
-		Dasher = new JDasher() {
-			private final List<String> webFiles = new ArrayList<String>();
-			/**Constructor - look for file list over http...*/
-			{
-				try {
-					java.net.URLConnection conn = new URL(getCodeBase(),"files.txt").openConnection();
-					BufferedReader rdr = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-					for (String line; (line=rdr.readLine())!=null;)
-						webFiles.add(line);
-					Collections.sort(webFiles);
-				} catch (Exception e) {
-					System.out.println("Could not open file list:");
-					e.printStackTrace(System.out);
-				}
+		try { defnBase = new URL(getParameter("DEFNS")); }
+		catch (Exception e) {//MalformedURL, or NullPointer if no param!
+			System.err.println("DEFNS parameter not valid, using <codebase>/files.txt");
+			try {defnBase = new URL(getCodeBase(),"files.txt");}
+			catch (java.net.MalformedURLException e2) {throw new RuntimeException("Error in Hardcoded URL?",e2);}
+		}
+		
+		try {trainBase = new URL(getParameter("TRAIN"));}
+		catch (Exception e) {
+			if (getParameter("DEFNS")!=null) trainBase=defnBase;
+			else trainBase=getCodeBase();
+		}
+		//Look for definition files over HTTP
+		any: try {
+			BufferedReader rdr = new BufferedReader(new InputStreamReader(defnBase.openStream()));
+			String line = rdr.readLine();
+			if (line==null) break any;
+			if (line.toUpperCase().startsWith("<!DOCTYPE")) {
+				//HTML
+				Pattern p = Pattern.compile("<A\\s+HREF=(\"[^\"<>]*\"|[a-zA-Z0-9_\\.]*)>",Pattern.CASE_INSENSITIVE);
+				do
+					for (Matcher m = p.matcher(line); m.find(); ) {
+						String s = m.group(1);
+						if (s.startsWith("\"") && s.endsWith("\""))
+							s=s.substring(1, s.length()-1);
+						webDefns.add(s);
+					}
+				while ((line=rdr.readLine())!=null);
+			} else {
+				//plaintext: treat each line as a filename
+				do
+					webDefns.add(line);
+				while ((line=rdr.readLine())!=null);
 			}
-				
+		} catch (IOException e) {
+			System.err.println("Could not open file list:");
+			e.printStackTrace();
+		}
+		Collections.sort(webDefns);
+		Dasher = new JDasher() {
+			
 			@Override
 			protected void CreateModules() {
 				super.CreateModules();
@@ -150,31 +227,25 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 			//request to any repaintTask, to perform another repaint;
 			// must ensure there _is_ a repaintTask before setting to true.
 			private boolean m_bRepaintScheduled;
-			@Override public void HandleEvent(EParameters eParam) {
-				super.HandleEvent(eParam);
-				if (eParam == Ebp_parameters.BP_DASHER_PAUSED) {
-					if (!GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED))
-						Redraw(true);
-				}
-			}
 			
 			/** Called once on the Swing GUI Thread, at startup, when the JDasherPanel
 			 * first becomes paintable. After that, only called from taskScheduler thread.
 			 */
 			@Override public void Redraw(boolean bRedrawNodes) {
 				super.Redraw(bRedrawNodes);
+				m_bRepaintScheduled=true;
 				if (repaintTask==null)
 					taskScheduler.schedule(repaintTask = new TimerTask() {
 						@Override public void run() {
 							m_bRepaintScheduled=false;
-							panel.swapBuffers();
-							if (GetBoolParameter(Ebp_parameters.BP_DASHER_PAUSED) && !m_bRepaintScheduled) {
+							panel.swapBuffers(); //calls NewFrame(), which calls Redraw()
+							if (!m_bRepaintScheduled) {
 								repaintTask=null;
 								cancel();
 							}
 						}
 					}, 0, TIME_BETWEEN_FRAMES);
-				m_bRepaintScheduled=true;
+				
 			}
 			
 			@Override public void Message(String msg, int iSeverity) { // Requested message display
@@ -186,25 +257,7 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 			}
 			
 			@Override public void Lock(String msg, int iPercent) {
-				if(iPercent>=0) {
-					ProgressMeter.setVisible(true);
-					ProgressMeter.setProgressBarVisible(true);
-					
-					try { 
-						java.awt.Point myloc = JDasherApplet.this.getLocationOnScreen();
-						ProgressMeter.setLocation(((myloc.x + getWidth()) / 2) - 100, ((myloc.y + getHeight()) / 2) - 50);
-					}
-					catch(Exception e) {
-						// ignore; this means we're not visible.
-					}
-								
-					ProgressMeter.setText(msg);
-					
-					ProgressMeter.setProgress(iPercent, 100);
-				}
-				else {
-					ProgressMeter.setVisible(false);
-				}
+				ShowProgress(iPercent>=0 ? msg : null, iPercent);
 			}
 
 			/** First looks for a file over http in the same location as our codebase;
@@ -217,17 +270,16 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 			 */
 		    @Override
 			protected void GetStreams(String fname, Collection<InputStream> into) {
-		    	try {
-		    		//System.out.println("Opening "+new URL(getCodeBase(),fname));
-		    		InputStream in = new URL(getCodeBase(),fname).openConnection().getInputStream();
-		    		if (in!=null) {
-		    			into.add(in);
-		    			return;
-		    		}
-		    	} catch (Exception e) {
-		    		System.out.println(e.toString());
-		    	}
-		    	System.out.println("Could not find "+fname+" over web");
+		    	if (!fname.endsWith(".dtd"))
+		    		try {
+			    		InputStream in = new URL(trainBase,fname).openConnection().getInputStream();
+			    		if (in!=null) {
+			    			into.add(in);
+			    			return;
+			    		}
+			    	} catch (Exception e) {
+			    		System.out.println("Trying to find "+fname+" via URL: "+e);
+			    	}
 		    	InputStream in = getClass().getResourceAsStream(fname);
 				if (in!=null) into.add(in);
 			}
@@ -259,14 +311,16 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 				//and _then_ look on the web: both AlphIO and ColourIO will replace
 				// any existing definitions of alphabets with the same name
 				// (and files on the latter location supercede the former)
-				int i = Collections.binarySearch(webFiles, prefix);
+				int i = Collections.binarySearch(webDefns, prefix);
 				if (i<0) i=-(i+1); //not found => start at first index after
-				for (String s; i < webFiles.size() && (s=webFiles.get(i)).startsWith(prefix); i++) {
+				for (String s; i < webDefns.size() && (s=webDefns.get(i)).startsWith(prefix); i++) {
 					if (!s.endsWith(".xml")) continue;
-					try {
-						parser.ParseFile(new URL(getCodeBase(),s).openConnection().getInputStream(), false);
+		    		try {
+		    			if (s.length() > prefix.length()+4)
+		    				ProgressMeter.setText("Loading " + s.substring(prefix.length()+1,s.length()-4));
+						parser.ParseFile(new URL(defnBase,s).openConnection().getInputStream(), false);
 					} catch (Exception e) {
-						System.out.println("Error trying to read URLConnection for "+s+": "+e.toString());
+						System.err.println("Error trying to read URLConnection for "+s+": "+e.toString());
 					}
 				}
 			}
@@ -294,8 +348,13 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 		// background thread (taskqueue)
 		final Object realized = new Object();
 		taskScheduler.schedule(new TimerTask() {
+			private final String MESSAGE = "Loading Alphabets from Cloud...";
 			@Override public void run() {
+				ShowProgress(MESSAGE, -1);
 				Dasher.Realize();
+				//Don't hide the ProgressMeter, if training is in progress...
+				if (ProgressMeter.getText().equals(MESSAGE))
+					ShowProgress(null, -1);
 				synchronized(realized) {
 					realized.notifyAll();
 				}
@@ -417,32 +476,12 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 		Dasher.KeyUp(System.currentTimeMillis(), 100);
 	}
 	
-	/**
-	 * We respond to the following key presses:
-	 * <p>
-	 * CTRL: Set speed boost factor to 175<br>
-	 * SHIFT: Set speed boost factor to 25.
-	 * </p>
-	 */	
-	public void keyPressed(KeyEvent e) {
-		boost: {
-			final int newBoostFactor;
-			if(e.getKeyCode() == KeyEvent.VK_CONTROL) 
-				newBoostFactor = 175; // Speed boost for pressing CTRL. Should this be in the interface?
-			else if(e.getKeyCode() == KeyEvent.VK_SHIFT)
-				newBoostFactor = 25; // Speed reduced when SHIFT pressed. As above?
-			else break boost;
-			menuSetLong(Elp_parameters.LP_BOOSTFACTOR, newBoostFactor);
-		}
-	}
-	
+	/** Ignore. */
+	public void keyPressed(KeyEvent e) {}
+		
 	/**
 	 * Upon releasing the space bar, we signal Dasher a KeyDown
 	 * event with a key of zero.
-	 * <p>
-	 * If either CTRL or SHIFT are released, the speed boost
-	 * constant is reset to 100, 175 or 25, dependent on which
-	 * keys are still down.
 	 */
 	public void keyReleased(KeyEvent e) {
 		
@@ -452,20 +491,6 @@ public class JDasherApplet extends JApplet implements MouseListener, KeyListener
 			Dasher.KeyDown(System.currentTimeMillis(), 0);
 		}
 		
-		
-		/* This completes the boost-key implementation by considering
-		 * whether the other boost key is currently pressed when one
-		 * is released.
-		 */
-		boost: {
-			final int newBoostFactor;
-			if(e.getKeyCode() == KeyEvent.VK_CONTROL) {
-				newBoostFactor = (e.isShiftDown()) ? 25 : 100;
-			} else if(e.getKeyCode() == KeyEvent.VK_SHIFT) {
-				newBoostFactor = (e.isControlDown()) ? 175 : 100;
-			} else break boost;
-			menuSetLong(Elp_parameters.LP_BOOSTFACTOR, newBoostFactor);
-		}
 	}
 
 	/**

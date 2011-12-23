@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+
+<!--Preference Strings -->
+<string name="MaxBitRateTimes100_title">Maxhastighet</string>
+<string name="MaxBitRateTimes100_summary">Max datainmatning i bits/sek</string>
+<string name="AndroidDisplaySettings_title">Skärminställningar</string>
+<string name="MinNodeSizeForText_title">Textstorlek</string>
+<string name="MinNodeSizeForText_summary">minsta ruta med text, 4096=hela skärmen</string>
+<string name="NodeBudget_title">Avvägning nod-/rutstorlek</string>
+<string name="NodeBudget_summary">Högre = mer detaljerat; lägre = snabbare</string>
+<string name="NonLinearX_title">X Icke-linearitet</string>
+<string name="NonLinearX_summary">Logga komprimering t.v. om hårkorset</string>
+<string name="DasherFontSize_title">Bokstavsstorlek</string>
+<string name="DasherFontSize_summary">Liten / mellan / stor</string>
+<string name="MarginWidth_title">Marginalbredd</string>
+<string name="MarginWidth_summary">Plats på högerkanten för att peka</string>
+<string name="ControlMode_title">Kommandon</string>
+<string name="ControlMode_summary">Generera noder/rutor för redigeringskommandon etc.</string>
+<string name="AlphabetID_title">Alfabetsamn</string>
+<string name="AndroidInputMethod_title">Styrsätt</string>
+<string name="AndroidInputMethod_summary">Välj hur Dasher skall styras</string>
+<string name="AndroidTilt_title">Lutningsstyrning</string>
+<string name="OneDimensionalMode_title">Använd bara 1 dimension</string>
+<string name="OneDimensionalMode_summaryOff">Framåt/bakåt &amp; utslag; upp/ner med 2 lutningsaxlar</string>
+<string name="OneDimensionalMode_summaryOn">Luta upp/ner för att cirkla runt</string>
+<string name="AndroidTiltHoldToGo_title">Tryck och håll finger för att köra </string>
+<string name="AndroidTiltUsesTouchX_title">X-koordinat från pekning</string>
+<string name="CircleStart_title">Starta i mittcirkeln</string>
+<string name="CircleStart_summary">Tryck och håll nära mitten av skärmen för start/stopp</string>
+<string name="AndroidCalibrateTilting_title">Kalibrera lutning</string>
+<string name="AndroidTouch_title">Pek-styrning</string>
+<string name="AndroidTouchUsesTiltX_title">X-koordinat från lutning</string>
+<string name="TargetOffset_title">Förskjutning av mål för pekning</string>
+<string name="TargetOffset_summary">Över/under verklig pekposition (400=skärmhöjden)</string>
+<string name="AutoAdjust_title">Automatisk anpassning</string>
+<string name="AutoAdjust_summary">Automatiskt inlärning av förskjutning (sedan tidigare) </string>
+<string name="TapTime_title">Max tid för \'klick\'</string>
+<string name="TapTime_summary">Allt som är längre tas som drag och släpp</string>
+<string name="Zoomsteps_title">Rutor för klick</string>
+<string name="MaxZoom_title">Max zoomning för klick</string>
+<string name="MaxZoom_summary">Maxfaktor för inzoomning vid klick</string>
+<string name="AndroidBoxes_title">Rut-styrning</string>
+<string name="AndroidBoxes_summary">Dela in i rutor och stega eller klicka</string>
+<string name="ButtonMenuBoxes_title">Antal rutor framåt</string>
+<string name="ButtonMenuSafety_title">Säkerhetsmarginal</string>
+<string name="ButtonMenuSafety_summary">Zooma inte hela vägen in i rutan</string>
+<string name="ButtonModeNonuniformity_title">Spridning av rutstorlekar</string>
+<string name="AndroidScan_title">Stega igenom rutor</string>
+<string name="AndroidScan_summaryOn">Klicka på skärmen för val av markerad ruta</string>
+<string name="AndroidScan_summaryOff">Klicka i rutan för att välja</string>
+<string name="ButtonScanTime_title">Stegningshastighet</string>
+<string name="ButtonScanTime_summary">0 = klicka i övre halvan av skärmen för att stega</string>
+<string name="AndroidCompass_title">Kompass-styrning</string>
+<string name="AndroidCompass_summary">Styrning med rullboll</string>
+<string name="ButtonCompassModeRightZoom_title">Zoomningsfaktor</string>
+<string name="AndroidGeneralInputSettings_title">Allmänna styrsättsinställningar</string>
+<string name="AutoSpeedControl_title">Automatisk hastighetskontroll</string>
+<string name="RemapXtreme_title">Ställ om överst/nederst</string>
+<string name="RemapXtreme_summary">...för att rulla mer och zooma mindre</string>
+<string name="AndroidDoubleX_title">Peka bara på vänster sida</string>
+<string name="AndroidDoubleX_summary">Som om pekning vore två ggr så långt åt höger</string>
+<string name="SlowStartTime_title">Långsam starttid</string>
+<string name="SlowStartTime_summary">Tid för att nå full hastighet (0=genast)</string>
+<string name="ReverseBoost_title">Backa fortare</string>
+<string name="ReverseBoost_summary">Acceleration vid backning (0=ingen)</string>
+<string name="ColourID_title">Färgschema</string>
+<string name="AndroidTwoButtonDynamic_title">Två-knapps dynamisk styrning</string>
+<string name="AndroidTwoButtonDynamic_summary">Klicka överst/nederst eller använd volymkontrollen</string>
+<string name="TwoButtonOffset_title">Markörförskjutning</string>
+<string name="TwoButtonOffset_summary">Vertikalt avstånd till upp-/ner-markör</string>
+<string name="LongPressTime_title">Tid för “långt tryck”</string>
+<string name="LongPressTime_summary">Tid för ett “långt tryck” (=&gt;backa)</string>
+<string name="DoublePressTime_title">Tid för dubbelklick</string>
+<string name="DoublePressTime_summary">Tid för att två efterföljande tryckningar skall räknas som dubbelklick (=&gt; backa)</string>
+<string name="AndroidOneButtonDynamic_title">En-knapps dynamisk styrning</string>
+<string name="AndroidOneButtonDynamic_summary">Klicka på skärmen eller tryck på någon knapp två ggr.</string>
+<string name="OneButtonShortGap_title">Kort mellanrum i %</string>
+<string name="OneButtonShortGap_summary">Mellanrum mellan upp-markeringar, i % av ner</string>
+<string name="OneButtonLongGap_title">Långt mellanrum</string>
+<string name="OneButtonLongGap_summary">Mellanrum mellan ner-markeringar</string>
+<string name="OneButtonOuter_title">Yttre markering</string>
+<string name="OneButtonOuter_summary">Avstånd till yttre markering (både upp och ner)</string>
+<string name="OneButtonReleaseTime_title">Använd släpp-tid för knapp</string>
+<string name="OneButtonReleaseTime_summaryOn">Tryck och håll när en mening är mellan markeringarna – kort eller långt tryck</string>
+<string name="OneButtonReleaseTime_summaryOff">Tryck när en mening passerar en av markeringarna – kort eller långt mellanrum mellan två tryck</string>
+<string name="Orientation_title">Riktning</string>
+<string name="Orientation_summary">Bortse från alfabetets skrivriktning</string>
+
+<!-- Calibration dialogue box buttons -->
+<string name="invert">Invertera</string>
+<string name="calibChange">Ändra...</string>
+
+<array name="Orientation_entries">
+<item>Använd standard för alfabetet</item>
+<item>Vänster-till-höger</item>
+<item>Höger-till-vänster</item>
+<item>Uppifrån-och-ner</item>
+<item>Nerifrån-och-upp</item>
+</array>
+</resources>

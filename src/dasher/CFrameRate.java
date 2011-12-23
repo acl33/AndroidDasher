@@ -25,6 +25,10 @@
 
 package dasher;
 
+import static dasher.Elp_parameters.LP_X_LIMIT_SPEED;
+import static dasher.Elp_parameters.LP_MAX_BITRATE;
+import static dasher.Elp_parameters.LP_FRAMERATE;
+
 /**
  * Monitors the framerate by taking records every time CountFrame
  * is called; this is used to control how far to make Dasher move per frame.
@@ -33,16 +37,6 @@ public class CFrameRate extends CDasherComponent {
 /*private int logCount;	
 private double logFrames;*/
 	/**
-	 * Last measured frame rate
-	 */
-	private double m_dFr;
-	
-	/**
-	 * Target maximum rate of entering information in bits/sec
-	 */
-	private double m_dMaxbitrate;         // the maximum rate of entering information
-	
-	/**
 	 * (Approximate) number of frames which we should take to move
 	 * to the location under the mouse pointer; based on a decaying
 	 * average of the current framerate.
@@ -50,25 +44,25 @@ private double logFrames;*/
 	private int m_iSteps;                 // the 'Steps' parameter. See djw thesis.
 	
 	/**
-	 * Hard limit on maximum amount of zoom per frame (based on the
-	 * current / last measured framerate, rather than decaying average) 
+	 * Number of bits which'd take us all the way to the x limit,
+	 * i.e. the point at which we are entering data at the maximum speed.
 	 */
-	private double m_dRXmax;
+	private double m_dBitsAtLimX;
 	
 	/**
 	 * Number of frames elapsed
 	 */
-	private int m_iFrames;
+	private int m_iFrames=-1;
 	
 	/**
 	 * Number of frames to allow to elapse before computing average framerate over that period
 	 */
-	private int m_iSamples;
+	private int m_iSamples=2;
 	
 	/**
 	 * Time of first frame in period being measured
 	 */
-	private long m_iTime;
+	private long m_iTime=0;
 	
 	/**
 	 * Cache of the natural log of 2
@@ -76,16 +70,8 @@ private double logFrames;*/
 	private static final double LN2 = Math.log(2.0);
 
 	/** Cache of base-2-logarithm of 5, used in calculating iSteps */
-	private static final double LOG2_5 = -Math.log(0.2) / LN2;
+	private static final double LOG_MAXY = Math.log(CDasherModel.MAX_Y);
  
-	/**
-	 * Gets the maximum amount by which to zoom in a single frame
-	 */ 
-	protected double maxZoom() {
-	////// TODO: Eventually fix this so that it uses integer maths internally.
-		return m_dRXmax;
-	}
-	
 	/**
 	 * Gets m_iSteps; see its description
 	 * 
@@ -96,17 +82,6 @@ private double logFrames;*/
 	} 
 	
 	/**
-	 * Gets current frame rate
-	 * 
-	 * @return Frame rate (FPS)
-	 */
-	public double Framerate() {
-		return m_dFr;
-	} 
-	
-	// TODO: These two shouldn't be the same thing:
-	
-	/**
 	 * Creates a new framerate monitor; all initial values
 	 * are currently hard coded in.
 	 * <p>
@@ -114,17 +89,7 @@ private double logFrames;*/
 	 */
 	public CFrameRate(CDasherComponent creator) {
 		super(creator);
-		HandleEvent(Elp_parameters.LP_MAX_BITRATE);
-		m_iFrames = -1;
-		m_iSamples = 1;
-		
-		// we dont know the framerate yet - play it safe by setting it high
-		m_dFr = 1 << 5;
-		//and set the max-zoom correspondingly...(otherwise first frame goes waaay too far)
-		m_dRXmax = Math.exp(m_dMaxbitrate*LN2/m_dFr);
-		
-		// start off very slow until we have sampled framerate adequately
-		m_iSteps = 2000;
+		HandleEvent(LP_X_LIMIT_SPEED);
 	}
 	
 	/**
@@ -147,25 +112,22 @@ private double logFrames;*/
 			if(Time - m_iTime < 50)
 				m_iSamples++;             // increase sample size
 			else if(Time - m_iTime > 80)
-				m_iSamples = Math.max(1, m_iSamples-1);;
+				m_iSamples = Math.max(2, m_iSamples-1);;
 			
+			//Calculate the framerate and reset sampling statistics
+			// for the next sampling period
 			if(Time - m_iTime != 0) {
-				m_dFr = m_iFrames * 1000.0 / (Time - m_iTime);
+				double dFrNow = m_iFrames * 1000.0 / (Time - m_iTime);
+				SetLongParameter(LP_FRAMERATE, (long)(GetLongParameter(LP_FRAMERATE) + (dFrNow*100))/2);
 				m_iTime = Time;
 				m_iFrames = 0;
 			}
+			
 			/*logFrames+=m_dFr;
 			if (++logCount==20) {
 				System.out.println("Framerate: "+logFrames/logCount);
 				logFrames = logCount=0;
 			}*/
-			m_dRXmax = Math.exp(m_dMaxbitrate * LN2 / m_dFr);
-			m_iSteps = (int)((m_iSteps + LOG2_5 * m_dFr / m_dMaxbitrate) / 2);
-			
-			// If the framerate slows to < 4 then we end up with steps < 1 ! 
-			if(m_iSteps == 0)
-				m_iSteps = 1;
-			
 		}
 		
 	}
@@ -178,9 +140,17 @@ private double logFrames;*/
 	}
 	
 	@Override public void HandleEvent(EParameters eParam) {
-		if(eParam == Elp_parameters.LP_MAX_BITRATE || eParam == Elp_parameters.LP_BOOSTFACTOR) {
-			//both bitrate _and_ boostfactor are stored as %ages...
-			m_dMaxbitrate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) * GetLongParameter(Elp_parameters.LP_BOOSTFACTOR) / 10000.0;
-		}
+		if (eParam==LP_X_LIMIT_SPEED) {
+			//log (MAX_Y / (2*LP_X_LIM))
+			//= log(MAX_Y) - log(2) - log(LP_X)
+	      m_dBitsAtLimX = (LOG_MAXY - LN2 - Math.log(GetLongParameter(LP_X_LIMIT_SPEED)))/LN2;
+	      //fallthrough
+		} else if (eParam!=LP_MAX_BITRATE && eParam!=LP_FRAMERATE) return;
+	    // => for either LP_MAX_BITRATE or LP_FRAMERATE, fallthrough
+		
+	    //Calculate m_iSteps from the decaying-average framerate, as the number
+	    // of steps that, at the X limit, will cause LP_MAX_BITRATE bits to be
+	    // entered per second
+	    m_iSteps = Math.max(1,(int)(GetLongParameter(LP_FRAMERATE)*m_dBitsAtLimX/GetLongParameter(LP_MAX_BITRATE)));
 	}
 }

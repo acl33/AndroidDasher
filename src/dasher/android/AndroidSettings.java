@@ -25,6 +25,8 @@
 
 package dasher.android;
 
+import java.lang.ref.WeakReference;
+
 import android.content.SharedPreferences;
 
 import dasher.CParameterNotFoundException;
@@ -37,7 +39,8 @@ import dasher.Esp_parameters;
 public class AndroidSettings extends CSettingsStore implements SharedPreferences.OnSharedPreferenceChangeListener {
 
 	private final SharedPreferences pref;
-	
+	private final SharedPreferences.Editor edit;
+	//private boolean modified; //whether anything's been written to the Editor
 	/** We allow the stored settings to be temporarily overriden
 	 * by providing (at most one at a time) instance of this class
 	 * - this allows e.g. properties specific to the document /
@@ -72,8 +75,34 @@ public class AndroidSettings extends CSettingsStore implements SharedPreferences
 	
 	public AndroidSettings(SharedPreferences pref) {
 		this.pref=pref;
+		this.edit=pref.edit();
+		Thread t = new Thread(new SaveTask(this));
+		t.setPriority(Thread.MIN_PRIORITY);
+		t.start();
 		pref.registerOnSharedPreferenceChangeListener(this);
 		LoadPersistent();
+	}
+	
+	private static class SaveTask implements Runnable {
+		private final WeakReference<AndroidSettings> sets;
+		private final SharedPreferences.Editor edit;
+		SaveTask(AndroidSettings sets) {
+			this.sets = new WeakReference<AndroidSettings>(sets);
+			this.edit = sets.edit;
+		}
+		public void run() {
+			for (;;) {
+				try {Thread.sleep(1000);}
+				catch (InterruptedException e) {}
+				AndroidSettings s = this.sets.get();
+				synchronized(edit) {
+				//	if (sets!=null && !sets.modified)
+				//		continue;
+					edit.commit();
+				}
+				if (s==null) break;//if GC'd, won't be making any more changes!
+			}
+		}
 	}
 	
 	/** Override stored settings with e.g. document-specific ones.
@@ -178,23 +207,18 @@ public class AndroidSettings extends CSettingsStore implements SharedPreferences
 	}
 
 	protected void SaveSetting(String key, boolean value) {
-		SharedPreferences.Editor edit = pref.edit();
-		edit.putBoolean(key, value);
-		edit.commit();
+		synchronized (edit) {edit.putBoolean(key, value);}
+		
 	}
 
 
 	protected void SaveSetting(String key, long value) {
-		SharedPreferences.Editor edit = pref.edit();
-		edit.putLong(key, value);
-		edit.commit();
+		synchronized (edit) {edit.putLong(key, value);}
 	}
 
 
 	protected void SaveSetting(String key, String value) {
-		SharedPreferences.Editor edit = pref.edit();
-		edit.putString(key, value);
-		edit.commit();
+		synchronized (edit) {edit.putString(key, value);}
 	}
 	
 }

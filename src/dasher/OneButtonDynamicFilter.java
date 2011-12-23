@@ -2,7 +2,7 @@ package dasher;
 
 import static dasher.CDasherModel.CROSS_Y;
 
-public class OneButtonDynamicFilter extends CDynamicFilter {
+public class OneButtonDynamicFilter extends CDynamicButtons {
 
 	private BounceMarker upInner, downInner, upOuter, downOuter;
 	
@@ -51,7 +51,7 @@ public class OneButtonDynamicFilter extends CDynamicFilter {
 		return false;
 	}
 
-	@Override protected boolean TimerImpl(long iTime, CDasherView pView, CDasherModel pModel) {
+	@Override protected void TimerImpl(long iTime, CDasherView pView, CDasherModel pModel) {
 		if (m_iFirstPressTime!=Long.MAX_VALUE) {
 			double dGrowth = Math.exp(pModel.GetNats()-m_dNatsAtFirstPress);
 			guideUp = (int)(dGrowth*upInner.m_iLocn);
@@ -62,11 +62,10 @@ public class OneButtonDynamicFilter extends CDynamicFilter {
 				//both markers outside y-axis (well, in compressed region)
 				// => waited too long for second press(/release)
 				reverse(iTime, pModel);
-				return false;
+				return; //hmmm. without scheduling anything?
 			}
 		}
-		pModel.oneStepTowards(0, CROSS_Y, iTime, 1.0f);
-        return true;
+		pModel.ScheduleOneStep(0, CROSS_Y, iTime, getSpeedMul(pModel, iTime));
 	}
 	
 	@Override
@@ -94,21 +93,15 @@ public class OneButtonDynamicFilter extends CDynamicFilter {
 	@Override public void KeyDown(long iTime, int iId, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
 		if (m_iKeyHeldId!=-1 && iId != m_iKeyHeldId) return; //ignore subsequent presses whilst button down
 		m_iKeyHeldId=iId;
-		switch (getState()) {
-		case REVERSING:
-			pause(iTime, pModel);
-			break;
-		case PAUSED:
+		if (isReversing())
+			pause();
+		else if (isPaused())
 			run(iTime, pModel);
-			break;
-		case RUNNING:
-			if (m_iFirstPressTime==Long.MAX_VALUE) {
-				m_iFirstPressTime = iTime;
-				m_dNatsAtFirstPress = pModel.GetNats();
-			} else
-				secondPress(iTime,pModel);
-			break;
-		}
+		else if (m_iFirstPressTime==Long.MAX_VALUE) {
+			m_iFirstPressTime = iTime;
+			m_dNatsAtFirstPress = pModel.GetNats();
+		} else
+			secondPress(iTime,pModel);
 	}
 	
 	@Override public void KeyUp(long iTime, int iId, CDasherView pView, CDasherInput pInput, CDasherModel pModel) {
@@ -126,8 +119,8 @@ public class OneButtonDynamicFilter extends CDynamicFilter {
 		} else {
 			inner = downInner; outer = downOuter;
 		}
-		double dCurBitrate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) * GetLongParameter(Elp_parameters.LP_BOOSTFACTOR) / 10000.0;
-		int iOffset = inner.GetTargetOffset(dCurBitrate, outer, iTime - m_iFirstPressTime);
+		double dCurBitrate = GetLongParameter(Elp_parameters.LP_MAX_BITRATE) /100.0;
+		int iOffset = inner.GetTargetOffset(dCurBitrate*getSpeedMul(pModel, iTime), outer, iTime - m_iFirstPressTime);
 		if (pModel.m_iDisplayOffset!=0) {
 			iOffset -= pModel.m_iDisplayOffset;
 			System.err.println("Display Offset "+pModel.m_iDisplayOffset+" reducing to "+iOffset);
@@ -137,21 +130,15 @@ public class OneButtonDynamicFilter extends CDynamicFilter {
 		downInner.NotifyOffset(iOffset, dNewNats); downOuter.NotifyOffset(iOffset, dNewNats);
 		inner.RecordPush(iOffset, pModel.GetNats() - m_dNatsAtFirstPress, dCurBitrate);
 		outer.RecordPush(iOffset, 0.0, dCurBitrate);
-		pModel.Offset(iOffset);
+		ApplyOffset(pModel, iOffset);
 		m_dNatsAtLastApply = pModel.GetNats();
 		m_iFirstPressTime = Long.MAX_VALUE;
 	}
 	
 	@Override public void reverse(long iTime, CDasherModel pModel) {
-		pModel.AbortOffset();
 		upInner.clearPushes(); upOuter.clearPushes(); downInner.clearPushes(); downOuter.clearPushes();
 		m_iFirstPressTime = Long.MAX_VALUE;
 		super.reverse(iTime, pModel);
 	}
 	
-	@Override public void pause(long iTime, CDasherModel pModel) {
-		pModel.AbortOffset();
-		super.pause(iTime, pModel);
-	}
-
 }
