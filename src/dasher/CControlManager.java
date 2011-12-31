@@ -78,20 +78,18 @@ public class CControlManager extends CDasherComponent {
 		 */
 		protected abstract int applyGetIndex(CControlManager mgr, CDasherNode node);
 	}
-	private final List<CDasherNode> tempList = new ArrayList<CDasherNode>();
 	
 	/*package*/ void populate(CDasherNode node, List<ControlAction> actions) {
-		tempList.clear();
 		for (int i=0; i<actions.size(); i++) {
 			CDasherNode temp = (actions.get(i)==null)
 					? m_pNCMgr.getAlphabetManager().GetRoot(node, node.getOffset(), false)
 					: actions.get(i).make(this,node);
-			if (temp!=null) tempList.add(temp);
+			if (temp!=null) temp.Reparent(node, i, i+1); //bounds temporary, just put in place
 		}
 		long boundary = 0;
-		for (int i=0; i<tempList.size(); i++) {
-			long next = (i+1) * NORMALIZATION / tempList.size();
-			tempList.get(i).Reparent(node, boundary, next);
+		for (int i=0; i<node.ChildCount(); i++) {
+			long next = (i+1) * NORMALIZATION / node.ChildCount();
+			node.ChildAtIndex(i).Reparent(node, boundary, next); //no change to parent, just set bounds
 			boundary=next;
 		}
 	}

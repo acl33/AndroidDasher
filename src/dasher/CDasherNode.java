@@ -346,15 +346,19 @@ public abstract class CDasherNode implements Document {
 	}
 	  
 	/**
-	 * Attaches this Node to a given Parent.
-	 * 
-	 * @param NewParent Our new parent
+	 * Attaches this Node to a given Parent, setting its bounds;
+	 * or, changes the bounds, without moving the node to a new parent.
+	 * The former occurs if we previously have no parent; the latter,
+	 * if the new parent is the same as the existing parent.
+	 * @param NewParent The new parent (may be the same as the existing)
 	 */
 	public void Reparent(CDasherNode NewParent, long iLower, long iUpper) {
-		assert m_Parent==null;
-	    m_Parent = NewParent;
-	    assert m_Parent.m_mChildren.get(m_Parent.m_mChildren.size()-1).m_iHbnd==iLower;
-	    m_Parent.m_mChildren.add(this);
+		if (m_Parent!=NewParent) {
+			assert m_Parent==null;
+		    m_Parent = NewParent;
+		    assert m_Parent.m_mChildren.get(m_Parent.m_mChildren.size()-1).m_iHbnd==iLower;
+		    m_Parent.m_mChildren.add(this);
+		}
 	    m_iLbnd = iLower;
 	    m_iHbnd = iUpper;
 	}
