@@ -71,10 +71,12 @@
 	    android:summary="@string/ControlMode_summary"/>
 	  <CheckBoxPreference
 	    android:key="AndroidSettingsNode"
+	    android:dependency="ControlMode"
 	    android:title="@string/AndroidSettingsNode_title"
 	    android:summary="@string/AndroidSettingsNode_summary"/>
 	  <CheckBoxPreference
 	    android:key="ControlModeRebuild"
+	    android:dependency="ControlMode"
 	    android:title="@string/ControlModeRebuild_title"
 	    android:summary="@string/ControlModeRebuild_summary"/>
 	  <CheckBoxPreference
